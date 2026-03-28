@@ -211,69 +211,65 @@
 
     <!-- 대시보드 -->
     <div id="page-dashboard" class="page-content">
-        <h2 class="text-3xl font-bold mb-6 text-gray-800">📈 대시보드</h2>
-        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-            <div class="flex items-center justify-between flex-wrap gap-4">
-                <div class="flex items-center space-x-4">
-                    <label class="text-lg font-semibold text-gray-700">📅 주차 선택:</label>
-                    <select id="week-selector" class="px-4 py-2 text-lg font-bold text-blue-600 border-2 border-blue-500 rounded-lg focus:ring-2 focus:ring-blue-500 cursor-pointer"></select>
-                    <button onclick="applyDashboardWeekFilter()" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition font-semibold">✔️ 선택</button>
-                    <button onclick="goToday()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition">📆 이번 주</button>
-                </div>
-                <div class="text-sm text-gray-600">ℹ️ 선택한 주의 과정 현황을 표시합니다</div>
+        <h2 class="text-xl font-bold mb-4 text-gray-800">📈 대시보드</h2>
+        <!-- 주차 선택 바 (모바일 최적화) -->
+        <div class="bg-white rounded-xl shadow-sm p-4 mb-4">
+            <div class="flex flex-wrap items-center gap-2">
+                <label class="text-sm font-semibold text-gray-700 whitespace-nowrap">📅 주차:</label>
+                <select id="week-selector" class="flex-1 px-3 py-2 text-sm font-bold text-blue-600 border-2 border-blue-400 rounded-lg cursor-pointer min-w-0"></select>
+                <button onclick="applyDashboardWeekFilter()" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold">✔️ 선택</button>
+                <button onclick="goToday()" class="px-4 py-2 bg-gray-600 text-white rounded-lg text-sm">이번주</button>
             </div>
         </div>
-        <div class="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg shadow-lg p-6 mb-6">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="text-center">
-                    <div class="text-sm opacity-90 mb-2">📚 선택 주차 전체 과정</div>
-                    <div class="text-4xl font-bold" id="week-total-courses">0</div>
-                    <div class="text-sm opacity-75 mt-1">개</div>
+        <!-- 주간 요약 카드 -->
+        <div class="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl shadow-lg p-4 mb-4">
+            <div class="grid grid-cols-3 gap-3 text-center">
+                <div>
+                    <div class="text-xs opacity-80 mb-1">📚 전체 과정</div>
+                    <div class="text-2xl font-bold" id="week-total-courses">0</div>
                 </div>
-                <div class="text-center border-l border-r border-blue-400">
-                    <div class="text-sm opacity-90 mb-2">🚀 진행 중 과정</div>
-                    <div class="text-4xl font-bold" id="week-progress-courses">0</div>
-                    <div class="text-sm opacity-75 mt-1">개</div>
+                <div class="border-l border-r border-blue-400">
+                    <div class="text-xs opacity-80 mb-1">🚀 진행 중</div>
+                    <div class="text-2xl font-bold" id="week-progress-courses">0</div>
                 </div>
-                <div class="text-center">
-                    <div class="text-sm opacity-90 mb-2">✅ 세팅 완료</div>
-                    <div class="text-4xl font-bold text-green-300" id="week-complete-courses">0</div>
-                    <div class="text-sm opacity-75 mt-1">개</div>
+                <div>
+                    <div class="text-xs opacity-80 mb-1">✅ 세팅 완료</div>
+                    <div class="text-2xl font-bold text-green-300" id="week-complete-courses">0</div>
                 </div>
             </div>
-            <div class="mt-4 pt-4 border-t border-blue-400 text-center">
-                <div class="text-lg font-semibold">완료율: <span id="week-completion-rate">0</span>% <span class="ml-4 text-sm opacity-90">(<span id="week-complete-count">0</span> / <span id="week-total-count">0</span>)</span></div>
+            <div class="mt-3 pt-3 border-t border-blue-400 text-center text-sm font-semibold">
+                완료율: <span id="week-completion-rate">0</span>%
+                <span class="ml-2 opacity-80 text-xs">(<span id="week-complete-count">0</span> / <span id="week-total-count">0</span>)</span>
             </div>
         </div>
-        <div class="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-6">
+        <!-- 통계 미니카드 -->
+        <div class="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-4">
             <div class="stat-card"><p class="text-gray-500 text-xs">전체</p><p class="text-xl font-bold text-gray-800 mt-1" id="stat-total-courses">0</p></div>
             <div class="stat-card"><p class="text-gray-500 text-xs">입고대기</p><p class="text-xl font-bold text-red-600 mt-1" id="stat-stock-waiting">0</p></div>
             <div class="stat-card"><p class="text-gray-500 text-xs">출고대기</p><p class="text-xl font-bold text-yellow-600 mt-1" id="stat-release-waiting">0</p></div>
             <div class="stat-card"><p class="text-gray-500 text-xs">세팅중</p><p class="text-xl font-bold text-purple-600 mt-1" id="stat-setup-progress">0</p></div>
             <div class="stat-card"><p class="text-gray-500 text-xs">세팅완료</p><p class="text-xl font-bold text-green-600 mt-1" id="stat-setup-complete">0</p></div>
         </div>
-        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h3 class="text-xl font-bold mb-4 text-gray-800">🗓️ 과정 타임라인</h3>
-            <div id="timeline-container" class="space-y-4"></div>
+        <!-- 타임라인 -->
+        <div class="bg-white rounded-xl shadow-sm p-4 mb-4">
+            <h3 class="text-base font-bold mb-3 text-gray-800">🗓️ 과정 타임라인</h3>
+            <div id="timeline-container" class="space-y-3"></div>
         </div>
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div class="bg-white rounded-lg shadow-md p-6">
-                <h3 class="text-xl font-bold mb-4 text-gray-800">⚠️ 긴급 작업 필요</h3>
+        <!-- 긴급 + 차트 -->
+        <div class="grid grid-cols-1 gap-4 mb-4">
+            <div class="bg-white rounded-xl shadow-sm p-4">
+                <h3 class="text-base font-bold mb-3 text-gray-800">⚠️ 긴급 작업 필요</h3>
                 <div id="urgent-tasks" class="space-y-2"></div>
             </div>
-            <div class="bg-white rounded-lg shadow-md p-6">
-                <h3 class="text-xl font-bold mb-4 text-gray-800">🥧 상태별 분포</h3>
-                <div style="height:300px;"><canvas id="statusChart"></canvas></div>
+            <div class="bg-white rounded-xl shadow-sm p-4">
+                <h3 class="text-base font-bold mb-3 text-gray-800">🥧 상태별 분포</h3>
+                <div style="height:240px;"><canvas id="statusChart"></canvas></div>
             </div>
         </div>
-
-        <!-- 관리자 모니터링 (관리자만 표시) -->
-        <div id="admin-monitor-section" class="hidden mt-6">
-            <div class="bg-white rounded-xl shadow-md p-5">
-                <h3 class="text-lg font-bold mb-4 text-gray-800 flex items-center gap-2">
-                    👁️ 관리자 모니터링 — 단계별 병목 현황
-                    <span class="text-xs font-normal text-gray-400">누가 어느 단계에서 막혀있는지 실시간 확인</span>
-                </h3>
+        <!-- 관리자 모니터링 -->
+        <div id="admin-monitor-section" class="hidden">
+            <div class="bg-white rounded-xl shadow-sm p-4">
+                <h3 class="text-base font-bold mb-3 text-gray-800">👁️ 관리자 모니터링 — 단계별 병목 현황</h3>
                 <div id="admin-monitor-content" class="space-y-3"></div>
             </div>
         </div>
@@ -281,45 +277,46 @@
 
     <!-- 과정 관리 (관리자/담당자) -->
     <div id="page-admin" class="page-content hidden">
-        <div class="flex items-center justify-between mb-6">
-            <h2 class="text-3xl font-bold text-gray-800">⚙️ 과정 관리 (관리자/담당자)</h2>
-            <button onclick="openAdminCourseModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition">➕ 과정 추가</button>
+        <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <h2 class="text-xl font-bold text-gray-800">⚙️ 과정 관리</h2>
+            <button onclick="openAdminCourseModal()" class="btn-action btn-primary px-4" style="min-height:40px;font-size:0.85rem;">➕ 과정 추가</button>
         </div>
-        <div id="admin-permission-alert" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-6 hidden">
-            <div class="flex items-center">⚠️ <div><strong>접근 권한 없음</strong><p>이 페이지는 관리자와 담당자만 접근할 수 있습니다.</p></div></div>
+        <div id="admin-permission-alert" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl mb-4 hidden text-sm">
+            ⚠️ <strong>접근 권한 없음</strong> — 관리자와 담당자만 접근할 수 있습니다.
         </div>
-        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-            <div class="flex items-center justify-between flex-wrap gap-4">
-                <div class="flex items-center space-x-4">
-                    <label class="text-lg font-semibold text-gray-700">📅 주차 선택:</label>
-                    <select id="admin-week-selector" class="px-4 py-2 text-lg font-bold text-blue-600 border-2 border-blue-500 rounded-lg cursor-pointer"></select>
-                    <button onclick="applyAdminWeekFilter()" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition font-semibold">✔️ 선택</button>
-                    <button onclick="goToTodayAdmin()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition">📆 이번 주</button>
-                </div>
+        <!-- 주차 선택 -->
+        <div class="bg-white rounded-xl shadow-sm p-4 mb-4">
+            <div class="flex flex-wrap items-center gap-2">
+                <label class="text-sm font-semibold text-gray-700 whitespace-nowrap">📅 주차:</label>
+                <select id="admin-week-selector" class="flex-1 px-3 py-2 text-sm font-bold text-blue-600 border-2 border-blue-400 rounded-lg cursor-pointer min-w-0"></select>
+                <button onclick="applyAdminWeekFilter()" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold">✔️ 선택</button>
+                <button onclick="goToTodayAdmin()" class="px-4 py-2 bg-gray-600 text-white rounded-lg text-sm">이번주</button>
             </div>
         </div>
-        <div class="bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg shadow-lg p-6 mb-6">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div class="text-center"><div class="text-sm opacity-90 mb-2">📚 전체 과정</div><div class="text-3xl font-bold" id="admin-total-courses">0</div><div class="text-sm opacity-75 mt-1">개</div></div>
-                <div class="text-center border-l border-purple-400"><div class="text-sm opacity-90 mb-2">✅ 세팅 완료</div><div class="text-3xl font-bold text-green-300" id="admin-complete-courses">0</div><div class="text-sm opacity-75 mt-1">개</div></div>
-                <div class="text-center border-l border-purple-400"><div class="text-sm opacity-90 mb-2">🚀 진행 중</div><div class="text-3xl font-bold text-yellow-300" id="admin-progress-courses">0</div><div class="text-sm opacity-75 mt-1">개</div></div>
-                <div class="text-center border-l border-purple-400"><div class="text-sm opacity-90 mb-2">⏳ 대기 중</div><div class="text-3xl font-bold text-red-300" id="admin-waiting-courses">0</div><div class="text-sm opacity-75 mt-1">개</div></div>
+        <!-- 통계 배너 -->
+        <div class="bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl p-4 mb-4">
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                <div><div class="text-xs opacity-80">📚 전체</div><div class="text-2xl font-bold" id="admin-total-courses">0</div></div>
+                <div><div class="text-xs opacity-80">✅ 세팅완료</div><div class="text-2xl font-bold text-green-300" id="admin-complete-courses">0</div></div>
+                <div><div class="text-xs opacity-80">🚀 진행중</div><div class="text-2xl font-bold text-yellow-300" id="admin-progress-courses">0</div></div>
+                <div><div class="text-xs opacity-80">⏳ 대기</div><div class="text-2xl font-bold text-red-300" id="admin-waiting-courses">0</div></div>
             </div>
         </div>
-        <div class="bg-white rounded-lg shadow-md overflow-hidden">
-            <div class="px-6 py-4 bg-gray-50 border-b border-gray-200"><h3 class="text-lg font-bold text-gray-800">📋 주차별 과정 목록</h3></div>
+        <!-- 과정 목록 테이블 (모바일: 카드형으로 대체) -->
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+            <div class="px-4 py-3 bg-gray-50 border-b"><h3 class="text-sm font-bold text-gray-700">📋 주차별 과정 목록</h3></div>
             <div class="overflow-x-auto">
-                <table class="w-full">
-                    <thead class="bg-gray-100 border-b border-gray-200">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-100 border-b">
                         <tr>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">과정명</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">시작일</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">종료일</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">인원</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">강의실</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">출고예정</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">상태</th>
-                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase">작업</th>
+                            <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600">과정명</th>
+                            <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 hidden sm:table-cell">시작일</th>
+                            <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 hidden sm:table-cell">종료일</th>
+                            <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600">인원</th>
+                            <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 hidden md:table-cell">강의실</th>
+                            <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 hidden md:table-cell">출고예정</th>
+                            <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600">상태</th>
+                            <th class="px-3 py-2 text-center text-xs font-semibold text-gray-600">작업</th>
                         </tr>
                     </thead>
                     <tbody id="admin-courses-table" class="bg-white divide-y divide-gray-200"></tbody>
@@ -330,55 +327,66 @@
 
     <!-- 과정 조회 -->
     <div id="page-courses" class="page-content hidden">
-        <div class="flex items-center justify-between mb-6">
-            <h2 class="text-3xl font-bold text-gray-800">📋 과정 조회</h2>
-            <div class="flex space-x-3">
-                <button onclick="openImportModal()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition">📥 데이터 가져오기</button>
-                <button onclick="openCourseModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition">➕ 과정 추가</button>
+        <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <h2 class="text-xl font-bold text-gray-800">📋 과정 조회</h2>
+            <div class="flex gap-2">
+                <button onclick="openImportModal()" class="btn-action btn-success px-3" style="min-height:38px;font-size:0.8rem;">📥 가져오기</button>
+                <button onclick="openCourseModal()" class="btn-action btn-primary px-3" style="min-height:38px;font-size:0.8rem;">➕ 추가</button>
             </div>
         </div>
-        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-            <div class="flex items-center justify-between flex-wrap gap-4">
-                <div class="flex items-center space-x-4">
-                    <label class="text-lg font-semibold text-gray-700">📅 주차 선택:</label>
-                    <select id="courses-week-selector" class="px-4 py-2 text-lg font-bold text-blue-600 border-2 border-blue-500 rounded-lg cursor-pointer"></select>
-                    <button onclick="applyCoursesWeekFilter()" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition font-semibold">✔️ 선택</button>
-                    <button onclick="goToTodayCourses()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition">📆 이번 주</button>
+        <!-- 주차 선택 -->
+        <div class="bg-white rounded-xl shadow-sm p-4 mb-4">
+            <div class="flex flex-wrap items-center gap-2">
+                <label class="text-sm font-semibold text-gray-700 whitespace-nowrap">📅 주차:</label>
+                <select id="courses-week-selector" class="flex-1 px-3 py-2 text-sm font-bold text-blue-600 border-2 border-blue-400 rounded-lg cursor-pointer min-w-0"></select>
+                <button onclick="applyCoursesWeekFilter()" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold">✔️ 선택</button>
+                <button onclick="goToTodayCourses()" class="px-4 py-2 bg-gray-600 text-white rounded-lg text-sm">이번주</button>
+            </div>
+        </div>
+        <!-- 검색 필터 -->
+        <div class="bg-white rounded-xl shadow-sm p-4 mb-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">과정명 검색</label>
+                    <input type="text" id="search-course" placeholder="과정명 입력..."
+                        class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500">
                 </div>
-            </div>
-        </div>
-        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div><label class="block text-sm font-medium text-gray-700 mb-2">과정명 검색</label><input type="text" id="search-course" placeholder="과정명 입력..." class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></div>
-                <div><label class="block text-sm font-medium text-gray-700 mb-2">상태 필터</label>
-                    <select id="filter-status" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">상태 필터</label>
+                    <select id="filter-status" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm">
                         <option value="">전체 상태</option>
                         <option value="입고대기">입고대기</option><option value="입고완료">입고완료</option>
                         <option value="출고대기">출고대기</option><option value="출고완료">출고완료</option>
                         <option value="출고확인">출고확인</option>
-                        <option value="세팅중">세팅중</option><option value="세팅완료">세팅완료</option>
+                        <option value="세팅중">세팅중</option><option value="세팅완료대기">세팅완료대기</option><option value="세팅완료">세팅완료</option>
                     </select>
                 </div>
-                <div><label class="block text-sm font-medium text-gray-700 mb-2">날짜</label><input type="date" id="filter-date" class="w-full px-4 py-2 border border-gray-300 rounded-lg"></div>
-                <div class="flex items-end"><button onclick="loadCourses()" class="w-full bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg transition">🔍 검색</button></div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">날짜</label>
+                    <input type="date" id="filter-date" class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm">
+                </div>
+                <div class="flex items-end">
+                    <button onclick="loadCourses()" class="w-full px-4 py-2 bg-gray-700 text-white rounded-xl text-sm font-semibold">🔍 검색</button>
+                </div>
             </div>
         </div>
-        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <!-- 과정 목록 -->
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
             <div class="overflow-x-auto">
-                <table class="w-full">
-                    <thead class="bg-gray-50 border-b border-gray-200">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50 border-b">
                         <tr>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">과정명</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">시작일</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">인원</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">재고</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">출고예정</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">상태</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">강의실</th>
-                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">작업</th>
+                            <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500">과정명</th>
+                            <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 hidden sm:table-cell">시작일</th>
+                            <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500">인원</th>
+                            <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 hidden sm:table-cell">재고</th>
+                            <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 hidden md:table-cell">출고예정</th>
+                            <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500">상태</th>
+                            <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 hidden md:table-cell">강의실</th>
+                            <th class="px-3 py-2 text-center text-xs font-semibold text-gray-500">작업</th>
                         </tr>
                     </thead>
-                    <tbody id="courses-table-body" class="bg-white divide-y divide-gray-200"></tbody>
+                    <tbody id="courses-table-body" class="bg-white divide-y divide-gray-100"></tbody>
                 </table>
             </div>
         </div>
@@ -552,6 +560,25 @@
                     class="btn-action btn-success flex-1" style="min-height:50px;">📥 가져오기</button>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- 시작 안내 팝업 (작업자 선택 요청) -->
+<div id="startup-popup" class="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8 text-center">
+        <div class="text-5xl mb-4">👋</div>
+        <h3 class="text-xl font-bold text-gray-800 mb-2">안녕하세요!</h3>
+        <p class="text-gray-600 mb-2 text-sm leading-relaxed">
+            인재개발원 교재관리 시스템입니다.
+        </p>
+        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+            <p class="text-blue-800 font-bold text-base">📌 상단의 <span class="underline">작업자 선택</span>을 먼저 해주세요!</p>
+            <p class="text-blue-600 text-xs mt-1">작업자 선택 후 모든 기능을 사용할 수 있습니다.</p>
+        </div>
+        <button onclick="closeStartupPopup()"
+            class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-lg transition">
+            확인
+        </button>
     </div>
 </div>
 
@@ -3501,6 +3528,14 @@ let currentSetupWeekStart = null;
 let availableWeeks = [];
 let statusChart = null;
 
+// 시작 팝업
+function closeStartupPopup() {
+    const el = document.getElementById('startup-popup');
+    if (el) { el.style.display = 'none'; }
+    // 닫은 후 작업자 선택에 포커스
+    setTimeout(() => document.getElementById('current-user').focus(), 200);
+}
+
 // 로딩 오버레이 제어
 function showLoadingOverlay(msg) {
     const el = document.getElementById('loading-overlay');
@@ -3621,16 +3656,30 @@ document.addEventListener('DOMContentLoaded', async function() {
     // ── 2. 사용자 확인 & 삽입 ──
     updateLoadingOverlay('👥 사용자 데이터 확인 중...');
     try {
-        const { data: existingUsers } = await sb.from('users').select('id').limit(1);
+        const { data: existingUsers } = await sb.from('users').select('id,name').limit(20);
         if (!existingUsers || existingUsers.length === 0) {
             await sb.from('users').insert([
-                { name: '김영만', role: '관리자', active: true },
-                { name: '배호용', role: '관리자', active: true },
-                { name: '이선희', role: '관리자', active: true },
-                { name: '주나연', role: '담당자', active: true },
-                { name: '유미정', role: '매니저', active: true },
-                { name: '나영하', role: '매니저', active: true },
+                { name: '교육부 부장',     role: '관리자', active: true },
+                { name: '교육기획팀장',    role: '관리자', active: true },
+                { name: '이선희',          role: '관리자', active: true },
+                { name: '주나연',          role: '담당자', active: true },
+                { name: '유미정',          role: '매니저', active: true },
+                { name: '나영하',          role: '매니저', active: true },
+                { name: '교육진행',        role: '매니저', active: true },
             ]);
+        } else {
+            // 기존 사용자 이름 업데이트 (마이그레이션)
+            const nameMap = { '김영만': '교육부 부장', '배호용': '교육기획팀장' };
+            for (const u of existingUsers) {
+                if (nameMap[u.name]) {
+                    await sb.from('users').update({ name: nameMap[u.name] }).eq('id', u.id);
+                }
+            }
+            // 교육진행 없으면 추가
+            const hasEduProgress = existingUsers.some(u => u.name === '교육진행');
+            if (!hasEduProgress) {
+                await sb.from('users').insert({ name: '교육진행', role: '매니저', active: true });
+            }
         }
     } catch(e) { console.error('사용자 초기화 오류:', e); }
 
@@ -3664,6 +3713,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     // ── 알림 권한 요청 ──
     await requestNotificationPermission();
     updateTabBadge();
+
+    // ── 시작 안내 팝업 표시 ──
+    document.getElementById('startup-popup').style.display = 'flex';
 
     // ── 7. 이벤트 리스너 ──
     document.getElementById('course-form').addEventListener('submit', handleCourseSubmit);
@@ -3875,7 +3927,7 @@ async function loadUsers() {
         const { data, error } = await sb.from('users').select('*').eq('active', true);
         if (error) throw error;
         users = data || [];
-        const userOrder = ['김영만','배호용','이선희','주나연','유미정','나영하'];
+        const userOrder = ['교육부 부장','교육기획팀장','이선희','주나연','유미정','나영하','교육진행'];
         users.sort((a, b) => {
             const ia = userOrder.indexOf(a.name), ib = userOrder.indexOf(b.name);
             return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
@@ -3950,24 +4002,24 @@ function updateCoursesTable(items) {
         return;
     }
     tbody.innerHTML = items.map(item => {
-        const startDate = formatDate(item.start_date, 'YYYY-MM-DD');
+        const startDate = formatDate(item.start_date, 'MM-DD');
         const releaseDate = item.scheduled_release_date ? formatDate(item.scheduled_release_date, 'MM-DD') : '-';
         const stockOk = item.stock_quantity >= item.student_count;
         return `
         <tr class="hover:bg-gray-50">
-            <td class="px-4 py-3"><div class="font-medium text-gray-900">${item.course_name}</div></td>
-            <td class="px-4 py-3 text-sm text-gray-600">${startDate}</td>
-            <td class="px-4 py-3 text-sm font-bold">${item.student_count}명</td>
-            <td class="px-4 py-3 text-sm font-bold ${stockOk ? 'text-green-600' : 'text-red-600'}">
-                ${item.stock_quantity} / ${item.student_count}
-                <span class="text-xs">(${stockOk ? '충분' : '부족'})</span>
+            <td class="px-3 py-2">
+                <div class="font-semibold text-gray-900 text-sm leading-tight">${item.course_name}</div>
+                <div class="text-xs text-gray-400 sm:hidden mt-0.5">${startDate} · <span class="status-badge status-${item.status}" style="font-size:0.65rem;">${item.status}</span></div>
             </td>
-            <td class="px-4 py-3 text-sm text-gray-600">${releaseDate}</td>
-            <td class="px-4 py-3"><span class="status-badge status-${item.status}">${item.status}</span></td>
-            <td class="px-4 py-3 text-sm text-gray-600">${item.classroom || '-'}</td>
-            <td class="px-4 py-3 text-center">
-                <button onclick="editCourse('${item.id}')" class="text-blue-600 hover:text-blue-900 mr-2">✏️</button>
-                <button onclick="deleteCourse('${item.id}')" class="text-red-600 hover:text-red-900">🗑️</button>
+            <td class="px-3 py-2 text-xs text-gray-600 hidden sm:table-cell">${startDate}</td>
+            <td class="px-3 py-2 text-xs font-bold">${item.student_count}명</td>
+            <td class="px-3 py-2 text-xs font-bold hidden sm:table-cell ${stockOk ? 'text-green-600' : 'text-red-600'}">${item.stock_quantity}/${item.student_count}</td>
+            <td class="px-3 py-2 text-xs hidden md:table-cell">${releaseDate}</td>
+            <td class="px-3 py-2 hidden sm:table-cell"><span class="status-badge status-${item.status}" style="font-size:0.7rem;">${item.status}</span></td>
+            <td class="px-3 py-2 text-xs hidden md:table-cell">${item.classroom || '-'}</td>
+            <td class="px-3 py-2 text-center">
+                <button onclick="editCourse('${item.id}')" class="text-blue-600 text-lg mr-1">✏️</button>
+                <button onclick="deleteCourse('${item.id}')" class="text-red-600 text-lg">🗑️</button>
             </td>
         </tr>`;
     }).join('');
@@ -4529,17 +4581,20 @@ function updateAdminCoursesTable(weekCourses) {
     }
     tbody.innerHTML = weekCourses.map(course => `
         <tr class="hover:bg-gray-50">
-            <td class="px-4 py-3"><div class="font-medium text-gray-900">${course.course_name}</div></td>
-            <td class="px-4 py-3 text-sm">${formatDate(course.start_date,'YYYY-MM-DD (ddd)')}</td>
-            <td class="px-4 py-3 text-sm">${formatDate(course.end_date,'YYYY-MM-DD (ddd)')}</td>
-            <td class="px-4 py-3 text-sm font-medium">${course.student_count}명</td>
-            <td class="px-4 py-3 text-sm">${course.classroom || '-'}</td>
-            <td class="px-4 py-3 text-sm">${course.scheduled_release_date ? formatDate(course.scheduled_release_date,'MM-DD') : '-'}</td>
-            <td class="px-4 py-3"><span class="status-badge status-${course.status}">${course.status}</span></td>
-            <td class="px-4 py-3 text-center">
-                <div class="flex items-center justify-center space-x-2">
-                    <button onclick="editAdminCourse('${course.id}')" class="text-blue-600 hover:text-blue-800" title="수정">✏️</button>
-                    <button onclick="deleteAdminCourse('${course.id}')" class="text-red-600 hover:text-red-800" title="삭제">🗑️</button>
+            <td class="px-3 py-2">
+                <div class="font-semibold text-gray-900 text-sm leading-tight">${course.course_name}</div>
+                <div class="text-xs text-gray-400 sm:hidden mt-0.5">${formatDate(course.start_date,'MM-DD')} · ${course.student_count}명</div>
+            </td>
+            <td class="px-3 py-2 text-xs text-gray-600 hidden sm:table-cell">${formatDate(course.start_date,'MM-DD (ddd)')}</td>
+            <td class="px-3 py-2 text-xs text-gray-600 hidden sm:table-cell">${formatDate(course.end_date,'MM-DD (ddd)')}</td>
+            <td class="px-3 py-2 text-xs font-semibold">${course.student_count}명</td>
+            <td class="px-3 py-2 text-xs hidden md:table-cell">${course.classroom || '-'}</td>
+            <td class="px-3 py-2 text-xs hidden md:table-cell">${course.scheduled_release_date ? formatDate(course.scheduled_release_date,'MM-DD') : '-'}</td>
+            <td class="px-3 py-2"><span class="status-badge status-${course.status}" style="font-size:0.7rem;">${course.status}</span></td>
+            <td class="px-3 py-2 text-center">
+                <div class="flex items-center justify-center gap-2">
+                    <button onclick="editAdminCourse('${course.id}')" class="text-blue-600 hover:text-blue-800 text-lg" title="수정">✏️</button>
+                    <button onclick="deleteAdminCourse('${course.id}')" class="text-red-600 hover:text-red-800 text-lg" title="삭제">🗑️</button>
                 </div>
             </td>
         </tr>`).join('');
