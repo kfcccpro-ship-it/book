@@ -160,6 +160,30 @@
             .stock-out-actions { flex-direction: column; }
             .stock-out-actions .note-input { width: 100%; }
         }
+
+        /* ── 텍스트 줄바꿈 제어 (글자 단위 줄바꿈 방지) ── */
+        * { word-break: keep-all; overflow-wrap: break-word; }
+
+        /* ── 모바일 최소 글자 크기: text-xs(0.75rem) → 0.85rem ── */
+        .text-xs { font-size: 0.85rem !important; }
+        /* status-badge 내 강제 크기 예외 처리 */
+        .status-badge { font-size: 0.82rem !important; }
+
+        /* ── 나브 버튼 글자 크기 ── */
+        .nav-btn { font-size: 0.9rem; }
+
+        /* ── 테이블 헤더/셀 최소 크기 ── */
+        table th, table td { font-size: 0.85rem !important; }
+
+        /* ── 카드 내 보조 텍스트 ── */
+        .course-card .text-xs { font-size: 0.85rem !important; }
+
+        /* ── 상태별 모니터링 소글씨 ── */
+        #admin-monitor-content .text-xs { font-size: 0.82rem !important; }
+
+        /* ── 긴급작업 상태 뱃지 인라인 ── */
+        .status-badge[style*="0.7rem"] { font-size: 0.82rem !important; }
+        .status-badge[style*="0.65rem"] { font-size: 0.82rem !important; }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -197,11 +221,11 @@
     <div class="container mx-auto px-0">
         <ul class="nav-scroll">
             <li><button onclick="showPage('dashboard')" class="nav-btn hover:bg-gray-100" data-page="dashboard">📈 대시보드</button></li>
-            <li><button onclick="showPage('courses')"   class="nav-btn hover:bg-gray-100" data-page="courses">📋 과정조회</button></li>
             <li><button onclick="showPage('stock')"     class="nav-btn hover:bg-gray-100" data-page="stock">🏭 입출고</button></li>
             <li><button onclick="showPage('setup')"     class="nav-btn hover:bg-gray-100" data-page="setup">✅ 세팅</button></li>
             <li><button onclick="showPage('logs')"      class="nav-btn hover:bg-gray-100" data-page="logs">🕐 이력</button></li>
             <li><button onclick="showPage('admin')"     class="nav-btn hover:bg-gray-100" data-page="admin">⚙️ 과정관리</button></li>
+            <li><button onclick="showPage('courses')"   class="nav-btn hover:bg-gray-100" data-page="courses">📋 과정조회</button></li>
         </ul>
     </div>
 </nav>
@@ -279,7 +303,7 @@
     <div id="page-admin" class="page-content hidden">
         <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
             <h2 class="text-xl font-bold text-gray-800">⚙️ 과정 관리</h2>
-            <button onclick="openAdminCourseModal()" class="btn-action btn-primary px-4" style="min-height:40px;font-size:0.85rem;">➕ 과정 추가</button>
+            <button onclick="openAdminCourseModal()" class="btn-action btn-primary px-4" style="min-height:40px;font-size:0.92rem;">➕ 과정 추가</button>
         </div>
         <div id="admin-permission-alert" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl mb-4 hidden text-sm">
             ⚠️ <strong>접근 권한 없음</strong> — 관리자와 담당자만 접근할 수 있습니다.
@@ -330,8 +354,8 @@
         <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
             <h2 class="text-xl font-bold text-gray-800">📋 과정 조회</h2>
             <div class="flex gap-2">
-                <button onclick="openImportModal()" class="btn-action btn-success px-3" style="min-height:38px;font-size:0.8rem;">📥 가져오기</button>
-                <button onclick="openCourseModal()" class="btn-action btn-primary px-3" style="min-height:38px;font-size:0.8rem;">➕ 추가</button>
+                <button onclick="openImportModal()" class="btn-action btn-success px-3" style="min-height:38px;font-size:0.92rem;">📥 가져오기</button>
+                <button onclick="openCourseModal()" class="btn-action btn-primary px-3" style="min-height:38px;font-size:0.92rem;">➕ 추가</button>
             </div>
         </div>
         <!-- 주차 선택 -->
@@ -3636,7 +3660,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 <h2 style="font-size:1.4rem;font-weight:800;color:#1e293b;margin-bottom:12px;">DB 연결 실패</h2>
                 <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:16px;margin-bottom:20px;text-align:left;">
                     <p style="color:#991b1b;font-size:0.9rem;font-weight:600;margin-bottom:8px;">오류 내용:</p>
-                    <p style="color:#7f1d1d;font-size:0.85rem;word-break:break-all;">${e.message}</p>
+                    <p style="color:#7f1d1d;font-size:0.85rem;word-break:keep-all;">${e.message}</p>
                 </div>
                 <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:12px;padding:16px;margin-bottom:24px;text-align:left;">
                     <p style="color:#0369a1;font-size:0.9rem;font-weight:700;margin-bottom:8px;">✅ 해결 방법:</p>
@@ -4009,13 +4033,13 @@ function updateCoursesTable(items) {
         <tr class="hover:bg-gray-50">
             <td class="px-3 py-2">
                 <div class="font-semibold text-gray-900 text-sm leading-tight">${item.course_name}</div>
-                <div class="text-xs text-gray-400 sm:hidden mt-0.5">${startDate} · <span class="status-badge status-${item.status}" style="font-size:0.65rem;">${item.status}</span></div>
+                <div class="text-xs text-gray-400 sm:hidden mt-0.5">${startDate} · <span class="status-badge status-${item.status}" style="font-size:0.82rem;">${item.status}</span></div>
             </td>
             <td class="px-3 py-2 text-xs text-gray-600 hidden sm:table-cell">${startDate}</td>
             <td class="px-3 py-2 text-xs font-bold">${item.student_count}명</td>
             <td class="px-3 py-2 text-xs font-bold hidden sm:table-cell ${stockOk ? 'text-green-600' : 'text-red-600'}">${item.stock_quantity}/${item.student_count}</td>
             <td class="px-3 py-2 text-xs hidden md:table-cell">${releaseDate}</td>
-            <td class="px-3 py-2 hidden sm:table-cell"><span class="status-badge status-${item.status}" style="font-size:0.7rem;">${item.status}</span></td>
+            <td class="px-3 py-2 hidden sm:table-cell"><span class="status-badge status-${item.status}" style="font-size:0.82rem;">${item.status}</span></td>
             <td class="px-3 py-2 text-xs hidden md:table-cell">${item.classroom || '-'}</td>
             <td class="px-3 py-2 text-center">
                 <button onclick="editCourse('${item.id}')" class="text-blue-600 text-lg mr-1">✏️</button>
@@ -4074,32 +4098,48 @@ function updateWeekSummary(weekCourses) {
 function updateTimeline(courseList) {
     const container = document.getElementById('timeline-container');
     if (courseList.length === 0) {
-        container.innerHTML = `<div class="text-center py-8 text-gray-500">🗓️<p>선택한 기간에 예정된 과정이 없습니다.</p></div>`;
+        container.innerHTML = `<div class="text-center py-6 text-gray-400">🗓️<p>선택한 기간에 예정된 과정이 없습니다.</p></div>`;
         return;
     }
     const sorted = [...courseList].sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
     container.innerHTML = sorted.map(course => {
-        const startDate   = formatDate(course.start_date, 'MM월 DD일 (ddd)');
-        const releaseDate = course.scheduled_release_date ? formatDate(course.scheduled_release_date, 'MM월 DD일') : '미정';
-        const daysUntil   = Math.ceil((new Date(course.start_date) - new Date()) / (1000 * 60 * 60 * 24));
-        const urgentClass = daysUntil <= 3 ? 'border-red-500 bg-red-50' : '';
+        const startDate   = formatDate(course.start_date, 'MM.DD (ddd)');
+        const releaseDate = course.scheduled_release_date
+            ? formatDate(course.scheduled_release_date, 'MM.DD (ddd)') : '미정';
+        const daysUntil = Math.ceil((new Date(course.start_date) - new Date()) / (1000 * 60 * 60 * 24));
+        const borderColor = daysUntil <= 3 ? 'border-red-500' : 'border-blue-400';
+        const bgColor     = daysUntil <= 3 ? 'bg-red-50' : 'bg-white';
         return `
-        <div class="border-l-4 ${urgentClass || 'border-blue-500'} pl-4 py-3 hover:bg-gray-50 transition">
-            <div class="flex items-start justify-between">
-                <div class="flex-1">
-                    <div class="flex items-center space-x-3 mb-2">
-                        <h4 class="font-bold text-lg text-gray-800">${course.course_name}</h4>
+        <div class="border-l-4 ${borderColor} ${bgColor} pl-4 py-3 rounded-r-xl">
+            <div class="flex items-start justify-between gap-2">
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center flex-wrap gap-2 mb-2">
+                        <h4 class="font-bold text-base text-gray-800 leading-tight">${course.course_name}</h4>
                         <span class="status-badge status-${course.status}">${course.status}</span>
-                        ${daysUntil <= 3 && daysUntil >= 0 ? `<span class="px-2 py-1 bg-red-600 text-white text-xs rounded-full">D-${daysUntil}</span>` : ''}
+                        ${daysUntil <= 3 && daysUntil >= 0
+                            ? `<span class="px-2 py-0.5 bg-red-600 text-white text-sm font-bold rounded-full">D-${daysUntil}</span>` : ''}
                     </div>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                        <div><span class="text-gray-500">시작일:</span><span class="font-medium ml-1">${startDate}</span></div>
-                        <div><span class="text-gray-500">출고예정:</span><span class="font-medium ml-1">${releaseDate}</span></div>
-                        <div><span class="text-gray-500">인원:</span><span class="font-medium ml-1">${course.student_count}명</span></div>
-                        <div><span class="text-gray-500">재고:</span><span class="font-medium ml-1 ${course.stock_quantity >= course.student_count ? 'text-green-600' : 'text-red-600'}">${course.stock_quantity}/${course.student_count}</span></div>
+                    <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                        <div class="flex flex-col">
+                            <span class="text-gray-400 text-xs font-semibold">시작일</span>
+                            <span class="font-semibold text-gray-800">${startDate}</span>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-gray-400 text-xs font-semibold">출고 예정</span>
+                            <span class="font-semibold text-orange-700">${releaseDate}</span>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-gray-400 text-xs font-semibold">인원</span>
+                            <span class="font-semibold text-gray-800">${course.student_count}명</span>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-gray-400 text-xs font-semibold">재고</span>
+                            <span class="font-semibold ${course.stock_quantity >= course.student_count ? 'text-green-600' : 'text-red-600'}">${course.stock_quantity}/${course.student_count}</span>
+                        </div>
                     </div>
                 </div>
-                <button onclick="viewCourseDetail('${course.id}')" class="ml-4 text-blue-600 hover:text-blue-800">›</button>
+                <button onclick="viewCourseDetail('${course.id}')"
+                    class="text-blue-500 text-2xl flex-shrink-0 px-1">›</button>
             </div>
         </div>`;
     }).join('');
@@ -4190,9 +4230,10 @@ function updateUrgentTasks(courseList) {
             <div class="flex items-center gap-3 min-w-0">
                 <span class="px-2 py-1 bg-red-600 text-white text-sm font-bold rounded-lg flex-shrink-0">D-${d}</span>
                 <div class="min-w-0">
-                    <div class="font-bold text-gray-900 text-sm leading-tight truncate">${task.course_name}</div>
-                    <div class="text-xs text-gray-500 mt-0.5">
-                        현재 상태: <span class="font-semibold status-badge status-${task.status}" style="font-size:0.7rem;padding:0.1rem 0.4rem;">${task.status}</span>
+                    <div class="font-bold text-gray-900 text-sm leading-tight"
+                         style="word-break:keep-all;">${task.course_name}</div>
+                    <div class="text-sm text-gray-500 mt-0.5">
+                        현재: <span class="font-semibold status-badge status-${task.status}" style="font-size:0.82rem;">${task.status}</span>
                     </div>
                 </div>
             </div>
@@ -4276,7 +4317,7 @@ function updateStockInList(list) {
             <div class="flex items-start justify-between gap-2 mb-3">
                 <div class="flex-1 min-w-0">
                     <div class="flex items-center flex-wrap gap-2 mb-1">
-                        <h4 class="font-bold text-base leading-tight">${course.course_name}</h4>
+                        <h4 class="font-bold text-base leading-tight" style="word-break:keep-all;">${course.course_name}</h4>
                         <span class="status-badge status-${course.status}">${course.status}</span>
                     </div>
                     <div class="grid grid-cols-3 gap-2 text-xs text-gray-600 mt-2">
@@ -4373,7 +4414,7 @@ function updateStockOutList(list) {
             <div class="flex items-start gap-2 mb-2">
                 <div class="flex-1 min-w-0">
                     <div class="flex items-center flex-wrap gap-2 mb-2">
-                        <h4 class="font-bold text-base leading-tight">${course.course_name}</h4>
+                        <h4 class="font-bold text-base leading-tight" style="word-break:keep-all;">${course.course_name}</h4>
                         <span class="status-badge status-${course.status}">${course.status}</span>
                         ${isReady ? `<span class="px-2 py-0.5 bg-blue-600 text-white text-xs rounded-full font-bold">출고 준비완료</span>` : ''}
                     </div>
@@ -4521,21 +4562,21 @@ function updateSetupList(containerId, list, statusType) {
             <div class="flex items-center justify-between flex-wrap gap-3">
                 <div class="flex-1 min-w-0">
                     <div class="flex items-center flex-wrap gap-2 mb-2">
-                        <h4 class="font-bold text-base">${course.course_name}</h4>
+                        <h4 class="font-bold text-base" style="word-break:keep-all;">${course.course_name}</h4>
                         <span class="status-badge status-${course.status}">${course.status}</span>
                     </div>
-                    <div class="grid grid-cols-3 gap-2 text-xs text-gray-500">
-                        <div class="flex flex-col"><span>인원</span><span class="font-bold text-gray-800 text-sm">${course.student_count}명</span></div>
-                        <div class="flex flex-col"><span>강의실</span><span class="font-bold text-gray-800 text-sm">${course.classroom || '-'}</span></div>
-                        <div class="flex flex-col"><span>시작일</span><span class="font-bold text-gray-800 text-sm">${formatDate(course.start_date,'MM-DD')}</span></div>
+                    <div class="grid grid-cols-3 gap-2 text-sm text-gray-500">
+                        <div class="flex flex-col"><span class="text-xs font-semibold text-gray-400">인원</span><span class="font-bold text-gray-800">${course.student_count}명</span></div>
+                        <div class="flex flex-col"><span class="text-xs font-semibold text-gray-400">강의실</span><span class="font-bold text-gray-800">${course.classroom || '-'}</span></div>
+                        <div class="flex flex-col"><span class="text-xs font-semibold text-gray-400">시작일</span><span class="font-bold text-gray-800">${formatDate(course.start_date,'MM-DD (ddd)')}</span></div>
                     </div>
-                    ${statusType === '세팅완료대기' ? `<p class="text-xs text-yellow-700 font-semibold mt-2">⏳ 담당자 최종 확인 대기 중</p>` : ''}
+                    ${statusType === '세팅완료대기' ? `<p class="text-sm text-yellow-700 font-semibold mt-2">⏳ 관리자 최종 확인 대기 중</p>` : ''}
                 </div>
                 <div class="flex flex-col gap-2 w-full sm:w-auto">
                     ${statusType === '출고확인'    && canStartSetup    ? `<button onclick="startSetup('${course.id}')"       class="btn-action btn-purple flex-1 sm:flex-none px-5" style="min-height:46px;">▶️ 세팅 시작</button>` : ''}
                     ${statusType === '세팅중'      && canCompleteSetup ? `<button onclick="completeSetup('${course.id}')"    class="btn-action btn-success flex-1 sm:flex-none px-5" style="min-height:46px;">✔️ 세팅 완료</button>` : ''}
                     ${statusType === '세팅완료대기' && canFinalConfirm  ? `<button onclick="finalConfirmSetup('${course.id}')" class="btn-action btn-primary flex-1 sm:flex-none px-5" style="min-height:46px;background:#1d4ed8;">✅ 관리자 최종 확인</button>` : ''}
-                    ${currentUser?.role === '관리자' ? `<button onclick="adminRollback('${course.id}','${course.status}')" class="btn-action flex-shrink-0 px-3" style="min-height:46px;background:#6b7280;font-size:0.75rem;" title="관리자 상태 롤백">↩ 롤백</button>` : ''}
+                    ${currentUser?.role === '관리자' ? `<button onclick="adminRollback('${course.id}','${course.status}')" class="btn-action flex-shrink-0 px-3" style="min-height:46px;background:#6b7280;font-size:0.85rem;" title="관리자 상태 롤백">↩ 롤백</button>` : ''}
                 </div>
             </div>
         </div>`).join('');
@@ -4590,7 +4631,7 @@ function updateAdminCoursesTable(weekCourses) {
             <td class="px-3 py-2 text-xs font-semibold">${course.student_count}명</td>
             <td class="px-3 py-2 text-xs hidden md:table-cell">${course.classroom || '-'}</td>
             <td class="px-3 py-2 text-xs hidden md:table-cell">${course.scheduled_release_date ? formatDate(course.scheduled_release_date,'MM-DD') : '-'}</td>
-            <td class="px-3 py-2"><span class="status-badge status-${course.status}" style="font-size:0.7rem;">${course.status}</span></td>
+            <td class="px-3 py-2"><span class="status-badge status-${course.status}" style="font-size:0.82rem;">${course.status}</span></td>
             <td class="px-3 py-2 text-center">
                 <div class="flex items-center justify-center gap-2">
                     <button onclick="editAdminCourse('${course.id}')" class="text-blue-600 hover:text-blue-800 text-lg" title="수정">✏️</button>
@@ -5277,12 +5318,12 @@ function updateNavBadges() {
 
     if (stockBtn) {
         stockBtn.innerHTML = stockNeeds > 0
-            ? `🏭 입출고 <span style="background:#ef4444;color:white;border-radius:999px;padding:0 6px;font-size:0.7rem;font-weight:800;">${stockNeeds}</span>`
+            ? `🏭 입출고 <span style="background:#ef4444;color:white;border-radius:999px;padding:0 6px;font-size:0.82rem;font-weight:800;">${stockNeeds}</span>`
             : '🏭 입출고';
     }
     if (setupBtn) {
         setupBtn.innerHTML = setupNeeds > 0
-            ? `✅ 세팅 <span style="background:#ef4444;color:white;border-radius:999px;padding:0 6px;font-size:0.7rem;font-weight:800;">${setupNeeds}</span>`
+            ? `✅ 세팅 <span style="background:#ef4444;color:white;border-radius:999px;padding:0 6px;font-size:0.82rem;font-weight:800;">${setupNeeds}</span>`
             : '✅ 세팅';
     }
 }
