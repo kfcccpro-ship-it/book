@@ -4615,7 +4615,7 @@ function updateSetupList(containerId, list, statusType, logsMap = {}) {
     const canStartSetup    = currentUser && ['매니저','관리자'].includes(currentUser.role);
     const canCompleteSetup = currentUser && ['매니저','관리자'].includes(currentUser.role);
     const canFinalConfirm  = currentUser && currentUser.role === '관리자';
-    const canExtraRelease  = currentUser && ['매니저','관리자'].includes(currentUser.role);
+    const canExtraRelease  = currentUser && ['매니저','담당자','관리자'].includes(currentUser.role);
 
     container.innerHTML = list.map(course => {
         const logs = logsMap[course.id] || [];
@@ -5477,8 +5477,8 @@ function notifyAction(actionType, courseName, targetRole) {
 // ============================================================
 function openExtraReleaseModal(courseId) {
     if (!requireUser()) return;
-    if (!['매니저','관리자'].includes(currentUser.role)) {
-        showNotification('매니저/관리자만 추가 출고할 수 있습니다.', 'error'); return;
+    if (!['매니저','담당자','관리자'].includes(currentUser.role)) {
+        showNotification('매니저/담당자/관리자만 추가 출고할 수 있습니다.', 'error'); return;
     }
     const course = courses.find(c => c.id === courseId);
     if (!course) return;
@@ -5522,8 +5522,8 @@ function calcExtraReleaseRemain() {
 
 async function submitExtraRelease() {
     if (!requireUser()) return;
-    if (!['매니저','관리자'].includes(currentUser.role)) {
-        showNotification('매니저/관리자만 추가 출고할 수 있습니다.', 'error'); return;
+    if (!['매니저','담당자','관리자'].includes(currentUser.role)) {
+        showNotification('매니저/담당자/관리자만 추가 출고할 수 있습니다.', 'error'); return;
     }
     const courseId = document.getElementById('extra-release-course-id').value;
     const input    = document.getElementById('extra-release-quantity');
