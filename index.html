@@ -461,7 +461,8 @@
             <div id="setup-complete-list" class="space-y-3"></div>
         </div>
         <div class="bg-white rounded-xl shadow-sm p-4">
-            <h3 class="text-base font-bold mb-3 text-green-700">✅ 세팅 완료 <span class="text-xs font-normal text-gray-400">(담당자 최종확인 완료)</span></h3>
+            <h3 class="text-base font-bold mb-1 text-green-700">✅ 세팅 완료 <span class="text-xs font-normal text-gray-400">(선택 주차 전체 누적)</span></h3>
+            <p class="text-xs text-gray-400 mb-3">세팅 처리자 · 관리자 확인 정보 · 추가출고 내역 포함</p>
             <div id="setup-final-list" class="space-y-3"></div>
         </div>
     </div>
@@ -475,6 +476,7 @@
                     <select id="log-filter-type" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
                         <option value="">전체</option>
                         <option value="입고">입고</option><option value="출고">출고</option>
+                        <option value="추가출고">추가출고</option>
                         <option value="확인">확인</option>
                         <option value="세팅">세팅</option><option value="수정">수정</option>
                         <option value="승인">승인</option><option value="완료">완료</option><option value="삭제">삭제</option>
@@ -762,6 +764,45 @@
                     class="btn-action btn-gray flex-1" style="min-height:52px;">취소</button>
                 <button onclick="submitStockOutModal()"
                     class="btn-action btn-orange flex-1" style="min-height:52px;">🚚 출고 완료</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 추가출고 모달 -->
+<div id="extra-release-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+    <div class="modal-box">
+        <div class="flex items-center justify-between p-5 border-b">
+            <h3 class="text-xl font-bold text-gray-800" id="extra-release-title">📤 추가 출고</h3>
+            <button onclick="closeExtraReleaseModal()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">✕</button>
+        </div>
+        <div class="p-5">
+            <input type="hidden" id="extra-release-course-id">
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4 text-sm text-amber-900">
+                📌 세팅 완료 후 현장에서 추가로 필요한 교재를 출고합니다.<br>
+                <span id="extra-release-stock-info" class="font-bold mt-1 block text-amber-800"></span>
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">추가 출고 수량 (권)</label>
+                <input type="number" id="extra-release-quantity" min="1"
+                    oninput="calcExtraReleaseRemain()"
+                    class="modal-input modal-input-lg"
+                    inputmode="numeric" pattern="[0-9]*">
+            </div>
+            <div class="flex items-center justify-between mb-5 px-1">
+                <span class="text-sm text-gray-500">추가 출고 후 잔여</span>
+                <span id="extra-release-remain" class="font-bold text-xl text-green-700">-</span>
+            </div>
+            <div class="mb-5">
+                <label class="block text-sm font-medium text-gray-700 mb-2">출고 사유 (필수)</label>
+                <textarea id="extra-release-notes" rows="2" placeholder="예: 강의실 추가 배치, 분실 보충 등"
+                    class="modal-input"></textarea>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="closeExtraReleaseModal()"
+                    class="btn-action btn-gray flex-1" style="min-height:52px;">취소</button>
+                <button onclick="submitExtraRelease()"
+                    class="btn-action flex-1" style="min-height:52px;background:#d97706;color:white;border:none;border-radius:12px;font-weight:700;">📤 추가 출고</button>
             </div>
         </div>
     </div>
@@ -4524,62 +4565,153 @@ async function loadSetupManagement() {
 
     const sort = (a, b) => new Date(a.start_date) - new Date(b.start_date);
 
-    // 세팅 대기/진행/완료대기: 주차 무관 — 담당자 확인된 것은 항상 표시
-    const waiting    = courses.filter(c => c.status === '출고확인').sort(sort);
-    const progress   = courses.filter(c => c.status === '세팅중').sort(sort);
-    const finalWait  = courses.filter(c => c.status === '세팅완료대기').sort(sort);
+    const waiting   = courses.filter(c => c.status === '출고확인').sort(sort);
+    const progress  = courses.filter(c => c.status === '세팅중').sort(sort);
+    const finalWait = courses.filter(c => c.status === '세팅완료대기').sort(sort);
 
-    // 세팅완료: 선택 주차 기준
-    const completed  = courses.filter(c => {
+    // 세팅완료: 선택 주차 내 전체 (시작일 기준)
+    const completed = courses.filter(c => {
         const sd = new Date(c.start_date);
         return c.status === '세팅완료' && sd >= currentSetupWeekStart && sd <= weekEnd;
     }).sort(sort);
 
-    updateSetupList('setup-waiting-list',  waiting,   '출고확인');
-    updateSetupList('setup-progress-list', progress,  '세팅중');
-    updateSetupList('setup-complete-list', finalWait, '세팅완료대기');
-    updateSetupList('setup-final-list',    completed, '세팅완료');
+    // 세팅완료 과정들의 work_logs 조회 (처리자·확인자·추가출고 표시용)
+    let logsMap = {};
+    if (completed.length > 0) {
+        try {
+            const ids = completed.map(c => c.id);
+            const { data: logs } = await sb.from('work_logs')
+                .select('*')
+                .in('course_id', ids)
+                .order('action_date', { ascending: true });
+            if (logs) {
+                logs.forEach(log => {
+                    if (!logsMap[log.course_id]) logsMap[log.course_id] = [];
+                    logsMap[log.course_id].push(log);
+                });
+            }
+        } catch(e) { console.error('세팅완료 로그 조회 오류:', e); }
+    }
+
+    updateSetupList('setup-waiting-list',  waiting,   '출고확인',    {});
+    updateSetupList('setup-progress-list', progress,  '세팅중',      {});
+    updateSetupList('setup-complete-list', finalWait, '세팅완료대기', {});
+    updateSetupList('setup-final-list',    completed, '세팅완료',    logsMap);
 }
 
-function updateSetupList(containerId, list, statusType) {
+function updateSetupList(containerId, list, statusType, logsMap = {}) {
     const container = document.getElementById(containerId);
     if (list.length === 0) {
         const emptyMsgs = {
-            '출고확인': '세팅 대기 과정이 없습니다.',
-            '세팅중': '세팅 진행 중인 과정이 없습니다.',
-            '세팅완료대기': '담당자 최종확인 대기 중인 과정이 없습니다.',
-            '세팅완료': '세팅 완료된 과정이 없습니다.'
+            '출고확인':    '세팅 대기 과정이 없습니다.',
+            '세팅중':      '세팅 진행 중인 과정이 없습니다.',
+            '세팅완료대기': '관리자 최종확인 대기 중인 과정이 없습니다.',
+            '세팅완료':    '이번 주차 세팅 완료된 과정이 없습니다.'
         };
         container.innerHTML = `<div class="text-center py-6 text-gray-400"><p>${emptyMsgs[statusType] || '과정이 없습니다.'}</p></div>`;
         return;
     }
-    const canStartSetup   = currentUser && ['매니저','관리자'].includes(currentUser.role);
-    const canCompleteSetup = currentUser && ['매니저','관리자'].includes(currentUser.role);
-    const canFinalConfirm  = currentUser && currentUser.role === '관리자'; // 관리자만 최종확인
 
-    container.innerHTML = list.map(course => `
-        <div class="course-card border-gray-200">
-            <div class="flex items-center justify-between flex-wrap gap-3">
+    const canStartSetup    = currentUser && ['매니저','관리자'].includes(currentUser.role);
+    const canCompleteSetup = currentUser && ['매니저','관리자'].includes(currentUser.role);
+    const canFinalConfirm  = currentUser && currentUser.role === '관리자';
+    const canExtraRelease  = currentUser && ['매니저','관리자'].includes(currentUser.role);
+
+    container.innerHTML = list.map(course => {
+        const logs = logsMap[course.id] || [];
+
+        // ── 세팅완료 전용: 처리 이력 추출 ──
+        let setupInfo = '', confirmInfo = '', extraReleaseInfo = '';
+        let totalExtraReleased = 0;
+
+        if (statusType === '세팅완료') {
+            // 세팅 시작한 사람 & 날짜
+            const setupLog = logs.find(l => l.action_type === '세팅' && l.new_status === '세팅중');
+            // 세팅 완료한 사람 & 날짜 (매니저가 완료 버튼)
+            const completeLog = logs.find(l => l.action_type === '완료' && l.previous_status === '세팅중');
+            // 관리자 최종확인
+            const confirmLog = logs.find(l => l.action_type === '완료' && l.previous_status === '세팅완료대기');
+            // 추가출고 로그들
+            const extraLogs = logs.filter(l => l.action_type === '추가출고');
+            totalExtraReleased = extraLogs.reduce((sum, l) => sum + (l.quantity || 0), 0);
+
+            // 세팅 처리자 정보
+            if (completeLog) {
+                setupInfo = `<div class="flex items-center gap-2 text-sm">
+                    <span class="text-gray-400">🔧 세팅 완료</span>
+                    <span class="font-semibold text-gray-700">${completeLog.user_name}</span>
+                    <span class="text-gray-400 text-xs">${formatDate(completeLog.action_date, 'MM.DD HH:mm')}</span>
+                </div>`;
+            } else if (setupLog) {
+                setupInfo = `<div class="text-sm text-gray-500">🔧 세팅: ${setupLog.user_name} · ${formatDate(setupLog.action_date,'MM.DD')}</div>`;
+            }
+
+            // 관리자 최종확인 정보
+            if (confirmLog) {
+                confirmInfo = `<div class="flex items-center gap-2 text-sm">
+                    <span class="text-gray-400">✅ 관리자 확인</span>
+                    <span class="font-semibold text-blue-700">${confirmLog.user_name}</span>
+                    <span class="text-gray-400 text-xs">${formatDate(confirmLog.action_date, 'MM.DD HH:mm')}</span>
+                </div>`;
+            } else {
+                confirmInfo = `<div class="text-sm text-amber-600 font-semibold">⏳ 관리자 확인 대기 중</div>`;
+            }
+
+            // 추가출고 내역
+            if (extraLogs.length > 0) {
+                const extraItems = extraLogs.map(l =>
+                    `<span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-xs font-semibold">${l.user_name} +${l.quantity}권 (${formatDate(l.action_date,'MM.DD')})</span>`
+                ).join(' ');
+                extraReleaseInfo = `<div class="mt-2 pt-2 border-t border-gray-100">
+                    <div class="text-xs text-gray-400 mb-1 font-semibold">📤 추가출고 내역 (총 ${totalExtraReleased}권)</div>
+                    <div class="flex flex-wrap gap-1">${extraItems}</div>
+                </div>`;
+            }
+        }
+
+        // 잔고 계산 (추가출고 포함)
+        const stock        = course.stock_quantity || 0;
+        const released     = course.released_quantity ?? course.student_count;
+        const remaining    = stock - released - totalExtraReleased;
+
+        return `
+        <div class="course-card ${statusType === '세팅완료' ? 'border-green-200 bg-green-50' : 'border-gray-200'}">
+            <div class="flex items-start justify-between flex-wrap gap-3">
                 <div class="flex-1 min-w-0">
                     <div class="flex items-center flex-wrap gap-2 mb-2">
                         <h4 class="font-bold text-base" style="word-break:keep-all;">${course.course_name}</h4>
                         <span class="status-badge status-${course.status}">${course.status}</span>
                     </div>
-                    <div class="grid grid-cols-3 gap-2 text-sm text-gray-500">
+                    <div class="grid grid-cols-3 gap-2 text-sm text-gray-500 mb-2">
                         <div class="flex flex-col"><span class="text-xs font-semibold text-gray-400">인원</span><span class="font-bold text-gray-800">${course.student_count}명</span></div>
                         <div class="flex flex-col"><span class="text-xs font-semibold text-gray-400">강의실</span><span class="font-bold text-gray-800">${course.classroom || '-'}</span></div>
                         <div class="flex flex-col"><span class="text-xs font-semibold text-gray-400">시작일</span><span class="font-bold text-gray-800">${formatDate(course.start_date,'MM-DD (ddd)')}</span></div>
                     </div>
+                    ${statusType === '세팅완료' ? `
+                    <div class="bg-white rounded-xl p-3 border border-green-200 space-y-1.5 mt-2">
+                        ${setupInfo}
+                        ${confirmInfo}
+                        <div class="flex items-center gap-3 text-sm pt-1 border-t border-gray-100 mt-1">
+                            <span class="text-gray-400">📦 출고</span>
+                            <span class="font-bold text-orange-700">${released}권</span>
+                            ${totalExtraReleased > 0 ? `<span class="text-gray-400">+ 추가</span><span class="font-bold text-amber-700">${totalExtraReleased}권</span>` : ''}
+                            <span class="text-gray-400">→ 잔여</span>
+                            <span class="font-bold ${remaining < 0 ? 'text-red-600' : 'text-blue-700'}">${remaining}권</span>
+                        </div>
+                        ${extraReleaseInfo}
+                    </div>` : ''}
                     ${statusType === '세팅완료대기' ? `<p class="text-sm text-yellow-700 font-semibold mt-2">⏳ 관리자 최종 확인 대기 중</p>` : ''}
                 </div>
                 <div class="flex flex-col gap-2 w-full sm:w-auto">
-                    ${statusType === '출고확인'    && canStartSetup    ? `<button onclick="startSetup('${course.id}')"       class="btn-action btn-purple flex-1 sm:flex-none px-5" style="min-height:46px;">▶️ 세팅 시작</button>` : ''}
-                    ${statusType === '세팅중'      && canCompleteSetup ? `<button onclick="completeSetup('${course.id}')"    class="btn-action btn-success flex-1 sm:flex-none px-5" style="min-height:46px;">✔️ 세팅 완료</button>` : ''}
+                    ${statusType === '출고확인'    && canStartSetup    ? `<button onclick="startSetup('${course.id}')" class="btn-action btn-purple flex-1 sm:flex-none px-5" style="min-height:46px;">▶️ 세팅 시작</button>` : ''}
+                    ${statusType === '세팅중'      && canCompleteSetup ? `<button onclick="completeSetup('${course.id}')" class="btn-action btn-success flex-1 sm:flex-none px-5" style="min-height:46px;">✔️ 세팅 완료</button>` : ''}
                     ${statusType === '세팅완료대기' && canFinalConfirm  ? `<button onclick="finalConfirmSetup('${course.id}')" class="btn-action btn-primary flex-1 sm:flex-none px-5" style="min-height:46px;background:#1d4ed8;">✅ 관리자 최종 확인</button>` : ''}
+                    ${statusType === '세팅완료'    && canExtraRelease  ? `<button onclick="openExtraReleaseModal('${course.id}')" class="btn-action flex-1 sm:flex-none px-5" style="min-height:46px;background:#d97706;color:white;border:none;border-radius:12px;font-weight:700;">📤 추가 출고</button>` : ''}
                     ${currentUser?.role === '관리자' ? `<button onclick="adminRollback('${course.id}','${course.status}')" class="btn-action flex-shrink-0 px-3" style="min-height:46px;background:#6b7280;font-size:0.85rem;" title="관리자 상태 롤백">↩ 롤백</button>` : ''}
                 </div>
             </div>
-        </div>`).join('');
+        </div>`;
+    }).join('');
 }
 
 // 관리자 과정 관리
@@ -5338,6 +5470,101 @@ function notifyAction(actionType, courseName, targetRole) {
         `${courseName}\n${roleLabel} 확인이 필요합니다.`,
         'mg-action-' + Date.now()
     );
+}
+
+// ============================================================
+//  추가출고 (세팅완료 후 현장 추가 출고)
+// ============================================================
+function openExtraReleaseModal(courseId) {
+    if (!requireUser()) return;
+    if (!['매니저','관리자'].includes(currentUser.role)) {
+        showNotification('매니저/관리자만 추가 출고할 수 있습니다.', 'error'); return;
+    }
+    const course = courses.find(c => c.id === courseId);
+    if (!course) return;
+
+    const stock     = course.stock_quantity || 0;
+    const released  = course.released_quantity ?? course.student_count;
+
+    document.getElementById('extra-release-course-id').value = courseId;
+    document.getElementById('extra-release-title').textContent = `📤 추가 출고 — ${course.course_name}`;
+    document.getElementById('extra-release-stock-info').textContent =
+        `현재 재고: ${stock}권 | 기존 출고: ${released}권 | 현재 잔여: ${stock - released}권`;
+    document.getElementById('extra-release-quantity').value = '';
+    document.getElementById('extra-release-quantity').dataset.stock    = stock;
+    document.getElementById('extra-release-quantity').dataset.released = released;
+    document.getElementById('extra-release-notes').value = '';
+    document.getElementById('extra-release-remain').textContent = '-';
+    document.getElementById('extra-release-modal').classList.remove('hidden');
+    document.getElementById('extra-release-modal').classList.add('flex');
+    setTimeout(() => document.getElementById('extra-release-quantity').focus(), 100);
+}
+
+function closeExtraReleaseModal() {
+    document.getElementById('extra-release-modal').classList.add('hidden');
+    document.getElementById('extra-release-modal').classList.remove('flex');
+}
+
+function calcExtraReleaseRemain() {
+    const input    = document.getElementById('extra-release-quantity');
+    const stock    = parseInt(input.dataset.stock)    || 0;
+    const released = parseInt(input.dataset.released) || 0;
+    const extra    = parseInt(input.value) || 0;
+    const remain   = stock - released - extra;
+    const el       = document.getElementById('extra-release-remain');
+    el.textContent = remain + '권';
+    el.className   = remain < 0
+        ? 'font-bold text-xl text-red-600'
+        : remain === 0
+        ? 'font-bold text-xl text-orange-600'
+        : 'font-bold text-xl text-green-700';
+}
+
+async function submitExtraRelease() {
+    if (!requireUser()) return;
+    if (!['매니저','관리자'].includes(currentUser.role)) {
+        showNotification('매니저/관리자만 추가 출고할 수 있습니다.', 'error'); return;
+    }
+    const courseId = document.getElementById('extra-release-course-id').value;
+    const input    = document.getElementById('extra-release-quantity');
+    const extraQty = parseInt(input.value);
+    const stock    = parseInt(input.dataset.stock) || 0;
+    const released = parseInt(input.dataset.released) || 0;
+    const notes    = document.getElementById('extra-release-notes').value.trim();
+
+    if (isNaN(extraQty) || extraQty < 1) {
+        showNotification('추가 출고 수량을 입력해주세요.', 'error'); return;
+    }
+    if (!notes) {
+        showNotification('출고 사유를 입력해주세요.', 'error'); return;
+    }
+    if (extraQty > (stock - released)) {
+        showNotification(`잔여 수량(${stock - released}권)을 초과할 수 없습니다.`, 'error'); return;
+    }
+
+    const course = courses.find(c => c.id === courseId);
+    if (!course) return;
+
+    if (!confirm(`📤 추가 출고 확인\n\n과정: ${course.course_name}\n추가 출고: ${extraQty}권\n사유: ${notes}\n\n진행하시겠습니까?`)) return;
+
+    try {
+        // work_logs에 추가출고 기록 (상태 변경 없음, 수량만 기록)
+        await createLog(
+            courseId,
+            '추가출고',
+            '세팅완료',
+            '세팅완료',
+            `추가출고 ${extraQty}권 / 사유: ${notes} / 잔여: ${stock - released - extraQty}권`,
+            extraQty
+        );
+
+        showNotification(`추가 출고 완료! ${extraQty}권 (잔여 ${stock - released - extraQty}권)`, 'success');
+        closeExtraReleaseModal();
+        await loadSetupManagement();
+    } catch(e) {
+        console.error('추가출고 오류:', e);
+        showNotification('추가 출고 중 오류가 발생했습니다.', 'error');
+    }
 }
 
 function debounce(func, wait) {
