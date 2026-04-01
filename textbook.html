@@ -419,7 +419,22 @@
     <!-- 입출고 관리 -->
     <div id="page-stock" class="page-content hidden">
         <h2 class="text-xl font-bold mb-4 text-gray-800">🏭 입출고 관리</h2>
+        <!-- 과정명 검색창 -->
         <div class="bg-white rounded-xl shadow-sm p-4 mb-4">
+            <label class="block text-sm font-semibold text-gray-700 mb-2">🔍 과정명 검색</label>
+            <div class="flex gap-2">
+                <input type="text" id="stock-search-input" placeholder="과정명 입력 후 검색..."
+                    class="flex-1 px-3 py-2 border-2 border-gray-300 rounded-xl text-sm focus:border-blue-500 focus:outline-none"
+                    oninput="applyStockSearch()"
+                    style="min-height:46px; font-size:1rem;">
+                <button onclick="clearStockSearch()"
+                    class="px-4 bg-gray-200 text-gray-600 rounded-xl text-sm font-bold"
+                    style="min-height:46px;">✕ 초기화</button>
+            </div>
+            <p class="text-xs text-gray-400 mt-1">※ 검색 시 주차 필터 무관하게 전체 과정에서 찾습니다</p>
+        </div>
+        <!-- 주차 선택 -->
+        <div class="bg-white rounded-xl shadow-sm p-4 mb-4" id="stock-week-filter-box">
             <div class="flex flex-wrap items-center gap-2">
                 <label class="text-sm font-semibold text-gray-700">📅 주차:</label>
                 <select id="stock-week-selector" class="flex-1 px-3 py-2 text-sm font-bold text-blue-600 border-2 border-blue-400 rounded-lg cursor-pointer"></select>
@@ -4315,30 +4330,97 @@ function updateStatusChart(courseList) {
     });
 }
 
-// 입출고 관리
-async function loadStockManagement() {
-    await loadCourses();
+// ══════════════════════════════════════════════
+// 과정 그룹명 추출 (재고 통합관리용)
+// "여신기본(L) 1차", "여신기본(L) 2차" → "여신기본(L)"
+// "MG 여신심사역 1차(1주차)" → "MG 여신심사역"
+// ══════════════════════════════════════════════
+function getGroupName(courseName) {
+    // 맨 끝의 " N차" 또는 " N차(X주차)" 패턴 제거
+    return courseName.replace(/\s*\d+차(\([^)]*\))?$/, '').trim() || courseName;
+}
+
+// 그룹 총 재고 (같은 과목명 과정들의 stock_quantity 합산)
+function getGroupTotalStock(groupName) {
+    return courses
+        .filter(c => getGroupName(c.course_name) === groupName)
+        .reduce((sum, c) => sum + (c.stock_quantity || 0), 0);
+}
+
+// 그룹 총 출고량 (이미 출고된 수량 합산)
+function getGroupTotalReleased(groupName, excludeCourseId = null) {
+    return courses
+        .filter(c => getGroupName(c.course_name) === groupName && c.id !== excludeCourseId)
+        .reduce((sum, c) => {
+            const released = ['출고완료','출고확인','세팅중','세팅완료대기','세팅완료'].includes(c.status)
+                ? (c.released_quantity || 0) : 0;
+            return sum + released;
+        }, 0);
+}
+
+// 검색어 상태
+let stockSearchTerm = '';
+
+// 검색 적용 (실시간)
+function applyStockSearch() {
+    stockSearchTerm = document.getElementById('stock-search-input')?.value.trim() || '';
+    const weekBox = document.getElementById('stock-week-filter-box');
+    if (weekBox) weekBox.style.opacity = stockSearchTerm ? '0.4' : '1';
+    renderStockLists();
+}
+
+// 검색 초기화
+function clearStockSearch() {
+    stockSearchTerm = '';
+    const input = document.getElementById('stock-search-input');
+    if (input) input.value = '';
+    const weekBox = document.getElementById('stock-week-filter-box');
+    if (weekBox) weekBox.style.opacity = '1';
+    renderStockLists();
+}
+
+// 실제 목록 렌더링 (검색 or 주차 필터 적용)
+function renderStockLists() {
     const weekEnd = new Date(currentStockWeekStart);
     weekEnd.setDate(currentStockWeekStart.getDate() + 6);
     weekEnd.setHours(23, 59, 59, 999);
 
-    // 입고 섹션: 선택 주차 기준
-    const stockIn = courses.filter(c => {
-        const sd = new Date(c.start_date);
-        const inWeek = sd >= currentStockWeekStart && sd <= weekEnd;
-        return inWeek && (c.status === '입고대기' || c.status === '입고완료');
-    }).sort((a,b) => new Date(a.start_date)-new Date(b.start_date));
+    let filtered = courses;
+    if (stockSearchTerm) {
+        // 검색 모드: 주차 무관, 과정명으로 전체 검색
+        filtered = courses.filter(c =>
+            c.course_name.toLowerCase().includes(stockSearchTerm.toLowerCase()));
+        const stockIn  = filtered.filter(c => ['입고대기','입고완료'].includes(c.status))
+            .sort((a,b) => new Date(a.start_date)-new Date(b.start_date));
+        const stockOut = filtered.filter(c => ['입고완료','출고대기','출고완료','출고확인'].includes(c.status))
+            .sort((a,b) => new Date(a.start_date)-new Date(b.start_date));
+        updateStockInList(stockIn);
+        updateStockOutList(stockOut);
+    } else {
+        // 주차 필터 모드 (기존 로직)
+        const stockIn = courses.filter(c => {
+            const sd = new Date(c.start_date);
+            const inWeek = sd >= currentStockWeekStart && sd <= weekEnd;
+            return inWeek && (c.status === '입고대기' || c.status === '입고완료');
+        }).sort((a,b) => new Date(a.start_date)-new Date(b.start_date));
 
-    // 출고 섹션: 선택 주차 기준 + 출고완료/출고확인은 주차 무관 항상 표시
-    const stockOut = courses.filter(c => {
-        const sd = new Date(c.start_date);
-        const inWeek = sd >= currentStockWeekStart && sd <= weekEnd;
-        const needsAction = ['출고완료','출고확인'].includes(c.status); // 주차 무관 표시
-        return (inWeek && ['입고완료','출고대기'].includes(c.status)) || needsAction;
-    }).sort((a,b) => new Date(a.start_date)-new Date(b.start_date));
+        const stockOut = courses.filter(c => {
+            const sd = new Date(c.start_date);
+            const inWeek = sd >= currentStockWeekStart && sd <= weekEnd;
+            const needsAction = ['출고완료','출고확인'].includes(c.status);
+            return (inWeek && ['입고완료','출고대기'].includes(c.status)) || needsAction;
+        }).sort((a,b) => new Date(a.start_date)-new Date(b.start_date));
 
-    updateStockInList(stockIn);
-    updateStockOutList(stockOut);
+        updateStockInList(stockIn);
+        updateStockOutList(stockOut);
+    }
+}
+
+// 입출고 관리
+async function loadStockManagement() {
+    await loadCourses();
+    stockSearchTerm = document.getElementById('stock-search-input')?.value.trim() || '';
+    renderStockLists();
 }
 
 function updateStockInList(list) {
@@ -4352,7 +4434,14 @@ function updateStockInList(list) {
         const isWaiting   = course.status === '입고대기';
         const isCompleted = course.status === '입고완료';
         const cardBg = isWaiting ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50';
-        const stockOk = course.stock_quantity >= course.student_count;
+        // ── 그룹 통합재고 계산 ──
+        const groupName    = getGroupName(course.course_name);
+        const groupStock   = getGroupTotalStock(groupName);
+        const groupRelease = getGroupTotalReleased(groupName);
+        const groupAvail   = groupStock - groupRelease;
+        const stockOk      = groupAvail >= course.student_count;
+        const sameGroupCourses = courses.filter(c => getGroupName(c.course_name) === groupName && c.id !== course.id);
+        const isGrouped = sameGroupCourses.length > 0;
         return `
         <div class="course-card ${cardBg}">
             <div class="flex items-start justify-between gap-2 mb-3">
@@ -4360,12 +4449,16 @@ function updateStockInList(list) {
                     <div class="flex items-center flex-wrap gap-2 mb-1">
                         <h4 class="font-bold text-base leading-tight" style="word-break:keep-all;">${course.course_name}</h4>
                         <span class="status-badge status-${course.status}">${course.status}</span>
+                        ${isGrouped ? `<span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs rounded-full font-bold">📚 통합재고</span>` : ''}
                     </div>
                     <div class="grid grid-cols-3 gap-2 text-xs text-gray-600 mt-2">
                         <div class="flex flex-col"><span class="text-gray-400">필요 수량</span><span class="font-bold text-sm text-gray-800">${course.student_count}권</span></div>
-                        <div class="flex flex-col"><span class="text-gray-400">현재 재고</span><span class="font-bold text-sm ${stockOk ? 'text-green-700' : 'text-red-600'}">${course.stock_quantity}권</span></div>
+                        <div class="flex flex-col"><span class="text-gray-400">${isGrouped ? '그룹 가용재고' : '현재 재고'}</span><span class="font-bold text-sm ${stockOk ? 'text-green-700' : 'text-red-600'}">${groupAvail}권</span></div>
                         <div class="flex flex-col"><span class="text-gray-400">시작일</span><span class="font-bold text-sm text-gray-800">${formatDate(course.start_date,'MM-DD')}</span></div>
                     </div>
+                    ${isGrouped ? `<div class="mt-2 text-xs text-indigo-600 bg-indigo-50 rounded-lg px-3 py-1">
+                        📦 그룹 총 입고 ${groupStock}권 / 기출고 ${groupRelease}권 / 가용 ${groupAvail}권
+                    </div>` : ''}
                 </div>
             </div>
             <div class="flex gap-2">
@@ -4404,9 +4497,15 @@ function updateStockOutList(list) {
         const isWaiting   = course.status === '출고대기';
         const isCompleted = course.status === '출고완료';   // 담당자 확인 필요
         const isConfirmed = course.status === '출고확인';   // 세팅 가능
-        const stock       = course.stock_quantity || 0;
-        const releasedQty = course.released_quantity ?? course.student_count;
-        const remainAfter = stock - releasedQty;
+        // ── 그룹 통합재고 계산 ──
+        const groupName      = getGroupName(course.course_name);
+        const groupStock     = getGroupTotalStock(groupName);
+        const groupOtherRel  = getGroupTotalReleased(groupName, course.id);  // 다른 차수 출고량
+        const groupAvail     = groupStock - groupOtherRel;                   // 이 과정이 쓸 수 있는 재고
+        const sameGroup      = courses.filter(c => getGroupName(c.course_name) === groupName && c.id !== course.id);
+        const isGrouped      = sameGroup.length > 0;
+        const releasedQty    = course.released_quantity ?? course.student_count;
+        const remainAfter    = groupAvail - (isCompleted || isConfirmed ? releasedQty : 0);
 
         let cardBg = isConfirmed ? 'border-pink-200 bg-pink-50'
                    : isCompleted ? 'border-green-200 bg-green-50'
@@ -4458,13 +4557,17 @@ function updateStockOutList(list) {
                         <h4 class="font-bold text-base leading-tight" style="word-break:keep-all;">${course.course_name}</h4>
                         <span class="status-badge status-${course.status}">${course.status}</span>
                         ${isReady ? `<span class="px-2 py-0.5 bg-blue-600 text-white text-xs rounded-full font-bold">출고 준비완료</span>` : ''}
+                        ${isGrouped ? `<span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs rounded-full font-bold">📚 통합재고</span>` : ''}
                     </div>
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs text-gray-500">
                         <div class="flex flex-col"><span>필요 교재</span><span class="font-bold text-gray-800 text-sm">${course.student_count}권</span></div>
-                        <div class="flex flex-col"><span>현재 재고</span><span class="font-bold text-blue-700 text-sm">${stock}권</span></div>
+                        <div class="flex flex-col"><span>${isGrouped ? '그룹 가용재고' : '현재 재고'}</span><span class="font-bold text-blue-700 text-sm">${groupAvail}권</span></div>
                         <div class="flex flex-col"><span>출고 예정</span><span class="font-bold text-gray-800 text-sm">${course.scheduled_release_date ? formatDate(course.scheduled_release_date,'MM-DD') : '-'}</span></div>
                         <div class="flex flex-col"><span>과정 시작</span><span class="font-bold text-gray-800 text-sm">${formatDate(course.start_date,'MM-DD')}</span></div>
                     </div>
+                    ${isGrouped ? `<div class="mt-2 text-xs text-indigo-600 bg-indigo-50 rounded-lg px-3 py-1">
+                        📦 그룹 총 입고 ${groupStock}권 / 타 차수 출고 ${groupOtherRel}권 / 이 과정 가용 ${groupAvail}권
+                    </div>` : ''}
                 </div>
             </div>
             ${stockOutBtn}
@@ -4483,14 +4586,22 @@ function openStockOutModal(courseId) {
     }
     const course = courses.find(c => c.id === courseId);
     if (!course) return;
-    const stock = course.stock_quantity || 0;
+    // 그룹 통합재고 기준으로 가용 재고 계산
+    const groupName  = getGroupName(course.course_name);
+    const groupStock = getGroupTotalStock(groupName);
+    const otherRel   = getGroupTotalReleased(groupName, courseId);
+    const avail      = groupStock - otherRel;   // 이 과정이 쓸 수 있는 재고
+    const isGrouped  = courses.filter(c => getGroupName(c.course_name) === groupName && c.id !== courseId).length > 0;
+    const infoText   = isGrouped
+        ? `그룹 총 입고 ${groupStock}권 / 타 차수 출고 ${otherRel}권 / 가용 재고 ${avail}권 / 필요 교재 ${course.student_count}권`
+        : `현재 재고: ${avail}권 / 필요 교재: ${course.student_count}권`;
     document.getElementById('stock-out-modal-course-id').value = courseId;
     document.getElementById('stock-out-modal-title').textContent = `🚚 출고 처리 — ${course.course_name}`;
-    document.getElementById('stock-out-modal-info').textContent = `현재 재고: ${stock}권 / 필요 교재: ${course.student_count}권`;
+    document.getElementById('stock-out-modal-info').textContent = infoText;
     document.getElementById('stock-out-modal-quantity').value = course.student_count;
-    document.getElementById('stock-out-modal-quantity').dataset.stock = stock;
+    document.getElementById('stock-out-modal-quantity').dataset.stock = avail;   // ← 가용재고 기준
     document.getElementById('stock-out-modal-notes').value = '';
-    document.getElementById('stock-out-modal-remain').textContent = `${stock - course.student_count}권`;
+    document.getElementById('stock-out-modal-remain').textContent = `${avail - course.student_count}권`;
     document.getElementById('stock-out-modal').classList.remove('hidden');
     document.getElementById('stock-out-modal').classList.add('flex');
     setTimeout(() => document.getElementById('stock-out-modal-quantity').focus(), 100);
@@ -4516,18 +4627,22 @@ async function submitStockOutModal() {
     const stock    = parseInt(input.dataset.stock) || 0;
     const notes    = document.getElementById('stock-out-modal-notes').value || '출고 처리';
     if (isNaN(outQty) || outQty < 1) { showNotification('출고 수량을 입력해주세요.', 'error'); return; }
-    if (outQty > stock) { showNotification(`출고 수량(${outQty})이 재고(${stock})를 초과합니다.`, 'error'); return; }
+    if (outQty > stock) { showNotification(`출고 수량(${outQty})이 가용 재고(${stock})를 초과합니다.`, 'error'); return; }
     const course = courses.find(c => c.id === courseId);
     if (!course) return;
+    const groupName  = getGroupName(course.course_name);
+    const groupStock = getGroupTotalStock(groupName);
+    const otherRel   = getGroupTotalReleased(groupName, courseId);
+    const remain     = groupStock - otherRel - outQty;
     try {
         const { error } = await sb.from('courses').update({
             status: '출고완료', released_quantity: outQty,
             actual_release_date: new Date().toISOString(), updated_at: new Date().toISOString()
         }).eq('id', courseId);
         if (error) throw error;
-        await createLog(courseId, '출고', course.status, '출고완료', `출고 ${outQty}권 / 잔여 ${stock - outQty}권 / ${notes}`, outQty);
-        showNotification(`출고 완료! 출고 ${outQty}권 / 잔여 ${stock - outQty}권`, 'success');
-        notifyAction('출고 처리', course.course_name, '담당자'); // 담당자에게 알림
+        await createLog(courseId, '출고', course.status, '출고완료', `출고 ${outQty}권 / 그룹 잔여 ${remain}권 / ${notes}`, outQty);
+        showNotification(`출고 완료! 출고 ${outQty}권 / 그룹 잔여 ${remain}권`, 'success');
+        notifyAction('출고 처리', course.course_name, '담당자');
         closeStockOutModal();
         await loadCourses(); await loadStockManagement(); await loadDashboardData();
     } catch(e) { console.error(e); showNotification('출고 처리 중 오류가 발생했습니다.', 'error'); }
@@ -4541,9 +4656,12 @@ async function confirmStockOut(courseId) {
     }
     const course = courses.find(c => c.id === courseId);
     if (!course) return;
-    const relQty = course.released_quantity ?? course.student_count;
-    const remain = (course.stock_quantity || 0) - relQty;
-    if (!confirm(`📋 담당자 출고 확인\n\n과정명: ${course.course_name}\n출고 수량: ${relQty}권\n잔여 수량: ${remain}권\n\n확인 후 세팅 관리로 넘어갑니다.`)) return;
+    const relQty     = course.released_quantity ?? course.student_count;
+    const groupName  = getGroupName(course.course_name);
+    const groupStock = getGroupTotalStock(groupName);
+    const otherRel   = getGroupTotalReleased(groupName, courseId);
+    const remain     = groupStock - otherRel - relQty;
+    if (!confirm(`📋 담당자 출고 확인\n\n과정명: ${course.course_name}\n출고 수량: ${relQty}권\n그룹 잔여 수량: ${remain}권\n\n확인 후 세팅 관리로 넘어갑니다.`)) return;
     try {
         const { error } = await sb.from('courses').update({
             status: '출고확인', confirmed_by: currentUser.name,
@@ -4991,6 +5109,7 @@ function openStockInAction(courseId) {
     document.getElementById('action-type').value = '입고';
     document.getElementById('action-modal-title').textContent = `입고 처리 — ${course.course_name}`;
     document.getElementById('action-quantity').value = course.student_count;
+    document.getElementById('action-notes').value = '';   // ← 비고 초기화
     document.getElementById('quantity-input-container').style.display = 'block';
     document.getElementById('action-modal').classList.remove('hidden');
     document.getElementById('action-modal').classList.add('flex');
