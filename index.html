@@ -184,6 +184,47 @@
         /* ── 긴급작업 상태 뱃지 인라인 ── */
         .status-badge[style*="0.7rem"] { font-size: 0.82rem !important; }
         .status-badge[style*="0.65rem"] { font-size: 0.82rem !important; }
+
+        /* ── iOS Safari 입력필드 줌 방지 (font-size 16px 이상 필수) ── */
+        input[type="text"],
+        input[type="number"],
+        input[type="date"],
+        textarea,
+        select {
+            font-size: 16px !important;
+        }
+        /* 단, 모달 large 입력은 더 크게 유지 */
+        .modal-input-lg {
+            font-size: 1.5rem !important;
+        }
+
+        /* ── 재고현황 테이블 모바일 최적화 ── */
+        #stock-inventory-table td {
+            padding: 10px 8px !important;
+            vertical-align: middle;
+        }
+        #stock-inventory-table th {
+            padding: 8px !important;
+        }
+
+        /* ── 터치 버튼 최소 영역 보장 ── */
+        button {
+            touch-action: manipulation;
+        }
+        .btn-action {
+            min-height: 52px !important;
+        }
+
+        /* ── 모바일 모달 여백 ── */
+        @media (max-width: 480px) {
+            .modal-box {
+                margin: 0 8px;
+                max-height: 95vh;
+            }
+            .modal-box .p-5 {
+                padding: 16px !important;
+            }
+        }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -844,6 +885,50 @@
                     class="btn-action btn-gray flex-1" style="min-height:52px;">취소</button>
                 <button onclick="submitExtraRelease()"
                     class="btn-action flex-1" style="min-height:52px;background:#d97706;color:white;border:none;border-radius:12px;font-weight:700;">📤 추가 출고</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 그룹 재고 수정 모달 -->
+<div id="group-stock-edit-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+    <div class="modal-box">
+        <div class="flex items-center justify-between p-5 border-b">
+            <h3 class="text-xl font-bold text-gray-800" id="group-stock-edit-title">✏️ 재고 수정</h3>
+            <button onclick="closeGroupStockEditModal()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">✕</button>
+        </div>
+        <div class="p-5">
+            <input type="hidden" id="group-stock-edit-group-name">
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4 text-sm text-amber-900">
+                ⚠️ 그룹 전체 재고량을 직접 수정합니다.<br>
+                <span id="group-stock-edit-info" class="font-bold mt-1 block"></span>
+                <span class="text-xs mt-1 block text-amber-700">※ 새 총 재고량을 입력하면 차이만큼 조정됩니다.</span>
+            </div>
+            <div class="mb-3">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">현재 총 재고</label>
+                <div id="group-stock-edit-current"
+                    style="background:#f3f4f6; border-radius:12px; padding:14px 16px; font-size:1.5rem; font-weight:800; text-align:center; color:#374151;"></div>
+            </div>
+            <div class="mb-5">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">수정할 총 재고 수량 (권)</label>
+                <input type="number" id="group-stock-edit-quantity" min="0"
+                    oninput="calcGroupStockEditDiff()"
+                    class="modal-input modal-input-lg"
+                    inputmode="numeric" pattern="[0-9]*"
+                    style="font-size:1.5rem !important;">
+                <div id="group-stock-edit-diff" class="mt-2 text-center text-sm font-bold" style="min-height:24px;"></div>
+            </div>
+            <div class="mb-5">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">수정 사유 <span class="text-red-500">*</span></label>
+                <textarea id="group-stock-edit-notes" rows="2"
+                    placeholder="수정 사유를 입력하세요 (필수)"
+                    class="modal-input"></textarea>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="closeGroupStockEditModal()"
+                    class="btn-action btn-gray flex-1" style="min-height:52px;">취소</button>
+                <button onclick="submitGroupStockEdit()"
+                    class="btn-action btn-amber flex-1" style="min-height:52px;">✔️ 수정 완료</button>
             </div>
         </div>
     </div>
@@ -4485,17 +4570,22 @@ function updateStockInventoryTable() {
             ? 'font-weight:800; color:#dc2626; background:#fef2f2; border-radius:6px; padding:2px 8px;'
             : 'font-weight:700; color:#15803d;';
 
+        const safeGroup = groupName.replace(/'/g, "\\'");
         return `<tr style="background:${rowBg}; border-bottom:1px solid #e5e7eb;">
             <td class="px-3 py-2" style="word-break:keep-all; font-size:0.88rem; font-weight:600; color:#1f2937;">${groupName}</td>
             <td class="px-3 py-2 text-center" style="font-size:0.88rem; color:#1d4ed8; font-weight:600;">${totalStock}권</td>
             <td class="px-3 py-2 text-center" style="font-size:0.88rem; color:#ea580c; font-weight:600;">${totalReleased}권</td>
             <td class="px-3 py-2 text-center"><span style="${remainStyle}">${remaining}권${isLow ? ' ⚠️' : ''}</span></td>
-            <td class="px-3 py-2 text-center">
-                ${canProcess
-                    ? `<button onclick="openGroupStockInModal('${groupName.replace(/'/g, "\\'")}')"
-                        style="background:#16a34a;color:white;border:none;border-radius:8px;padding:5px 12px;font-size:0.8rem;font-weight:700;cursor:pointer;white-space:nowrap;">
-                        ＋ 입고</button>`
-                    : `<span style="font-size:0.78rem;color:#9ca3af;">-</span>`}
+            <td class="px-3 py-2">
+                ${canProcess ? `
+                <div style="display:flex; flex-direction:column; gap:5px; align-items:stretch;">
+                    <button onclick="openGroupStockInModal('${safeGroup}')"
+                        style="background:#16a34a;color:white;border:none;border-radius:8px;padding:8px 10px;font-size:0.82rem;font-weight:700;cursor:pointer;min-height:40px;touch-action:manipulation;">
+                        ＋ 입고</button>
+                    <button onclick="openGroupStockEditModal('${safeGroup}')"
+                        style="background:#b45309;color:white;border:none;border-radius:8px;padding:8px 10px;font-size:0.82rem;font-weight:700;cursor:pointer;min-height:40px;touch-action:manipulation;">
+                        ✏️ 수정</button>
+                </div>` : `<span style="font-size:0.78rem;color:#9ca3af;display:block;text-align:center;">-</span>`}
             </td>
         </tr>`;
     }).join('');
@@ -4525,6 +4615,107 @@ function openGroupStockInModal(groupName) {
 function closeGroupStockInModal() {
     document.getElementById('group-stock-in-modal').classList.add('hidden');
     document.getElementById('group-stock-in-modal').classList.remove('flex');
+}
+
+// ──────────────────────────────────────────────
+// 그룹 재고 수정 모달
+// ──────────────────────────────────────────────
+function openGroupStockEditModal(groupName) {
+    if (!requireUser()) return;
+    if (!['담당자','관리자'].includes(currentUser.role)) {
+        showNotification('담당자/관리자만 재고를 수정할 수 있습니다.', 'error'); return;
+    }
+    const totalStock    = getGroupTotalStock(groupName);
+    const totalReleased = getGroupTotalReleased(groupName);
+    const remaining     = totalStock - totalReleased;
+
+    document.getElementById('group-stock-edit-group-name').value = groupName;
+    document.getElementById('group-stock-edit-title').textContent = `✏️ 재고 수정 — ${groupName}`;
+    document.getElementById('group-stock-edit-info').textContent =
+        `출고량: ${totalReleased}권 / 잔여: ${remaining}권`;
+    document.getElementById('group-stock-edit-current').textContent = `${totalStock}권`;
+    document.getElementById('group-stock-edit-current').dataset.current = totalStock;
+    document.getElementById('group-stock-edit-quantity').value = '';
+    document.getElementById('group-stock-edit-notes').value = '';
+    document.getElementById('group-stock-edit-diff').textContent = '';
+    document.getElementById('group-stock-edit-modal').classList.remove('hidden');
+    document.getElementById('group-stock-edit-modal').classList.add('flex');
+    setTimeout(() => document.getElementById('group-stock-edit-quantity').focus(), 100);
+}
+
+function closeGroupStockEditModal() {
+    document.getElementById('group-stock-edit-modal').classList.add('hidden');
+    document.getElementById('group-stock-edit-modal').classList.remove('flex');
+}
+
+function calcGroupStockEditDiff() {
+    const current = parseInt(document.getElementById('group-stock-edit-current').dataset.current) || 0;
+    const newVal  = parseInt(document.getElementById('group-stock-edit-quantity').value);
+    const el      = document.getElementById('group-stock-edit-diff');
+    if (isNaN(newVal)) { el.textContent = ''; return; }
+    const diff = newVal - current;
+    if (diff === 0) {
+        el.textContent = '변경 없음';
+        el.style.color = '#6b7280';
+    } else if (diff > 0) {
+        el.textContent = `▲ ${diff}권 증가 (${current}권 → ${newVal}권)`;
+        el.style.color = '#16a34a';
+    } else {
+        el.textContent = `▼ ${Math.abs(diff)}권 감소 (${current}권 → ${newVal}권)`;
+        el.style.color = '#dc2626';
+    }
+}
+
+async function submitGroupStockEdit() {
+    if (!requireUser()) return;
+    const groupName = document.getElementById('group-stock-edit-group-name').value;
+    const qtyInput  = document.getElementById('group-stock-edit-quantity').value;
+    const notes     = document.getElementById('group-stock-edit-notes').value.trim();
+    const current   = parseInt(document.getElementById('group-stock-edit-current').dataset.current) || 0;
+
+    if (qtyInput === '') { showNotification('수정할 재고 수량을 입력해주세요.', 'error'); return; }
+    const newTotal = parseInt(qtyInput);
+    if (isNaN(newTotal) || newTotal < 0) { showNotification('올바른 수량을 입력해주세요.', 'error'); return; }
+    if (!notes) { showNotification('수정 사유를 입력해주세요.', 'error'); return; }
+    if (newTotal === current) { showNotification('현재 재고와 동일합니다.', 'info'); return; }
+
+    const diff = newTotal - current;
+    const diffText = diff > 0 ? `+${diff}권` : `${diff}권`;
+
+    if (!confirm(`✏️ 재고 수정 확인\n\n그룹: ${groupName}\n현재: ${current}권 → 수정: ${newTotal}권 (${diffText})\n사유: ${notes}\n\n진행하시겠습니까?`)) return;
+
+    // 그룹 내 과정들 중 stock_quantity > 0인 첫 번째 과정, 없으면 첫 번째 과정
+    const groupCourses = courses
+        .filter(c => getGroupName(c.course_name) === groupName)
+        .sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
+    const target = groupCourses.find(c => (c.stock_quantity || 0) > 0) || groupCourses[0];
+    if (!target) { showNotification('대상 과정을 찾을 수 없습니다.', 'error'); return; }
+
+    // 차이만큼만 해당 과정 stock_quantity에 반영
+    const targetNewStock = Math.max(0, (target.stock_quantity || 0) + diff);
+
+    try {
+        const { error } = await sb.from('courses').update({
+            stock_quantity: targetNewStock,
+            updated_at: new Date().toISOString()
+        }).eq('id', target.id);
+        if (error) throw error;
+
+        await createLog(
+            target.id, '수정', target.status, target.status,
+            `재고 수정 (${diffText}) — 그룹 총 재고 ${current}권→${newTotal}권 / 사유: ${notes}`,
+            Math.abs(diff)
+        );
+
+        showNotification(`재고 수정 완료! ${groupName}: ${current}권 → ${newTotal}권 (${diffText})`, 'success');
+        closeGroupStockEditModal();
+        await loadCourses();
+        await loadStockManagement();
+        await loadDashboardData();
+    } catch(e) {
+        console.error('재고 수정 오류:', e);
+        showNotification('재고 수정 중 오류가 발생했습니다.', 'error');
+    }
 }
 
 // 그룹 입고 처리
