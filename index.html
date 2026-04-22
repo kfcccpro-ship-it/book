@@ -3997,23 +3997,26 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     });
 
-    document.getElementById('current-user').addEventListener('change', function(e) {
+    // 작업자 변경 핸들러 (change + input 둘 다 청취 — iOS Safari 호환성)
+    const handleUserChange = function(e) {
         const userName = e.target.value;
         currentUser = users.find(u => u.name === userName) || null;
         const wrap = document.getElementById('user-selector-wrap');
         if (currentUser) {
             localStorage.setItem('textbook_last_user', currentUser.name);
             showNotification(`${currentUser.name}(${currentUser.role})로 전환되었습니다.`, 'info');
-            wrap.classList.remove('no-user');
-            // 시작 팝업 자동 닫기
+            wrap?.classList.remove('no-user');
             const sp = document.getElementById('startup-popup');
             if (sp) sp.style.display = 'none';
+            console.log('✅ 작업자 변경:', currentUser.name);
         } else {
             localStorage.removeItem('textbook_last_user');
-            wrap.classList.add('no-user');
+            wrap?.classList.add('no-user');
         }
         updateNavTabsForRole();
-    });
+    };
+    document.getElementById('current-user').addEventListener('change', handleUserChange);
+    document.getElementById('current-user').addEventListener('input', handleUserChange);
 
     // ── 8. Supabase 실시간 구독 ──
     sb.channel('courses-realtime')
@@ -4164,12 +4167,31 @@ function goToTodaySetup() {
 }
 
 function showPage(pageName) {
-    // 대시보드 외: 작업자 미선택 시 차단
-    if (pageName !== 'dashboard' && !currentUser) {
-        showNotification('⚠️ 상단에서 작업자를 먼저 선택해주세요.', 'error');
-        const wrap = document.getElementById('user-selector-wrap');
-        if (wrap) { wrap.style.transform = 'scale(1.05)'; setTimeout(() => { wrap.style.transform = ''; }, 400); }
-        return;
+    // 대시보드 외: 작업자 미선택 시 차단 (드롭다운 값까지 재확인)
+    if (pageName !== 'dashboard') {
+        // currentUser가 없으면 드롭다운에서 다시 읽기 시도
+        if (!currentUser) {
+            const sel = document.getElementById('current-user');
+            const name = sel?.value;
+            if (name && Array.isArray(users) && users.length > 0) {
+                const found = users.find(u => u.name === name);
+                if (found) {
+                    currentUser = found;
+                    localStorage.setItem('textbook_last_user', found.name);
+                    document.getElementById('user-selector-wrap')?.classList.remove('no-user');
+                    updateNavTabsForRole();
+                }
+            }
+        }
+        if (!currentUser) {
+            showNotification('⚠️ 상단에서 작업자를 먼저 선택해주세요.', 'error');
+            const wrap = document.getElementById('user-selector-wrap');
+            if (wrap) { wrap.style.transform = 'scale(1.05)'; setTimeout(() => { wrap.style.transform = ''; }, 400); }
+            // 드롭다운 열어주기
+            const sel = document.getElementById('current-user');
+            if (sel) { sel.focus(); try { sel.click(); } catch(e) {} }
+            return;
+        }
     }
 
     document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
@@ -4185,55 +4207,74 @@ function showPage(pageName) {
     else if (pageName === 'logs')     { loadLogs(); }
 }
 
+const FALLBACK_USERS = [
+    { name: '교육부 부장',  role: '관리자', active: true },
+    { name: '교육기획팀장', role: '관리자', active: true },
+    { name: '이선희',       role: '관리자', active: true },
+    { name: '주나연',       role: '담당자', active: true },
+    { name: '유미정',       role: '매니저', active: true },
+    { name: '나영하',       role: '매니저', active: true },
+    { name: '교육진행',     role: '매니저', active: true },
+];
+
 async function loadUsers() {
     try {
         const { data, error } = await sb.from('users').select('*').eq('active', true);
         if (error) throw error;
-        users = data || [];
-        const userOrder = ['교육부 부장','교육기획팀장','이선희','주나연','유미정','나영하','교육진행'];
-        users.sort((a, b) => {
-            const ia = userOrder.indexOf(a.name), ib = userOrder.indexOf(b.name);
-            return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
-        });
-        const userSelect = document.getElementById('current-user');
+        users = (data && data.length > 0) ? data : [...FALLBACK_USERS];
+    } catch (error) {
+        console.error('사용자 로드 오류 - fallback 사용:', error);
+        users = [...FALLBACK_USERS];
+    }
 
-        // ── 드롭다운 재구성 전에 현재 표시값 저장 ──
-        const prevValue = userSelect.value; // 브라우저 자동완성 포함
+    // 정렬
+    const userOrder = ['교육부 부장','교육기획팀장','이선희','주나연','유미정','나영하','교육진행'];
+    users.sort((a, b) => {
+        const ia = userOrder.indexOf(a.name), ib = userOrder.indexOf(b.name);
+        return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+    });
 
-        userSelect.innerHTML = '<option value="" style="background-color:#1e40af;color:white;">작업자 선택</option>';
+    const userSelect = document.getElementById('current-user');
+    if (!userSelect) return;
+
+    // 드롭다운 재구성 전 현재값 저장
+    const prevValue = userSelect.value;
+
+    userSelect.innerHTML = '<option value="" style="background-color:#1e40af;color:white;">작업자 선택</option>';
+    users.forEach(user => {
+        const option = document.createElement('option');
+        option.value = user.name;
+        option.textContent = `${user.name} (${user.role})`;
+        option.style.backgroundColor = '#1e40af';
+        option.style.color = 'white';
+        userSelect.appendChild(option);
+    });
+
+    // ── 작업자 복원: localStorage > 이전값 ──
+    const savedUser = localStorage.getItem('textbook_last_user') || prevValue;
+    if (savedUser) {
+        const found = users.find(u => u.name === savedUser);
+        if (found) {
+            userSelect.value = found.name;
+            currentUser = found;
+            localStorage.setItem('textbook_last_user', found.name);
+            document.getElementById('user-selector-wrap')?.classList.remove('no-user');
+            updateNavTabsForRole();
+            console.log('✅ 작업자 자동 복원:', found.name, found.role);
+        }
+    }
+
+    // 로그 필터 드롭다운
+    const logUserSelect = document.getElementById('log-filter-user');
+    if (logUserSelect) {
+        logUserSelect.innerHTML = '<option value="">전체</option>';
         users.forEach(user => {
             const option = document.createElement('option');
             option.value = user.name;
             option.textContent = `${user.name} (${user.role})`;
-            option.style.backgroundColor = '#1e40af';
-            option.style.color = 'white';
-            userSelect.appendChild(option);
+            logUserSelect.appendChild(option);
         });
-
-        // ── 작업자 복원 우선순위: localStorage > 이전 선택값 ──
-        const savedUser = localStorage.getItem('textbook_last_user') || prevValue;
-        if (savedUser) {
-            const found = users.find(u => u.name === savedUser);
-            if (found) {
-                userSelect.value = found.name;
-                currentUser = found;
-                localStorage.setItem('textbook_last_user', found.name);
-                document.getElementById('user-selector-wrap')?.classList.remove('no-user');
-                updateNavTabsForRole();
-            }
-        }
-
-        const logUserSelect = document.getElementById('log-filter-user');
-        if (logUserSelect) {
-            logUserSelect.innerHTML = '<option value="">전체</option>';
-            users.forEach(user => {
-                const option = document.createElement('option');
-                option.value = user.name;
-                option.textContent = `${user.name} (${user.role})`;
-                logUserSelect.appendChild(option);
-            });
-        }
-    } catch (error) { console.error('사용자 로드 오류:', error); }
+    }
 }
 
 async function loadAllData() {
