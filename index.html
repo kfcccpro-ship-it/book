@@ -3811,7 +3811,14 @@ function hideLoadingOverlay() {
 // 작업자 미선택 팝업
 function requireUser() {
     if (currentUser) return true;
-    document.getElementById('no-user-popup').classList.add('show');
+    // 드롭다운 강조 애니메이션
+    const wrap = document.getElementById('user-selector-wrap');
+    if (wrap) {
+        wrap.classList.add('no-user');
+        wrap.style.transform = 'scale(1.05)';
+        setTimeout(() => { wrap.style.transform = ''; }, 400);
+    }
+    showNotification('⚠️ 상단에서 작업자를 먼저 선택해주세요.', 'error');
     return false;
 }
 function closeNoUserPopup() {
@@ -3830,26 +3837,26 @@ document.addEventListener('keydown', e => {
 // 역할별 탭 색상/접근 업데이트
 function updateNavTabsForRole() {
     const role = currentUser?.role;
-    // 모든 역할: 모든 탭 접근 가능
     const tabPermissions = {
         '관리자': ['dashboard','courses','stockin','stockout','logs','admin'],
         '담당자': ['dashboard','courses','stockin','stockout','logs','admin'],
         '매니저': ['dashboard','courses','stockin','stockout','logs','admin'],
     };
-    const allowed = role ? (tabPermissions[role] || ['dashboard']) : [];
+    const allowed = role ? (tabPermissions[role] || ['dashboard']) : ['dashboard'];
     document.querySelectorAll('.nav-btn').forEach(btn => {
         const page = btn.getAttribute('data-page');
-        const isActive = btn.classList.contains('active-nav');
         if (allowed.includes(page)) {
             btn.style.opacity = '1';
             btn.style.filter = 'none';
             btn.style.cursor = 'pointer';
+            btn.style.pointerEvents = 'auto';
             btn.title = '';
         } else {
-            btn.style.opacity = role ? '0.35' : '0.5';
+            btn.style.opacity = '0.4';
             btn.style.filter = 'grayscale(60%)';
             btn.style.cursor = role ? 'not-allowed' : 'default';
-            btn.title = role ? '이 역할은 접근 권한이 없습니다' : '작업자를 먼저 선택하세요';
+            btn.style.pointerEvents = role ? 'none' : 'auto';
+            btn.title = role ? '접근 권한 없음' : '작업자를 먼저 선택하세요';
         }
     });
 }
@@ -3958,11 +3965,25 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // ── 5. 데이터 로드 ──
     updateLoadingOverlay('📊 데이터 로딩 중...');
-    await loadUsers();
+    await loadUsers();   // ← currentUser 복원 포함
     await loadCourses();
 
     // ── 6. 화면 표시 ──
     hideLoadingOverlay();
+
+    // currentUser 없으면 드롭다운 현재값으로 한번 더 시도 (브라우저 자동완성 대응)
+    if (!currentUser) {
+        const sel = document.getElementById('current-user');
+        if (sel?.value) {
+            const found = users.find(u => u.name === sel.value);
+            if (found) {
+                currentUser = found;
+                localStorage.setItem('textbook_last_user', found.name);
+                document.getElementById('user-selector-wrap')?.classList.remove('no-user');
+            }
+        }
+    }
+
     showPage('dashboard');
     updateNavTabsForRole();
 
@@ -3970,9 +3991,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     await requestNotificationPermission();
     updateTabBadge();
 
-    // ── 시작 안내 팝업 표시 (자동 복원된 경우 생략) ──
+    // ── 시작 안내 팝업: 작업자 미선택 시에만 ──
     if (!currentUser) {
         document.getElementById('startup-popup').style.display = 'flex';
+    } else {
+        document.getElementById('startup-popup').style.display = 'none';
     }
 
     // ── 7. 이벤트 리스너 ──
@@ -4155,24 +4178,16 @@ function goToTodaySetup() {
 }
 
 function showPage(pageName) {
-    // 대시보드 외 모든 탭은 작업자 선택 필수
-    if (pageName !== 'dashboard' && !requireUser()) return;
-
-    // 역할 권한 체크
-    const role = currentUser?.role;
-    const tabPermissions = {
-        '관리자': ['dashboard','courses','stockin','stockout','logs','admin'],
-        '담당자': ['dashboard','courses','stockin','stockout','logs','admin'],
-        '매니저': ['dashboard','courses','stockin','stockout','logs','admin'],
-    };
-    const allowed = role ? (tabPermissions[role] || ['dashboard']) : ['dashboard'];
-    if (!allowed.includes(pageName)) {
-        showNotification(role ? '이 역할은 해당 탭에 접근 권한이 없습니다.' : '작업자를 먼저 선택해주세요.', 'error');
+    // 대시보드 외: 작업자 미선택 시 차단
+    if (pageName !== 'dashboard' && !currentUser) {
+        showNotification('⚠️ 상단에서 작업자를 먼저 선택해주세요.', 'error');
+        const wrap = document.getElementById('user-selector-wrap');
+        if (wrap) { wrap.style.transform = 'scale(1.05)'; setTimeout(() => { wrap.style.transform = ''; }, 400); }
         return;
     }
 
     document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
-    document.getElementById('page-' + pageName).classList.remove('hidden');
+    document.getElementById('page-' + pageName)?.classList.remove('hidden');
     document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active-nav'));
     document.querySelector(`[data-page="${pageName}"]`)?.classList.add('active-nav');
 
@@ -4181,7 +4196,6 @@ function showPage(pageName) {
     else if (pageName === 'courses')  { updateCoursesWeekSelector(); loadCourses(); }
     else if (pageName === 'stockin')  { loadStockInPage(); }
     else if (pageName === 'stockout') { updateStockWeekSelector(); loadStockOutPage(); }
-    // 세팅 탭 비활성화
     else if (pageName === 'logs')     { loadLogs(); }
 }
 
