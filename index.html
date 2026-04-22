@@ -346,10 +346,20 @@
             <button onclick="openAdminCourseModal()" class="btn-action btn-primary px-4" style="min-height:40px;font-size:0.92rem;">➕ 과정 추가</button>
         </div>
         <div id="admin-permission-alert" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl mb-4 hidden text-sm">
-            ⚠️ <strong>접근 권한 없음</strong> — 관리자와 담당자만 접근할 수 있습니다.
+            ⚠️ <strong>접근 권한 없음</strong>
+        </div>
+        <!-- 검색 -->
+        <div class="bg-white rounded-xl shadow-sm p-4 mb-4">
+            <div class="flex gap-2">
+                <input type="text" id="admin-search-input" placeholder="과정명 검색..."
+                    class="flex-1 px-3 py-2 border-2 border-gray-300 rounded-xl text-sm focus:border-blue-500 focus:outline-none"
+                    oninput="applyAdminSearch()" style="min-height:44px; font-size:1rem;">
+                <button onclick="clearAdminSearch()" class="px-4 bg-gray-200 text-gray-600 rounded-xl text-sm font-bold" style="min-height:44px;">✕</button>
+            </div>
+            <p class="text-xs text-gray-400 mt-1">※ 검색 시 전체 과정에서 검색 · 빈칸이면 주차 필터 적용</p>
         </div>
         <!-- 주차 선택 -->
-        <div class="bg-white rounded-xl shadow-sm p-4 mb-4">
+        <div class="bg-white rounded-xl shadow-sm p-4 mb-4" id="admin-week-filter-box">
             <div class="flex flex-wrap items-center gap-2">
                 <label class="text-sm font-semibold text-gray-700 whitespace-nowrap">📅 주차:</label>
                 <select id="admin-week-selector" class="flex-1 px-3 py-2 text-sm font-bold text-blue-600 border-2 border-blue-400 rounded-lg cursor-pointer min-w-0"></select>
@@ -362,30 +372,17 @@
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
                 <div><div class="text-xs opacity-80">📚 전체</div><div class="text-2xl font-bold" id="admin-total-courses">0</div></div>
                 <div><div class="text-xs opacity-80">✅ 출고완료</div><div class="text-2xl font-bold text-green-300" id="admin-complete-courses">0</div></div>
-                <div><div class="text-xs opacity-80">🚀 진행중</div><div class="text-2xl font-bold text-yellow-300" id="admin-progress-courses">0</div></div>
-                <div><div class="text-xs opacity-80">⏳ 대기</div><div class="text-2xl font-bold text-red-300" id="admin-waiting-courses">0</div></div>
+                <div><div class="text-xs opacity-80">🚀 입고완료</div><div class="text-2xl font-bold text-yellow-300" id="admin-progress-courses">0</div></div>
+                <div><div class="text-xs opacity-80">⏳ 입고대기</div><div class="text-2xl font-bold text-red-300" id="admin-waiting-courses">0</div></div>
             </div>
         </div>
-        <!-- 과정 목록 테이블 (모바일: 카드형으로 대체) -->
-        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-            <div class="px-4 py-3 bg-gray-50 border-b"><h3 class="text-sm font-bold text-gray-700">📋 주차별 과정 목록</h3></div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm">
-                    <thead class="bg-gray-100 border-b">
-                        <tr>
-                            <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600">과정명</th>
-                            <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 hidden sm:table-cell">시작일</th>
-                            <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 hidden sm:table-cell">종료일</th>
-                            <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600">인원</th>
-                            <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 hidden md:table-cell">강의실</th>
-                            <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 hidden md:table-cell">출고예정</th>
-                            <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600">상태</th>
-                            <th class="px-3 py-2 text-center text-xs font-semibold text-gray-600">작업</th>
-                        </tr>
-                    </thead>
-                    <tbody id="admin-courses-table" class="bg-white divide-y divide-gray-200"></tbody>
-                </table>
+        <!-- 과정 목록 (카드형) -->
+        <div class="bg-white rounded-xl shadow-sm p-4">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-sm font-bold text-gray-700">📋 과정 목록</h3>
+                <span id="admin-course-count" class="text-xs text-gray-400"></span>
             </div>
+            <div id="admin-courses-list" class="space-y-3"></div>
         </div>
     </div>
 
@@ -481,7 +478,14 @@
                 <h3 class="text-base font-bold text-gray-800">📊 과정별 입고 현황
                     <span class="text-xs font-normal text-gray-400 ml-1">(차수 통합 집계)</span>
                 </h3>
-                <span class="text-xs text-red-500 font-semibold">🔴 잔여 100권 미만 강조</span>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <button onclick="toggleInventorySort()" id="inventory-sort-btn"
+                        class="px-3 py-1 bg-gray-100 text-gray-600 rounded-lg text-xs font-bold border border-gray-300"
+                        style="min-height:32px; touch-action:manipulation;">
+                        🔽 잔여 많은순
+                    </button>
+                    <span class="text-xs text-red-500 font-semibold">🔴 100권 미만</span>
+                </div>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full" style="border-collapse:collapse;">
@@ -900,11 +904,11 @@
     </div>
 </div>
 
-<!-- 그룹 통합 관리 모달 (입고수정 + 출고수정) -->
+<!-- 그룹 통합 관리 모달 (수정) -->
 <div id="group-manage-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
     <div class="modal-box" style="max-width:520px;">
         <div class="flex items-center justify-between p-4 border-b">
-            <h3 class="text-lg font-bold text-gray-800" id="group-manage-title">📋 재고 관리</h3>
+            <h3 class="text-lg font-bold text-gray-800" id="group-manage-title">📋 재고 수정</h3>
             <button onclick="closeGroupManageModal()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">✕</button>
         </div>
         <div class="p-4" style="overflow-y:auto; max-height:80vh;">
@@ -915,14 +919,40 @@
                 style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:16px;">
             </div>
 
+            <!-- ── 섹션0: 급 출고 (소량) ── -->
+            <details id="section-quick-release" style="margin-bottom:12px;">
+                <summary style="background:#fff7ed; border:1px solid #fed7aa; border-radius:12px; padding:12px 16px; font-size:0.95rem; font-weight:700; color:#c2410c; cursor:pointer; list-style:none; display:flex; align-items:center; justify-content:space-between;">
+                    <span>📤 급 출고 <span style="font-size:0.8rem; font-weight:400; color:#9a3412;">(1~수권 즉시)</span></span>
+                    <span style="font-size:0.8rem; font-weight:500; color:#c2410c;">전체</span>
+                </summary>
+                <div style="border:1px solid #fed7aa; border-top:none; border-radius:0 0 12px 12px; padding:16px; background:#fff7ed;">
+                    <p class="text-xs text-orange-700 mb-3">📤 입고 후 바로 소량 출고 필요 시 사용. 별도 과정 선택 없이 재고에서 즉시 차감됩니다.</p>
+                    <div class="mb-3">
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">급 출고 수량 (권)</label>
+                        <input type="number" id="quick-release-quantity" min="1"
+                            oninput="calcQuickReleaseDiff()"
+                            class="modal-input" inputmode="numeric" pattern="[0-9]*"
+                            style="font-size:1.3rem; font-weight:800; text-align:center;">
+                        <div id="quick-release-remain" class="mt-1 text-center text-sm font-bold" style="min-height:22px;"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">출고 사유 <span class="text-red-500">*</span></label>
+                        <textarea id="quick-release-notes" rows="2"
+                            placeholder="예: 현장 급 배포, 강사 요청 등" class="modal-input"></textarea>
+                    </div>
+                    <button onclick="submitQuickRelease()"
+                        class="btn-action btn-orange w-full" style="min-height:48px;">📤 급 출고 처리</button>
+                </div>
+            </details>
+
             <!-- ── 섹션1: 입고량 수정 ── -->
             <details id="section-stock-edit" style="margin-bottom:12px;">
                 <summary style="background:#fef3c7; border:1px solid #fcd34d; border-radius:12px; padding:12px 16px; font-size:0.95rem; font-weight:700; color:#92400e; cursor:pointer; list-style:none; display:flex; align-items:center; justify-content:space-between;">
-                    <span>✏️ 입고량 수정</span>
+                    <span>✏️ 입고량 수정 <span style="font-size:0.8rem; font-weight:400; color:#78350f;">(잘못 입력 시)</span></span>
                     <span style="font-size:0.8rem; font-weight:500; color:#b45309;">담당자/관리자</span>
                 </summary>
                 <div style="border:1px solid #fcd34d; border-top:none; border-radius:0 0 12px 12px; padding:16px; background:#fffbeb;">
-                    <p class="text-xs text-amber-700 mb-3">⚠️ 총 입고량을 직접 수정합니다. 차이만큼 자동 조정됩니다.</p>
+                    <p class="text-xs text-amber-700 mb-3">⚠️ 총 입고량을 직접 수정합니다. 실제 입고 수량이 다를 때 사용하세요.</p>
                     <div class="mb-3">
                         <label class="block text-sm font-semibold text-gray-700 mb-1">현재 총 입고량</label>
                         <div id="group-stock-edit-current"
@@ -949,11 +979,11 @@
             <!-- ── 섹션2: 출고 수정 ── -->
             <details id="section-release-edit" style="margin-bottom:4px;">
                 <summary style="background:#fce7f3; border:1px solid #f9a8d4; border-radius:12px; padding:12px 16px; font-size:0.95rem; font-weight:700; color:#9d174d; cursor:pointer; list-style:none; display:flex; align-items:center; justify-content:space-between;">
-                    <span>🔄 출고 수정 <span id="release-edit-badge" style="background:#db2777; color:white; border-radius:20px; font-size:0.78rem; padding:2px 8px; margin-left:6px;"></span></span>
+                    <span>🔄 출고 수정 <span id="release-edit-badge" style="background:#db2777; color:white; border-radius:20px; font-size:0.78rem; padding:2px 8px; margin-left:6px;"></span> <span style="font-size:0.8rem; font-weight:400; color:#831843;">(출고 오류 시)</span></span>
                     <span style="font-size:0.8rem; font-weight:500; color:#be185d;">담당자/관리자</span>
                 </summary>
                 <div style="border:1px solid #f9a8d4; border-top:none; border-radius:0 0 12px 12px; padding:16px; background:#fdf2f8;">
-                    <p class="text-xs text-pink-700 mb-3">🔄 출고된 과정을 초기화하면 <b>입고완료</b> 상태로 돌아가 다시 출고할 수 있습니다.<br>출고량도 0으로 초기화됩니다.</p>
+                    <p class="text-xs text-pink-700 mb-3">🔄 출고 수량 직접 수정 또는 초기화 후 재출고. 출고량이 잘못됐을 때 사용하세요.</p>
                     <div id="release-edit-list" class="space-y-2"></div>
                 </div>
             </details>
@@ -978,6 +1008,11 @@
                 📦 그룹 전체 재고에 입고 수량을 추가합니다.<br>
                 <span id="group-stock-in-info" class="font-bold mt-1 block text-blue-900"></span>
                 <span class="text-xs text-blue-600 mt-1 block">※ 같은 과목의 다른 차수와 재고를 공유합니다.</span>
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">📅 입고 날짜 <span class="text-xs font-normal text-gray-400">(기본: 오늘)</span></label>
+                <input type="date" id="group-stock-in-date"
+                    class="modal-input" style="font-size:1rem;">
             </div>
             <div class="mb-5">
                 <label class="block text-sm font-semibold text-gray-700 mb-2">입고 수량 (권) <span class="text-xs font-normal text-gray-400">— 0 입력 가능</span></label>
@@ -4591,6 +4626,8 @@ function getGroupTotalReleased(groupKey, excludeCourseId = null) {
 
 // 검색어 상태
 let stockSearchTerm = '';
+let adminSearchTerm = '';
+let inventorySortAsc = false; // false=많은순, true=적은순
 
 // 검색 적용 (입고 탭 전용)
 function applyStockSearch() {
@@ -4606,9 +4643,174 @@ function clearStockSearch() {
     updateStockInventoryTable();
 }
 
-// ══════════════════════════════════════════════
-// 📊 재고 현황 테이블 (그룹 단위)
-// ══════════════════════════════════════════════
+// ── 잔여 정렬 토글
+function toggleInventorySort() {
+    inventorySortAsc = !inventorySortAsc;
+    const btn = document.getElementById('inventory-sort-btn');
+    if (btn) btn.textContent = inventorySortAsc ? '🔼 잔여 적은순' : '🔽 잔여 많은순';
+    updateStockInventoryTable();
+}
+
+// ── 과정관리 검색
+function applyAdminSearch() {
+    adminSearchTerm = document.getElementById('admin-search-input')?.value.trim() || '';
+    const weekBox = document.getElementById('admin-week-filter-box');
+    if (weekBox) weekBox.style.opacity = adminSearchTerm ? '0.4' : '1';
+    renderAdminCoursesList();
+}
+function clearAdminSearch() {
+    adminSearchTerm = '';
+    const el = document.getElementById('admin-search-input');
+    if (el) el.value = '';
+    const weekBox = document.getElementById('admin-week-filter-box');
+    if (weekBox) weekBox.style.opacity = '1';
+    renderAdminCoursesList();
+}
+
+// ── 과정관리 카드 렌더
+function renderAdminCoursesList() {
+    const container = document.getElementById('admin-courses-list');
+    const countEl   = document.getElementById('admin-course-count');
+    if (!container) return;
+
+    let list;
+    if (adminSearchTerm) {
+        list = courses.filter(c => c.course_name.toLowerCase().includes(adminSearchTerm.toLowerCase()))
+                      .sort((a,b) => new Date(a.start_date)-new Date(b.start_date));
+    } else {
+        const weekEnd = new Date(currentAdminWeekStart);
+        weekEnd.setDate(currentAdminWeekStart.getDate() + 6);
+        weekEnd.setHours(23,59,59,999);
+        list = courses.filter(c => {
+            const sd = new Date(c.start_date);
+            return sd >= currentAdminWeekStart && sd <= weekEnd;
+        }).sort((a,b) => new Date(a.start_date)-new Date(b.start_date));
+    }
+
+    if (countEl) countEl.textContent = `${list.length}개`;
+
+    if (list.length === 0) {
+        container.innerHTML = `<div class="text-center py-10 text-gray-400">
+            <div class="text-3xl mb-2">📋</div>
+            <p>${adminSearchTerm ? '"'+adminSearchTerm+'" 검색 결과 없음' : '해당 주차에 과정이 없습니다.'}</p>
+        </div>`;
+        return;
+    }
+
+    container.innerHTML = list.map(c => {
+        const statusColors = {'입고대기':'border-red-200 bg-red-50','입고완료':'border-blue-200 bg-blue-50','출고완료':'border-green-200 bg-green-50'};
+        const bg = statusColors[c.status] || 'border-gray-200 bg-gray-50';
+        return `
+        <div class="course-card ${bg}">
+            <div class="flex items-start justify-between gap-2 flex-wrap">
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap mb-1">
+                        <h4 class="font-bold text-base leading-tight" style="word-break:keep-all;">${c.course_name}</h4>
+                        <span class="status-badge status-${c.status}">${c.status}</span>
+                    </div>
+                    <div class="flex gap-3 text-xs text-gray-500 flex-wrap">
+                        <span>📅 ${formatDate(c.start_date,'MM-DD')} 시작</span>
+                        <span>👥 ${c.student_count}명</span>
+                        ${c.classroom ? `<span>🏫 ${c.classroom}</span>` : ''}
+                        ${c.end_date ? `<span>~ ${formatDate(c.end_date,'MM-DD')}</span>` : ''}
+                    </div>
+                </div>
+                <div class="flex gap-2 flex-shrink-0">
+                    <button onclick="editAdminCourse('${c.id}')"
+                        style="background:#3b82f6;color:white;border:none;border-radius:8px;padding:8px 12px;font-size:0.85rem;font-weight:700;cursor:pointer;min-height:38px;touch-action:manipulation;">
+                        ✏️ 수정</button>
+                    <button onclick="deleteAdminCourse('${c.id}')"
+                        style="background:#ef4444;color:white;border:none;border-radius:8px;padding:8px 12px;font-size:0.85rem;font-weight:700;cursor:pointer;min-height:38px;touch-action:manipulation;">
+                        🗑️ 삭제</button>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+// ── 급 출고 (수정 모달에서)
+function calcQuickReleaseDiff() {
+    const groupKey  = document.getElementById('group-manage-group-name').value;
+    const totalStock    = getGroupTotalStock(groupKey);
+    const totalReleased = getGroupTotalReleased(groupKey);
+    const remaining     = totalStock - totalReleased;
+    const qty  = parseInt(document.getElementById('quick-release-quantity').value) || 0;
+    const el   = document.getElementById('quick-release-remain');
+    if (!el) return;
+    const after = remaining - qty;
+    el.textContent = `출고 후 잔여: ${after}권`;
+    el.style.color = after < 0 ? '#dc2626' : after < 10 ? '#d97706' : '#16a34a';
+}
+
+async function submitQuickRelease() {
+    if (!requireUser()) return;
+    const groupKey = document.getElementById('group-manage-group-name').value;
+    const qty      = parseInt(document.getElementById('quick-release-quantity').value);
+    const notes    = document.getElementById('quick-release-notes').value.trim();
+    const displayName = (() => { const c = courses.find(x => getGroupKey(x.course_name) === groupKey); return c ? getGroupName(c.course_name) : groupKey; })();
+
+    if (isNaN(qty) || qty < 1) { showNotification('출고 수량을 입력해주세요.', 'error'); return; }
+    if (!notes) { showNotification('출고 사유를 입력해주세요.', 'error'); return; }
+
+    const totalStock    = getGroupTotalStock(groupKey);
+    const totalReleased = getGroupTotalReleased(groupKey);
+    const remaining     = totalStock - totalReleased;
+    if (qty > remaining) { showNotification(`잔여 재고(${remaining}권)를 초과할 수 없습니다.`, 'error'); return; }
+
+    // 그룹 내 입고완료 과정 우선
+    const target = courses
+        .filter(c => getGroupKey(c.course_name) === groupKey && ['입고완료','출고완료'].includes(c.status))
+        .sort((a,b) => new Date(a.start_date)-new Date(b.start_date))[0];
+    if (!target) { showNotification('입고완료 상태의 과정이 없습니다.', 'error'); return; }
+
+    if (!confirm(`📤 급 출고 확인\n\n${displayName}\n출고 수량: ${qty}권\n사유: ${notes}\n\n진행하시겠습니까?`)) return;
+
+    try {
+        const prevReleased = target.released_quantity || 0;
+        const newReleased  = prevReleased + qty;
+        const { error } = await sb.from('courses').update({
+            status: '출고완료',
+            released_quantity: newReleased,
+            actual_release_date: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        }).eq('id', target.id);
+        if (error) throw error;
+
+        await createLog(target.id, '출고', target.status, '출고완료',
+            `급 출고 ${qty}권 / 사유: ${notes} / 잔여 ${remaining - qty}권`, qty);
+
+        showNotification(`급 출고 완료! ${qty}권 → ${displayName} 잔여 ${remaining - qty}권`, 'success');
+        document.getElementById('quick-release-quantity').value = '';
+        document.getElementById('quick-release-notes').value = '';
+        document.getElementById('quick-release-remain').textContent = '';
+        await loadCourses();
+        await loadDashboardData();
+        // 모달 현황 요약 갱신
+        const ts = getGroupTotalStock(groupKey);
+        const tr = getGroupTotalReleased(groupKey);
+        const rm = ts - tr;
+        const lw = rm < 100;
+        document.getElementById('group-manage-summary').innerHTML = `
+            <div style="background:#eff6ff; border-radius:10px; padding:10px; text-align:center;">
+                <div style="font-size:0.75rem; color:#6b7280; margin-bottom:4px;">총 입고</div>
+                <div style="font-size:1.4rem; font-weight:800; color:#1d4ed8;">${ts}권</div>
+            </div>
+            <div style="background:#fff7ed; border-radius:10px; padding:10px; text-align:center;">
+                <div style="font-size:0.75rem; color:#6b7280; margin-bottom:4px;">총 출고</div>
+                <div style="font-size:1.4rem; font-weight:800; color:#ea580c;">${tr}권</div>
+            </div>
+            <div style="background:${lw?'#fef2f2':'#f0fdf4'}; border-radius:10px; padding:10px; text-align:center;">
+                <div style="font-size:0.75rem; color:#6b7280; margin-bottom:4px;">잔여</div>
+                <div style="font-size:1.4rem; font-weight:800; color:${lw?'#dc2626':'#15803d'};">${rm}권${lw?' ⚠️':''}</div>
+            </div>`;
+        renderStockLists();
+    } catch(e) {
+        console.error('급 출고 오류:', e);
+        showNotification('급 출고 처리 중 오류가 발생했습니다.', 'error');
+    }
+}
+
+
 function updateStockInventoryTable() {
     const tbody = document.getElementById('stock-inventory-table');
     if (!tbody) return;
@@ -4632,8 +4834,15 @@ function updateStockInventoryTable() {
         groupEntries = groupEntries.filter(([, v]) => v.displayName.toLowerCase().includes(searchTerm));
     }
 
-    // 시작일 순 정렬
+    // 시작일 순 정렬 후 잔여 정렬 적용
     groupEntries.sort((a, b) => a[1].date - b[1].date);
+    if (inventorySortAsc) {
+        groupEntries.sort(([ka], [kb]) => {
+            const ra = getGroupTotalStock(ka) - getGroupTotalReleased(ka);
+            const rb = getGroupTotalStock(kb) - getGroupTotalReleased(kb);
+            return ra - rb; // 적은순
+        });
+    }
 
     if (groupEntries.length === 0) {
         tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-400">${searchTerm ? `"${stockSearchTerm}" 검색 결과가 없습니다.` : '과정 데이터가 없습니다.'}</td></tr>`;
@@ -4693,6 +4902,10 @@ function openGroupStockInModal(groupKey) {
     document.getElementById('group-stock-in-title').textContent = `📦 입고 처리 — ${displayName}`;
     document.getElementById('group-stock-in-info').textContent =
         `현재 재고: ${totalStock}권 / 출고: ${totalReleased}권 / 잔여: ${remaining}권`;
+    // 날짜 기본값: 오늘
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    document.getElementById('group-stock-in-date').value = todayStr;
     document.getElementById('group-stock-in-quantity').value = '';
     document.getElementById('group-stock-in-notes').value = '';
     document.getElementById('group-stock-in-modal').classList.remove('hidden');
@@ -5171,6 +5384,7 @@ async function submitGroupStockIn() {
     })();
     const qtyInput  = document.getElementById('group-stock-in-quantity').value;
     const notes     = document.getElementById('group-stock-in-notes').value.trim();
+    const inDate    = document.getElementById('group-stock-in-date').value || new Date().toISOString().split('T')[0];
 
     if (qtyInput === '' || qtyInput === null) {
         showNotification('입고 수량을 입력해주세요.', 'error'); return;
@@ -5193,14 +5407,16 @@ async function submitGroupStockIn() {
     const target = groupCourses.find(c => c.status === '입고대기') || groupCourses[0];
 
     if (qty === 0) {
-        if (!confirm(`📦 입고 수량 0권으로 입고 처리합니다.\n\n그룹: ${displayName}\n대상 과정: ${target.course_name}\n\n재고 없이 상태만 입고완료로 변경됩니다. 진행하시겠습니까?`)) return;
+        if (!confirm(`📦 입고 수량 0권으로 입고 처리합니다.\n\n그룹: ${displayName}\n입고일: ${inDate}\n대상 과정: ${target.course_name}\n\n재고 없이 상태만 입고완료로 변경됩니다. 진행하시겠습니까?`)) return;
     } else {
-        if (!confirm(`📦 입고 처리 확인\n\n그룹: ${displayName}\n대상 과정: ${target.course_name}\n입고 수량: ${qty}권\n${notes ? '비고: ' + notes : ''}\n\n진행하시겠습니까?`)) return;
+        if (!confirm(`📦 입고 처리 확인\n\n그룹: ${displayName}\n입고일: ${inDate}\n대상 과정: ${target.course_name}\n입고 수량: ${qty}권\n${notes ? '비고: ' + notes : ''}\n\n진행하시겠습니까?`)) return;
     }
 
     try {
         const newStock = (target.stock_quantity || 0) + qty;
         const newStatus = target.status === '입고대기' ? '입고완료' : target.status;
+        // 입고일을 action_date에 반영하기 위해 ISO 변환
+        const inDateISO = new Date(inDate + 'T09:00:00').toISOString();
         const { error } = await sb.from('courses').update({
             stock_quantity: newStock,
             status: newStatus,
@@ -5209,10 +5425,11 @@ async function submitGroupStockIn() {
         if (error) throw error;
 
         const logNote = qty === 0
-            ? `입고 0권 처리 (재고 없음)${notes ? ' / ' + notes : ''}`
-            : `입고 ${qty}권 (누적 재고 ${newStock}권)${notes ? ' / ' + notes : ''}`;
+            ? `입고 0권 처리 (재고 없음) / 입고일: ${inDate}${notes ? ' / ' + notes : ''}`
+            : `입고 ${qty}권 (누적 재고 ${newStock}권) / 입고일: ${inDate}${notes ? ' / ' + notes : ''}`;
 
-        await createLog(target.id, '입고', target.status, newStatus, logNote, qty);
+        // createLog에 입고 날짜 전달
+        await createLog(target.id, '입고', target.status, newStatus, logNote, qty, inDateISO);
 
         if (qty === 0) {
             showNotification(`입고 처리 완료 (0권) — ${target.course_name}`, 'info');
@@ -5644,12 +5861,8 @@ function updateSetupList(containerId, list, statusType, logsMap = {}) {
 // 관리자 과정 관리
 async function loadAdminCourses() {
     const permAlert = document.getElementById('admin-permission-alert');
-    if (!currentUser || (currentUser.role !== '관리자' && currentUser.role !== '담당자')) {
-        permAlert.classList.remove('hidden');
-        document.getElementById('admin-courses-table').innerHTML = `<tr><td colspan="8" class="px-6 py-12 text-center text-gray-500">🔒이 페이지는 관리자와 담당자만 접근할 수 있습니다.</td></tr>`;
-        return;
-    }
-    permAlert.classList.add('hidden');
+    if (!currentUser) { permAlert?.classList.remove('hidden'); return; }
+    permAlert?.classList.add('hidden');
     try {
         const { data, error } = await sb.from('courses').select('*').order('start_date');
         if (error) throw error;
@@ -5662,7 +5875,7 @@ async function loadAdminCourses() {
             return sd >= currentAdminWeekStart && sd <= weekEnd;
         });
         updateAdminStatistics(weekCourses);
-        updateAdminCoursesTable(weekCourses);
+        renderAdminCoursesList();
     } catch (error) { console.error('관리자 페이지 로드 오류:', error); }
 }
 
@@ -6051,14 +6264,13 @@ async function finalConfirmSetup(courseId) {
     } catch (e) { console.error(e); showNotification('최종 확인 중 오류가 발생했습니다.', 'error'); }
 }
 
-async function createLog(courseId, actionType, previousStatus, newStatus, notes, quantity = null, courseName = null) {
+async function createLog(courseId, actionType, previousStatus, newStatus, notes, quantity = null, actionDate = null) {
     if (!currentUser) return;
     try {
         await sb.from('work_logs').insert({
             course_id: courseId,
-            course_name: courseName,
             action_type: actionType,
-            action_date: new Date().toISOString(),
+            action_date: actionDate || new Date().toISOString(),
             user_name: currentUser.name,
             user_role: currentUser.role,
             quantity,
