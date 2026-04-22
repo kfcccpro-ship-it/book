@@ -3965,25 +3965,11 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // ── 5. 데이터 로드 ──
     updateLoadingOverlay('📊 데이터 로딩 중...');
-    await loadUsers();   // ← currentUser 복원 포함
+    await loadUsers();   // ← currentUser 복원 포함 (localStorage + 브라우저 자동완성)
     await loadCourses();
 
     // ── 6. 화면 표시 ──
     hideLoadingOverlay();
-
-    // currentUser 없으면 드롭다운 현재값으로 한번 더 시도 (브라우저 자동완성 대응)
-    if (!currentUser) {
-        const sel = document.getElementById('current-user');
-        if (sel?.value) {
-            const found = users.find(u => u.name === sel.value);
-            if (found) {
-                currentUser = found;
-                localStorage.setItem('textbook_last_user', found.name);
-                document.getElementById('user-selector-wrap')?.classList.remove('no-user');
-            }
-        }
-    }
-
     showPage('dashboard');
     updateNavTabsForRole();
 
@@ -4210,6 +4196,10 @@ async function loadUsers() {
             return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
         });
         const userSelect = document.getElementById('current-user');
+
+        // ── 드롭다운 재구성 전에 현재 표시값 저장 ──
+        const prevValue = userSelect.value; // 브라우저 자동완성 포함
+
         userSelect.innerHTML = '<option value="" style="background-color:#1e40af;color:white;">작업자 선택</option>';
         users.forEach(user => {
             const option = document.createElement('option');
@@ -4220,13 +4210,14 @@ async function loadUsers() {
             userSelect.appendChild(option);
         });
 
-        // ── 마지막 작업자 자동 복원 ──
-        const savedUser = localStorage.getItem('textbook_last_user');
+        // ── 작업자 복원 우선순위: localStorage > 이전 선택값 ──
+        const savedUser = localStorage.getItem('textbook_last_user') || prevValue;
         if (savedUser) {
             const found = users.find(u => u.name === savedUser);
             if (found) {
                 userSelect.value = found.name;
                 currentUser = found;
+                localStorage.setItem('textbook_last_user', found.name);
                 document.getElementById('user-selector-wrap')?.classList.remove('no-user');
                 updateNavTabsForRole();
             }
