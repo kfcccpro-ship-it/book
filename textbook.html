@@ -184,6 +184,47 @@
         /* ── 긴급작업 상태 뱃지 인라인 ── */
         .status-badge[style*="0.7rem"] { font-size: 0.82rem !important; }
         .status-badge[style*="0.65rem"] { font-size: 0.82rem !important; }
+
+        /* ── iOS Safari 입력필드 줌 방지 (font-size 16px 이상 필수) ── */
+        input[type="text"],
+        input[type="number"],
+        input[type="date"],
+        textarea,
+        select {
+            font-size: 16px !important;
+        }
+        /* 단, 모달 large 입력은 더 크게 유지 */
+        .modal-input-lg {
+            font-size: 1.5rem !important;
+        }
+
+        /* ── 재고현황 테이블 모바일 최적화 ── */
+        #stock-inventory-table td {
+            padding: 10px 8px !important;
+            vertical-align: middle;
+        }
+        #stock-inventory-table th {
+            padding: 8px !important;
+        }
+
+        /* ── 터치 버튼 최소 영역 보장 ── */
+        button {
+            touch-action: manipulation;
+        }
+        .btn-action {
+            min-height: 52px !important;
+        }
+
+        /* ── 모바일 모달 여백 ── */
+        @media (max-width: 480px) {
+            .modal-box {
+                margin: 0 8px;
+                max-height: 95vh;
+            }
+            .modal-box .p-5 {
+                padding: 16px !important;
+            }
+        }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -221,8 +262,8 @@
     <div class="container mx-auto px-0">
         <ul class="nav-scroll">
             <li><button onclick="showPage('dashboard')" class="nav-btn hover:bg-gray-100" data-page="dashboard">📈 대시보드</button></li>
-            <li><button onclick="showPage('stock')"     class="nav-btn hover:bg-gray-100" data-page="stock">🏭 입출고</button></li>
-            <li><button onclick="showPage('setup')"     class="nav-btn hover:bg-gray-100" data-page="setup">✅ 세팅</button></li>
+            <li><button onclick="showPage('stockin')"   class="nav-btn hover:bg-gray-100" data-page="stockin">📦 입고</button></li>
+            <li><button onclick="showPage('stockout')"  class="nav-btn hover:bg-gray-100" data-page="stockout">🚚 출고</button></li>
             <li><button onclick="showPage('logs')"      class="nav-btn hover:bg-gray-100" data-page="logs">🕐 이력</button></li>
             <li><button onclick="showPage('admin')"     class="nav-btn hover:bg-gray-100" data-page="admin">⚙️ 과정관리</button></li>
             <li><button onclick="showPage('courses')"   class="nav-btn hover:bg-gray-100" data-page="courses">📋 과정조회</button></li>
@@ -257,7 +298,7 @@
                     <div class="text-2xl font-bold" id="week-progress-courses">0</div>
                 </div>
                 <div>
-                    <div class="text-xs opacity-80 mb-1">✅ 세팅 완료</div>
+                    <div class="text-xs opacity-80 mb-1">✅ 출고 완료</div>
                     <div class="text-2xl font-bold text-green-300" id="week-complete-courses">0</div>
                 </div>
             </div>
@@ -267,12 +308,11 @@
             </div>
         </div>
         <!-- 통계 미니카드 -->
-        <div class="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-4">
+        <div class="grid grid-cols-4 gap-2 mb-4">
             <div class="stat-card"><p class="text-gray-500 text-xs">전체</p><p class="text-xl font-bold text-gray-800 mt-1" id="stat-total-courses">0</p></div>
             <div class="stat-card"><p class="text-gray-500 text-xs">입고대기</p><p class="text-xl font-bold text-red-600 mt-1" id="stat-stock-waiting">0</p></div>
-            <div class="stat-card"><p class="text-gray-500 text-xs">출고대기</p><p class="text-xl font-bold text-yellow-600 mt-1" id="stat-release-waiting">0</p></div>
-            <div class="stat-card"><p class="text-gray-500 text-xs">세팅중</p><p class="text-xl font-bold text-purple-600 mt-1" id="stat-setup-progress">0</p></div>
-            <div class="stat-card"><p class="text-gray-500 text-xs">세팅완료</p><p class="text-xl font-bold text-green-600 mt-1" id="stat-setup-complete">0</p></div>
+            <div class="stat-card"><p class="text-gray-500 text-xs">입고완료</p><p class="text-xl font-bold text-blue-600 mt-1" id="stat-release-waiting">0</p></div>
+            <div class="stat-card"><p class="text-gray-500 text-xs">출고완료</p><p class="text-xl font-bold text-green-600 mt-1" id="stat-setup-complete">0</p></div>
         </div>
         <!-- 타임라인 -->
         <div class="bg-white rounded-xl shadow-sm p-4 mb-4">
@@ -321,7 +361,7 @@
         <div class="bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl p-4 mb-4">
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
                 <div><div class="text-xs opacity-80">📚 전체</div><div class="text-2xl font-bold" id="admin-total-courses">0</div></div>
-                <div><div class="text-xs opacity-80">✅ 세팅완료</div><div class="text-2xl font-bold text-green-300" id="admin-complete-courses">0</div></div>
+                <div><div class="text-xs opacity-80">✅ 출고완료</div><div class="text-2xl font-bold text-green-300" id="admin-complete-courses">0</div></div>
                 <div><div class="text-xs opacity-80">🚀 진행중</div><div class="text-2xl font-bold text-yellow-300" id="admin-progress-courses">0</div></div>
                 <div><div class="text-xs opacity-80">⏳ 대기</div><div class="text-2xl font-bold text-red-300" id="admin-waiting-courses">0</div></div>
             </div>
@@ -416,14 +456,15 @@
         </div>
     </div>
 
-    <!-- 입출고 관리 -->
-    <div id="page-stock" class="page-content hidden">
-        <h2 class="text-xl font-bold mb-4 text-gray-800">🏭 입출고 관리</h2>
+    <!-- 📦 입고 관리 -->
+    <div id="page-stockin" class="page-content hidden">
+        <h2 class="text-xl font-bold mb-4 text-gray-800">📦 입고 관리</h2>
+
         <!-- 과정명 검색창 -->
         <div class="bg-white rounded-xl shadow-sm p-4 mb-4">
             <label class="block text-sm font-semibold text-gray-700 mb-2">🔍 과정명 검색</label>
             <div class="flex gap-2">
-                <input type="text" id="stock-search-input" placeholder="과정명 입력 후 검색..."
+                <input type="text" id="stock-search-input" placeholder="과정명 일부 입력 (예: 여신기본)"
                     class="flex-1 px-3 py-2 border-2 border-gray-300 rounded-xl text-sm focus:border-blue-500 focus:outline-none"
                     oninput="applyStockSearch()"
                     style="min-height:46px; font-size:1rem;">
@@ -431,56 +472,70 @@
                     class="px-4 bg-gray-200 text-gray-600 rounded-xl text-sm font-bold"
                     style="min-height:46px;">✕ 초기화</button>
             </div>
-            <p class="text-xs text-gray-400 mt-1">※ 검색 시 주차 필터 무관하게 전체 과정에서 찾습니다</p>
+            <p class="text-xs text-gray-400 mt-1">※ 검색어 포함 과정 전체를 그룹 단위로 표시 · 빈칸이면 전체 목록</p>
         </div>
+
+        <!-- 📊 과정별 입고/재고 현황 테이블 -->
+        <div class="bg-white rounded-xl shadow-sm p-4">
+            <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+                <h3 class="text-base font-bold text-gray-800">📊 과정별 입고 현황
+                    <span class="text-xs font-normal text-gray-400 ml-1">(차수 통합 집계)</span>
+                </h3>
+                <span class="text-xs text-red-500 font-semibold">🔴 잔여 100권 미만 강조</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full" style="border-collapse:collapse;">
+                    <thead>
+                        <tr style="background:#f3f4f6; border-bottom:2px solid #e5e7eb;">
+                            <th class="px-3 py-2 text-left text-xs font-bold text-gray-600" style="min-width:140px;">과정명</th>
+                            <th class="px-3 py-2 text-center text-xs font-bold text-blue-600" style="min-width:60px;">입고량</th>
+                            <th class="px-3 py-2 text-center text-xs font-bold text-orange-600" style="min-width:60px;">출고량</th>
+                            <th class="px-3 py-2 text-center text-xs font-bold text-green-700" style="min-width:60px;">잔여</th>
+                            <th class="px-3 py-2 text-center text-xs font-bold text-gray-600" style="min-width:100px;">처리</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stock-inventory-table">
+                        <tr><td colspan="5" class="text-center py-8 text-gray-400">데이터 로딩 중...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🚚 출고 관리 -->
+    <div id="page-stockout" class="page-content hidden">
+        <h2 class="text-xl font-bold mb-4 text-gray-800">🚚 출고 관리</h2>
+
         <!-- 주차 선택 -->
         <div class="bg-white rounded-xl shadow-sm p-4 mb-4" id="stock-week-filter-box">
             <div class="flex flex-wrap items-center gap-2">
-                <label class="text-sm font-semibold text-gray-700">📅 주차:</label>
+                <label class="text-sm font-semibold text-gray-700">📅 출고 주차:</label>
                 <select id="stock-week-selector" class="flex-1 px-3 py-2 text-sm font-bold text-blue-600 border-2 border-blue-400 rounded-lg cursor-pointer"></select>
                 <button onclick="applyStockWeekFilter()" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold">✔️ 선택</button>
                 <button onclick="goToTodayStock()" class="px-4 py-2 bg-gray-600 text-white rounded-lg text-sm">이번주</button>
             </div>
         </div>
-        <div class="bg-white rounded-xl shadow-sm p-4 mb-4">
-            <h3 class="text-base font-bold mb-3 text-gray-800">⬇️ 입고 대기 과정</h3>
-            <div id="stock-in-list" class="space-y-3"></div>
-        </div>
+
+        <!-- 출고 목록 (차수별) -->
         <div class="bg-white rounded-xl shadow-sm p-4">
-            <h3 class="text-base font-bold mb-3 text-gray-800">⬆️ 출고 대기/완료 과정</h3>
+            <h3 class="text-base font-bold mb-3 text-gray-800">🚚 출고 목록
+                <span class="text-xs font-normal text-gray-400">(과정명+차수 · 출고완료 포함)</span>
+            </h3>
             <div id="stock-out-list" class="space-y-3"></div>
         </div>
     </div>
 
-    <!-- 세팅 관리 -->
-    <div id="page-setup" class="page-content hidden">
-        <h2 class="text-xl font-bold mb-4 text-gray-800">✅ 세팅 관리</h2>
-        <div class="bg-white rounded-xl shadow-sm p-4 mb-4">
-            <div class="flex flex-wrap items-center gap-2">
-                <label class="text-sm font-semibold text-gray-700">📅 주차:</label>
-                <select id="setup-week-selector" class="flex-1 px-3 py-2 text-sm font-bold text-blue-600 border-2 border-blue-400 rounded-lg cursor-pointer"></select>
-                <button onclick="applySetupWeekFilter()" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold">✔️ 선택</button>
-                <button onclick="goToTodaySetup()" class="px-4 py-2 bg-gray-600 text-white rounded-lg text-sm">이번주</button>
-            </div>
-        </div>
-        <div class="bg-white rounded-xl shadow-sm p-4 mb-4">
-            <h3 class="text-base font-bold mb-3 text-gray-800 flex items-center gap-2">⏳ 세팅 대기 <span class="text-xs font-normal text-gray-400">(담당자 출고확인 완료)</span></h3>
-            <div id="setup-waiting-list" class="space-y-3"></div>
-        </div>
-        <div class="bg-white rounded-xl shadow-sm p-4 mb-4">
-            <h3 class="text-base font-bold mb-3 text-gray-800">🔧 세팅 진행 중 <span class="text-xs font-normal text-gray-400">(매니저 처리 중)</span></h3>
-            <div id="setup-progress-list" class="space-y-3"></div>
-        </div>
-        <div class="bg-white rounded-xl shadow-sm p-4 mb-4">
-            <h3 class="text-base font-bold mb-3 text-blue-700">🔷 관리자 최종 확인 대기 <span class="text-xs font-normal text-gray-400">(매니저 완료 → 관리자 최종확인 필요)</span></h3>
-            <div id="setup-complete-list" class="space-y-3"></div>
-        </div>
-        <div class="bg-white rounded-xl shadow-sm p-4">
-            <h3 class="text-base font-bold mb-1 text-green-700">✅ 세팅 완료 <span class="text-xs font-normal text-gray-400">(선택 주차 전체 누적)</span></h3>
-            <p class="text-xs text-gray-400 mb-3">세팅 처리자 · 관리자 확인 정보 · 추가출고 내역 포함</p>
-            <div id="setup-final-list" class="space-y-3"></div>
-        </div>
+    <!-- 세팅 관리 (숨김 - 데이터 보존) -->
+    <div id="page-setup" class="page-content hidden" style="display:none !important;">
+        <div id="setup-waiting-list"></div>
+        <div id="setup-progress-list"></div>
+        <div id="setup-complete-list"></div>
+        <div id="setup-final-list"></div>
+        <select id="setup-week-selector" style="display:none;"></select>
     </div>
+
+    <!-- 기존 stock 페이지 (하위 호환 - 숨김) -->
+    <div id="page-stock" class="page-content hidden" style="display:none !important;"></div>
 
     <!-- 작업 이력 -->
     <div id="page-logs" class="page-content hidden">
@@ -818,6 +873,128 @@
                     class="btn-action btn-gray flex-1" style="min-height:52px;">취소</button>
                 <button onclick="submitExtraRelease()"
                     class="btn-action flex-1" style="min-height:52px;background:#d97706;color:white;border:none;border-radius:12px;font-weight:700;">📤 추가 출고</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 강제 출고 모달 -->
+<div id="group-force-release-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+    <div class="modal-box" style="max-width:500px;">
+        <div class="flex items-center justify-between p-4 border-b">
+            <h3 class="text-lg font-bold text-gray-800" id="force-release-title">📤 출고 처리</h3>
+            <button onclick="closeGroupForceReleaseModal()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">✕</button>
+        </div>
+        <div class="p-4" style="overflow-y:auto; max-height:80vh;">
+            <input type="hidden" id="force-release-group-key">
+            <!-- 현황 요약 -->
+            <div id="force-release-summary" style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px;"></div>
+            <p style="font-size:0.82rem; color:#6b7280; margin-bottom:10px;">※ 입고완료 상태인 과정에서 직접 출고 처리합니다. 워크플로우와 별개로 즉시 처리됩니다.</p>
+            <!-- 출고 가능 과정 목록 -->
+            <div id="force-release-list" class="space-y-3"></div>
+        </div>
+        <div class="p-4 border-t">
+            <button onclick="closeGroupForceReleaseModal()"
+                class="btn-action btn-gray w-full" style="min-height:48px;">닫기</button>
+        </div>
+    </div>
+</div>
+
+<!-- 그룹 통합 관리 모달 (입고수정 + 출고수정) -->
+<div id="group-manage-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+    <div class="modal-box" style="max-width:520px;">
+        <div class="flex items-center justify-between p-4 border-b">
+            <h3 class="text-lg font-bold text-gray-800" id="group-manage-title">📋 재고 관리</h3>
+            <button onclick="closeGroupManageModal()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">✕</button>
+        </div>
+        <div class="p-4" style="overflow-y:auto; max-height:80vh;">
+            <input type="hidden" id="group-manage-group-name">
+
+            <!-- 현황 요약 -->
+            <div id="group-manage-summary"
+                style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:16px;">
+            </div>
+
+            <!-- ── 섹션1: 입고량 수정 ── -->
+            <details id="section-stock-edit" style="margin-bottom:12px;">
+                <summary style="background:#fef3c7; border:1px solid #fcd34d; border-radius:12px; padding:12px 16px; font-size:0.95rem; font-weight:700; color:#92400e; cursor:pointer; list-style:none; display:flex; align-items:center; justify-content:space-between;">
+                    <span>✏️ 입고량 수정</span>
+                    <span style="font-size:0.8rem; font-weight:500; color:#b45309;">담당자/관리자</span>
+                </summary>
+                <div style="border:1px solid #fcd34d; border-top:none; border-radius:0 0 12px 12px; padding:16px; background:#fffbeb;">
+                    <p class="text-xs text-amber-700 mb-3">⚠️ 총 입고량을 직접 수정합니다. 차이만큼 자동 조정됩니다.</p>
+                    <div class="mb-3">
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">현재 총 입고량</label>
+                        <div id="group-stock-edit-current"
+                            style="background:#f3f4f6; border-radius:10px; padding:12px; font-size:1.4rem; font-weight:800; text-align:center; color:#374151;"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">수정할 총 입고량 (권)</label>
+                        <input type="number" id="group-stock-edit-quantity" min="0"
+                            oninput="calcGroupStockEditDiff()"
+                            class="modal-input" inputmode="numeric" pattern="[0-9]*"
+                            style="font-size:1.3rem; font-weight:800; text-align:center;">
+                        <div id="group-stock-edit-diff" class="mt-1 text-center text-sm font-bold" style="min-height:22px;"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">수정 사유 <span class="text-red-500">*</span></label>
+                        <textarea id="group-stock-edit-notes" rows="2"
+                            placeholder="수정 사유를 입력하세요 (필수)" class="modal-input"></textarea>
+                    </div>
+                    <button onclick="submitGroupStockEdit()"
+                        class="btn-action btn-amber w-full" style="min-height:48px;">✔️ 입고량 수정 완료</button>
+                </div>
+            </details>
+
+            <!-- ── 섹션2: 출고 수정 ── -->
+            <details id="section-release-edit" style="margin-bottom:4px;">
+                <summary style="background:#fce7f3; border:1px solid #f9a8d4; border-radius:12px; padding:12px 16px; font-size:0.95rem; font-weight:700; color:#9d174d; cursor:pointer; list-style:none; display:flex; align-items:center; justify-content:space-between;">
+                    <span>🔄 출고 수정 <span id="release-edit-badge" style="background:#db2777; color:white; border-radius:20px; font-size:0.78rem; padding:2px 8px; margin-left:6px;"></span></span>
+                    <span style="font-size:0.8rem; font-weight:500; color:#be185d;">담당자/관리자</span>
+                </summary>
+                <div style="border:1px solid #f9a8d4; border-top:none; border-radius:0 0 12px 12px; padding:16px; background:#fdf2f8;">
+                    <p class="text-xs text-pink-700 mb-3">🔄 출고된 과정을 초기화하면 <b>입고완료</b> 상태로 돌아가 다시 출고할 수 있습니다.<br>출고량도 0으로 초기화됩니다.</p>
+                    <div id="release-edit-list" class="space-y-2"></div>
+                </div>
+            </details>
+        </div>
+        <div class="p-4 border-t">
+            <button onclick="closeGroupManageModal()"
+                class="btn-action btn-gray w-full" style="min-height:48px;">닫기</button>
+        </div>
+    </div>
+</div>
+
+<!-- 그룹 단위 입고 모달 -->
+<div id="group-stock-in-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+    <div class="modal-box">
+        <div class="flex items-center justify-between p-5 border-b">
+            <h3 class="text-xl font-bold text-gray-800" id="group-stock-in-title">📦 입고 처리</h3>
+            <button onclick="closeGroupStockInModal()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">✕</button>
+        </div>
+        <div class="p-5">
+            <input type="hidden" id="group-stock-in-group-name">
+            <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-4 text-sm text-blue-800">
+                📦 그룹 전체 재고에 입고 수량을 추가합니다.<br>
+                <span id="group-stock-in-info" class="font-bold mt-1 block text-blue-900"></span>
+                <span class="text-xs text-blue-600 mt-1 block">※ 같은 과목의 다른 차수와 재고를 공유합니다.</span>
+            </div>
+            <div class="mb-5">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">입고 수량 (권) <span class="text-xs font-normal text-gray-400">— 0 입력 가능</span></label>
+                <input type="number" id="group-stock-in-quantity" min="0"
+                    class="modal-input modal-input-lg"
+                    inputmode="numeric" pattern="[0-9]*">
+            </div>
+            <div class="mb-5">
+                <label class="block text-sm font-medium text-gray-700 mb-2">비고</label>
+                <textarea id="group-stock-in-notes" rows="2" placeholder="입고 관련 메모 (선택)"
+                    class="modal-input"></textarea>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="closeGroupStockInModal()"
+                    class="btn-action btn-gray flex-1" style="min-height:52px;">취소</button>
+                <button onclick="submitGroupStockIn()"
+                    class="btn-action btn-success flex-1" style="min-height:52px;">✔️ 입고 완료</button>
             </div>
         </div>
     </div>
@@ -3634,7 +3811,14 @@ function hideLoadingOverlay() {
 // 작업자 미선택 팝업
 function requireUser() {
     if (currentUser) return true;
-    document.getElementById('no-user-popup').classList.add('show');
+    // 드롭다운 강조 애니메이션
+    const wrap = document.getElementById('user-selector-wrap');
+    if (wrap) {
+        wrap.classList.add('no-user');
+        wrap.style.transform = 'scale(1.05)';
+        setTimeout(() => { wrap.style.transform = ''; }, 400);
+    }
+    showNotification('⚠️ 상단에서 작업자를 먼저 선택해주세요.', 'error');
     return false;
 }
 function closeNoUserPopup() {
@@ -3653,28 +3837,26 @@ document.addEventListener('keydown', e => {
 // 역할별 탭 색상/접근 업데이트
 function updateNavTabsForRole() {
     const role = currentUser?.role;
-    // 관리자, 담당자: 모든 탭 접근 가능
-    // 매니저: 대시보드, 입출고관리, 세팅관리, 작업이력만 접근 가능
-    // 미선택: 대시보드만 밝게
     const tabPermissions = {
-        '관리자': ['dashboard','courses','stock','setup','logs','admin'],
-        '담당자': ['dashboard','courses','stock','setup','logs','admin'],
-        '매니저': ['dashboard','stock','setup','logs'],
+        '관리자': ['dashboard','courses','stockin','stockout','logs','admin'],
+        '담당자': ['dashboard','courses','stockin','stockout','logs','admin'],
+        '매니저': ['dashboard','courses','stockin','stockout','logs','admin'],
     };
-    const allowed = role ? (tabPermissions[role] || ['dashboard']) : [];
+    const allowed = role ? (tabPermissions[role] || ['dashboard']) : ['dashboard'];
     document.querySelectorAll('.nav-btn').forEach(btn => {
         const page = btn.getAttribute('data-page');
-        const isActive = btn.classList.contains('active-nav');
         if (allowed.includes(page)) {
             btn.style.opacity = '1';
             btn.style.filter = 'none';
             btn.style.cursor = 'pointer';
+            btn.style.pointerEvents = 'auto';
             btn.title = '';
         } else {
-            btn.style.opacity = role ? '0.35' : '0.5';
+            btn.style.opacity = '0.4';
             btn.style.filter = 'grayscale(60%)';
             btn.style.cursor = role ? 'not-allowed' : 'default';
-            btn.title = role ? '이 역할은 접근 권한이 없습니다' : '작업자를 먼저 선택하세요';
+            btn.style.pointerEvents = role ? 'none' : 'auto';
+            btn.title = role ? '접근 권한 없음' : '작업자를 먼저 선택하세요';
         }
     });
 }
@@ -3783,7 +3965,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // ── 5. 데이터 로드 ──
     updateLoadingOverlay('📊 데이터 로딩 중...');
-    await loadUsers();
+    await loadUsers();   // ← currentUser 복원 포함 (localStorage + 브라우저 자동완성)
     await loadCourses();
 
     // ── 6. 화면 표시 ──
@@ -3795,8 +3977,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     await requestNotificationPermission();
     updateTabBadge();
 
-    // ── 시작 안내 팝업 표시 ──
-    document.getElementById('startup-popup').style.display = 'flex';
+    // ── 시작 안내 팝업: 작업자 미선택 시에만 ──
+    if (!currentUser) {
+        document.getElementById('startup-popup').style.display = 'flex';
+    } else {
+        document.getElementById('startup-popup').style.display = 'none';
+    }
 
     // ── 7. 이벤트 리스너 ──
     document.getElementById('course-form').addEventListener('submit', handleCourseSubmit);
@@ -3811,18 +3997,26 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     });
 
-    document.getElementById('current-user').addEventListener('change', function(e) {
+    // 작업자 변경 핸들러 (change + input 둘 다 청취 — iOS Safari 호환성)
+    const handleUserChange = function(e) {
         const userName = e.target.value;
         currentUser = users.find(u => u.name === userName) || null;
         const wrap = document.getElementById('user-selector-wrap');
         if (currentUser) {
+            localStorage.setItem('textbook_last_user', currentUser.name);
             showNotification(`${currentUser.name}(${currentUser.role})로 전환되었습니다.`, 'info');
-            wrap.classList.remove('no-user');
+            wrap?.classList.remove('no-user');
+            const sp = document.getElementById('startup-popup');
+            if (sp) sp.style.display = 'none';
+            console.log('✅ 작업자 변경:', currentUser.name);
         } else {
-            wrap.classList.add('no-user');
+            localStorage.removeItem('textbook_last_user');
+            wrap?.classList.add('no-user');
         }
         updateNavTabsForRole();
-    });
+    };
+    document.getElementById('current-user').addEventListener('change', handleUserChange);
+    document.getElementById('current-user').addEventListener('input', handleUserChange);
 
     // ── 8. Supabase 실시간 구독 ──
     sb.channel('courses-realtime')
@@ -3830,8 +4024,9 @@ document.addEventListener('DOMContentLoaded', async function() {
             await loadCourses();
             loadDashboardData();
             const activePage = document.querySelector('.nav-btn.active-nav')?.getAttribute('data-page');
-            if (activePage === 'stock')  loadStockManagement();
-            if (activePage === 'setup') loadSetupManagement();
+            if (activePage === 'stockin') loadStockInPage();
+            if (activePage === 'stockout') loadStockOutPage();
+            // 세팅 비활성화
             if (activePage === 'admin') loadAdminCourses();
         })
         .subscribe();
@@ -3963,77 +4158,123 @@ function goToTodayStock() {
 }
 function applySetupWeekFilter() {
     currentSetupWeekStart = new Date(availableWeeks[parseInt(document.getElementById('setup-week-selector').value)]);
-    loadSetupManagement();
     showNotification('선택한 주차의 세팅 데이터를 불러왔습니다.', 'success');
 }
 function goToTodaySetup() {
     const idx = getTodayIdx();
     currentSetupWeekStart = new Date(availableWeeks[idx]);
     document.getElementById('setup-week-selector').value = idx;
-    loadSetupManagement();
 }
 
 function showPage(pageName) {
-    // 대시보드 외 모든 탭은 작업자 선택 필수
-    if (pageName !== 'dashboard' && !requireUser()) return;
-
-    // 역할 권한 체크
-    const role = currentUser?.role;
-    const tabPermissions = {
-        '관리자': ['dashboard','courses','stock','setup','logs','admin'],
-        '담당자': ['dashboard','courses','stock','setup','logs','admin'],
-        '매니저': ['dashboard','stock','setup','logs'],
-    };
-    const allowed = role ? (tabPermissions[role] || ['dashboard']) : ['dashboard'];
-    if (!allowed.includes(pageName)) {
-        showNotification(role ? '이 역할은 해당 탭에 접근 권한이 없습니다.' : '작업자를 먼저 선택해주세요.', 'error');
-        return;
+    // 대시보드 외: 작업자 미선택 시 차단 (드롭다운 값까지 재확인)
+    if (pageName !== 'dashboard') {
+        // currentUser가 없으면 드롭다운에서 다시 읽기 시도
+        if (!currentUser) {
+            const sel = document.getElementById('current-user');
+            const name = sel?.value;
+            if (name && Array.isArray(users) && users.length > 0) {
+                const found = users.find(u => u.name === name);
+                if (found) {
+                    currentUser = found;
+                    localStorage.setItem('textbook_last_user', found.name);
+                    document.getElementById('user-selector-wrap')?.classList.remove('no-user');
+                    updateNavTabsForRole();
+                }
+            }
+        }
+        if (!currentUser) {
+            showNotification('⚠️ 상단에서 작업자를 먼저 선택해주세요.', 'error');
+            const wrap = document.getElementById('user-selector-wrap');
+            if (wrap) { wrap.style.transform = 'scale(1.05)'; setTimeout(() => { wrap.style.transform = ''; }, 400); }
+            // 드롭다운 열어주기
+            const sel = document.getElementById('current-user');
+            if (sel) { sel.focus(); try { sel.click(); } catch(e) {} }
+            return;
+        }
     }
 
     document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
-    document.getElementById('page-' + pageName).classList.remove('hidden');
+    document.getElementById('page-' + pageName)?.classList.remove('hidden');
     document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active-nav'));
     document.querySelector(`[data-page="${pageName}"]`)?.classList.add('active-nav');
 
     if (pageName === 'dashboard')     { loadDashboardData(); }
     else if (pageName === 'admin')    { updateAdminWeekSelector(); loadAdminCourses(); }
     else if (pageName === 'courses')  { updateCoursesWeekSelector(); loadCourses(); }
-    else if (pageName === 'stock')    { updateStockWeekSelector(); loadStockManagement(); }
-    else if (pageName === 'setup')    { updateSetupWeekSelector(); loadSetupManagement(); }
+    else if (pageName === 'stockin')  { loadStockInPage(); }
+    else if (pageName === 'stockout') { updateStockWeekSelector(); loadStockOutPage(); }
     else if (pageName === 'logs')     { loadLogs(); }
 }
+
+const FALLBACK_USERS = [
+    { name: '교육부 부장',  role: '관리자', active: true },
+    { name: '교육기획팀장', role: '관리자', active: true },
+    { name: '이선희',       role: '관리자', active: true },
+    { name: '주나연',       role: '담당자', active: true },
+    { name: '유미정',       role: '매니저', active: true },
+    { name: '나영하',       role: '매니저', active: true },
+    { name: '교육진행',     role: '매니저', active: true },
+];
 
 async function loadUsers() {
     try {
         const { data, error } = await sb.from('users').select('*').eq('active', true);
         if (error) throw error;
-        users = data || [];
-        const userOrder = ['교육부 부장','교육기획팀장','이선희','주나연','유미정','나영하','교육진행'];
-        users.sort((a, b) => {
-            const ia = userOrder.indexOf(a.name), ib = userOrder.indexOf(b.name);
-            return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
-        });
-        const userSelect = document.getElementById('current-user');
-        userSelect.innerHTML = '<option value="" style="background-color:#1e40af;color:white;">작업자 선택</option>';
+        users = (data && data.length > 0) ? data : [...FALLBACK_USERS];
+    } catch (error) {
+        console.error('사용자 로드 오류 - fallback 사용:', error);
+        users = [...FALLBACK_USERS];
+    }
+
+    // 정렬
+    const userOrder = ['교육부 부장','교육기획팀장','이선희','주나연','유미정','나영하','교육진행'];
+    users.sort((a, b) => {
+        const ia = userOrder.indexOf(a.name), ib = userOrder.indexOf(b.name);
+        return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+    });
+
+    const userSelect = document.getElementById('current-user');
+    if (!userSelect) return;
+
+    // 드롭다운 재구성 전 현재값 저장
+    const prevValue = userSelect.value;
+
+    userSelect.innerHTML = '<option value="" style="background-color:#1e40af;color:white;">작업자 선택</option>';
+    users.forEach(user => {
+        const option = document.createElement('option');
+        option.value = user.name;
+        option.textContent = `${user.name} (${user.role})`;
+        option.style.backgroundColor = '#1e40af';
+        option.style.color = 'white';
+        userSelect.appendChild(option);
+    });
+
+    // ── 작업자 복원: localStorage > 이전값 ──
+    const savedUser = localStorage.getItem('textbook_last_user') || prevValue;
+    if (savedUser) {
+        const found = users.find(u => u.name === savedUser);
+        if (found) {
+            userSelect.value = found.name;
+            currentUser = found;
+            localStorage.setItem('textbook_last_user', found.name);
+            document.getElementById('user-selector-wrap')?.classList.remove('no-user');
+            updateNavTabsForRole();
+            console.log('✅ 작업자 자동 복원:', found.name, found.role);
+        }
+    }
+
+    // 로그 필터 드롭다운
+    const logUserSelect = document.getElementById('log-filter-user');
+    if (logUserSelect) {
+        logUserSelect.innerHTML = '<option value="">전체</option>';
         users.forEach(user => {
             const option = document.createElement('option');
             option.value = user.name;
             option.textContent = `${user.name} (${user.role})`;
-            option.style.backgroundColor = '#1e40af';
-            option.style.color = 'white';
-            userSelect.appendChild(option);
+            logUserSelect.appendChild(option);
         });
-        const logUserSelect = document.getElementById('log-filter-user');
-        if (logUserSelect) {
-            logUserSelect.innerHTML = '<option value="">전체</option>';
-            users.forEach(user => {
-                const option = document.createElement('option');
-                option.value = user.name;
-                option.textContent = `${user.name} (${user.role})`;
-                logUserSelect.appendChild(option);
-            });
-        }
-    } catch (error) { console.error('사용자 로드 오류:', error); }
+    }
 }
 
 async function loadAllData() {
@@ -4120,9 +4361,8 @@ async function loadDashboardData() {
 
         document.getElementById('stat-total-courses').textContent    = weekCourses.length;
         document.getElementById('stat-stock-waiting').textContent    = weekCourses.filter(c => c.status === '입고대기').length;
-        document.getElementById('stat-release-waiting').textContent  = weekCourses.filter(c => c.status === '출고대기').length;
-        document.getElementById('stat-setup-progress').textContent   = weekCourses.filter(c => c.status === '세팅중').length;
-        document.getElementById('stat-setup-complete').textContent   = weekCourses.filter(c => c.status === '세팅완료').length;
+        document.getElementById('stat-release-waiting').textContent  = weekCourses.filter(c => c.status === '입고완료').length;
+        document.getElementById('stat-setup-complete').textContent   = weekCourses.filter(c => c.status === '출고완료').length;
 
         updateWeekSummary(weekCourses);
         updateTimeline(weekCourses);
@@ -4130,7 +4370,7 @@ async function loadDashboardData() {
         updateStatusChart(courses); // 전체 과정 기준
 
         // 관리자 모니터링
-        if (currentUser?.role === '관리자') {
+        if (['매니저','담당자','관리자'].includes(currentUser?.role)) {
             document.getElementById('admin-monitor-section').classList.remove('hidden');
             updateAdminMonitor(courses);
         } else {
@@ -4140,9 +4380,9 @@ async function loadDashboardData() {
 }
 
 function updateWeekSummary(weekCourses) {
-    const total = weekCourses.length;
-    const complete = weekCourses.filter(c => c.status === '세팅완료').length;
-    const progress = weekCourses.filter(c => c.status !== '세팅완료' && c.status !== '입고대기').length;
+    const total    = weekCourses.length;
+    const complete = weekCourses.filter(c => c.status === '출고완료').length;
+    const progress = weekCourses.filter(c => c.status === '입고완료').length;
     const rate = total > 0 ? Math.round((complete / total) * 100) : 0;
     document.getElementById('week-total-courses').textContent    = total;
     document.getElementById('week-progress-courses').textContent = progress;
@@ -4211,10 +4451,10 @@ function updateAdminMonitor(allCourses) {
         { label: '📦 입고대기',      status: ['입고대기'],       color: 'bg-red-100 border-red-300',    icon: '📦', desc: '담당자/관리자가 입고 처리 필요' },
         { label: '✔️ 입고완료',      status: ['입고완료'],       color: 'bg-blue-100 border-blue-300',  icon: '✔️', desc: '매니저가 출고 처리 필요' },
         { label: '🚚 출고완료',      status: ['출고완료'],       color: 'bg-yellow-100 border-yellow-300', icon: '🚚', desc: '담당자 출고 확인 필요 ← 병목 주의' },
-        { label: '📋 출고확인',      status: ['출고확인'],       color: 'bg-pink-100 border-pink-300',  icon: '📋', desc: '매니저가 세팅 시작 필요' },
-        { label: '🔧 세팅중',        status: ['세팅중'],         color: 'bg-purple-100 border-purple-300', icon: '🔧', desc: '매니저 세팅 진행 중' },
-        { label: '📋 세팅완료대기',  status: ['세팅완료대기'],   color: 'bg-amber-100 border-amber-300', icon: '📋', desc: '담당자 최종 확인 필요 ← 병목 주의' },
-        { label: '✅ 세팅완료',      status: ['세팅완료'],       color: 'bg-green-100 border-green-300', icon: '✅', desc: '완료' },
+        
+        
+        
+        { label: '✅ 출고완료',      status: ['출고완료'],       color: 'bg-green-100 border-green-300', icon: '✅', desc: '완료' },
     ];
 
     const today = new Date(); today.setHours(0,0,0,0);
@@ -4261,7 +4501,7 @@ function updateUrgentTasks(courseList) {
     const today = new Date(); today.setHours(0,0,0,0);
     const urgent = courseList.filter(c => {
         const d = Math.ceil((new Date(c.start_date) - today) / (1000 * 60 * 60 * 24));
-        return d <= 3 && d >= 0 && !['세팅완료'].includes(c.status);
+        return d <= 3 && d >= 0 && c.status !== '출고완료';
     });
     if (urgent.length === 0) {
         container.innerHTML = `<div class="text-center py-6 text-gray-500">✅<p>긴급 작업이 없습니다.</p></div>`;
@@ -4269,26 +4509,16 @@ function updateUrgentTasks(courseList) {
     }
     container.innerHTML = urgent.map(task => {
         const d = Math.ceil((new Date(task.start_date) - today) / (1000 * 60 * 60 * 24));
-
-        // 상태에 따라 이동할 탭과 버튼 색상 결정
-        const isStockPending  = ['입고대기','입고완료'].includes(task.status);
-        const isOutPending    = ['출고대기','출고완료'].includes(task.status);
-        const isSetupPending  = ['출고확인','세팅중'].includes(task.status);
-        const targetPage      = isStockPending ? 'stock' : isOutPending ? 'stock' : 'setup';
-        const btnColor        = isStockPending ? 'bg-blue-600 hover:bg-blue-700'
-                              : isOutPending   ? 'bg-orange-600 hover:bg-orange-700'
-                              : 'bg-purple-600 hover:bg-purple-700';
-        const actionLabel     = isStockPending ? '→ 입출고 처리'
-                              : isOutPending   ? '→ 출고 처리'
-                              : '→ 세팅 처리';
-
+        const isStockPending = task.status === '입고대기';
+        const targetPage  = isStockPending ? 'stockin' : 'stockout';
+        const btnColor    = isStockPending ? 'bg-blue-600 hover:bg-blue-700' : 'bg-orange-600 hover:bg-orange-700';
+        const actionLabel = isStockPending ? '→ 입고 처리' : '→ 출고 처리';
         return `
         <div class="flex items-center justify-between p-3 bg-red-50 border border-red-200 rounded-xl gap-3">
             <div class="flex items-center gap-3 min-w-0">
                 <span class="px-2 py-1 bg-red-600 text-white text-sm font-bold rounded-lg flex-shrink-0">D-${d}</span>
                 <div class="min-w-0">
-                    <div class="font-bold text-gray-900 text-sm leading-tight"
-                         style="word-break:keep-all;">${task.course_name}</div>
+                    <div class="font-bold text-gray-900 text-sm leading-tight" style="word-break:keep-all;">${task.course_name}</div>
                     <div class="text-sm text-gray-500 mt-0.5">
                         현재: <span class="font-semibold status-badge status-${task.status}" style="font-size:0.82rem;">${task.status}</span>
                     </div>
@@ -4306,14 +4536,9 @@ function updateStatusChart(courseList) {
     const ctx = document.getElementById('statusChart');
     if (!ctx) return;
     const statusCounts = {
-        '입고대기':   courseList.filter(c => c.status === '입고대기').length,
-        '입고완료':   courseList.filter(c => c.status === '입고완료').length,
-        '출고대기':   courseList.filter(c => c.status === '출고대기').length,
-        '출고완료':   courseList.filter(c => c.status === '출고완료').length,
-        '출고확인':   courseList.filter(c => c.status === '출고확인').length,
-        '세팅중':     courseList.filter(c => c.status === '세팅중').length,
-        '세팅완료대기': courseList.filter(c => c.status === '세팅완료대기').length,
-        '세팅완료':   courseList.filter(c => c.status === '세팅완료').length,
+        '입고대기': courseList.filter(c => c.status === '입고대기').length,
+        '입고완료': courseList.filter(c => c.status === '입고완료').length,
+        '출고완료': courseList.filter(c => c.status === '출고완료').length,
     };
     if (statusChart) statusChart.destroy();
     statusChart = new Chart(ctx, {
@@ -4322,8 +4547,8 @@ function updateStatusChart(courseList) {
             labels: Object.keys(statusCounts),
             datasets: [{
                 data: Object.values(statusCounts),
-                backgroundColor: ['#fee2e2','#dbeafe','#fef3c7','#d1fae5','#fce7f3','#e0e7ff','#fef9c3','#bbf7d0'],
-                borderColor:     ['#991b1b','#1e40af','#92400e','#065f46','#9d174d','#3730a3','#854d0e','#065f46'],
+                backgroundColor: ['#fee2e2','#dbeafe','#d1fae5'],
+                borderColor:     ['#991b1b','#1e40af','#065f46'],
                 borderWidth: 2
             }]
         },
@@ -4341,19 +4566,24 @@ function getGroupName(courseName) {
     return courseName.replace(/\s*\d+차(\([^)]*\))?$/, '').trim() || courseName;
 }
 
+// 비교용 정규화 키: 공백 전부 제거 → "여신기본"과 "여신 기본"을 동일하게 처리
+function getGroupKey(courseName) {
+    return getGroupName(courseName).replace(/\s+/g, '');
+}
+
 // 그룹 총 재고 (같은 과목명 과정들의 stock_quantity 합산)
-function getGroupTotalStock(groupName) {
+function getGroupTotalStock(groupKey) {
     return courses
-        .filter(c => getGroupName(c.course_name) === groupName)
+        .filter(c => getGroupKey(c.course_name) === groupKey)
         .reduce((sum, c) => sum + (c.stock_quantity || 0), 0);
 }
 
 // 그룹 총 출고량 (이미 출고된 수량 합산)
-function getGroupTotalReleased(groupName, excludeCourseId = null) {
+function getGroupTotalReleased(groupKey, excludeCourseId = null) {
     return courses
-        .filter(c => getGroupName(c.course_name) === groupName && c.id !== excludeCourseId)
+        .filter(c => getGroupKey(c.course_name) === groupKey && c.id !== excludeCourseId)
         .reduce((sum, c) => {
-            const released = ['출고완료','출고확인','세팅중','세팅완료대기','세팅완료'].includes(c.status)
+            const released = ['출고완료'].includes(c.status)
                 ? (c.released_quantity || 0) : 0;
             return sum + released;
         }, 0);
@@ -4362,12 +4592,10 @@ function getGroupTotalReleased(groupName, excludeCourseId = null) {
 // 검색어 상태
 let stockSearchTerm = '';
 
-// 검색 적용 (실시간)
+// 검색 적용 (입고 탭 전용)
 function applyStockSearch() {
     stockSearchTerm = document.getElementById('stock-search-input')?.value.trim() || '';
-    const weekBox = document.getElementById('stock-week-filter-box');
-    if (weekBox) weekBox.style.opacity = stockSearchTerm ? '0.4' : '1';
-    renderStockLists();
+    updateStockInventoryTable();
 }
 
 // 검색 초기화
@@ -4375,53 +4603,674 @@ function clearStockSearch() {
     stockSearchTerm = '';
     const input = document.getElementById('stock-search-input');
     if (input) input.value = '';
-    const weekBox = document.getElementById('stock-week-filter-box');
-    if (weekBox) weekBox.style.opacity = '1';
-    renderStockLists();
+    updateStockInventoryTable();
+}
+
+// ══════════════════════════════════════════════
+// 📊 재고 현황 테이블 (그룹 단위)
+// ══════════════════════════════════════════════
+function updateStockInventoryTable() {
+    const tbody = document.getElementById('stock-inventory-table');
+    if (!tbody) return;
+
+    const searchTerm = stockSearchTerm.toLowerCase();
+
+    // 전체 과정에서 그룹명 목록 추출 (DB 시작일 순서 유지)
+    // 키: 정규화된 그룹키(공백제거), 값: { date, displayName(원본표시용) }
+    const groupOrderMap = new Map(); // groupKey → { date, displayName }
+    courses.forEach(c => {
+        const key         = getGroupKey(c.course_name);
+        const displayName = getGroupName(c.course_name);
+        if (!groupOrderMap.has(key)) {
+            groupOrderMap.set(key, { date: new Date(c.start_date), displayName });
+        }
+    });
+
+    // 검색어 필터 적용 (displayName 기준)
+    let groupEntries = [...groupOrderMap.entries()];
+    if (searchTerm) {
+        groupEntries = groupEntries.filter(([, v]) => v.displayName.toLowerCase().includes(searchTerm));
+    }
+
+    // 시작일 순 정렬
+    groupEntries.sort((a, b) => a[1].date - b[1].date);
+
+    if (groupEntries.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-400">${searchTerm ? `"${stockSearchTerm}" 검색 결과가 없습니다.` : '과정 데이터가 없습니다.'}</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = groupEntries.map(([groupKey, { displayName }], idx) => {
+        const totalStock    = getGroupTotalStock(groupKey);
+        const totalReleased = getGroupTotalReleased(groupKey);
+        const remaining     = totalStock - totalReleased;
+        const isLow         = remaining < 100;
+        const rowBg         = idx % 2 === 0 ? '#ffffff' : '#f9fafb';
+        const remainStyle   = isLow
+            ? 'font-weight:800; color:#dc2626; background:#fef2f2; border-radius:6px; padding:2px 8px;'
+            : 'font-weight:700; color:#15803d;';
+
+        const canStock  = currentUser && ['매니저','담당자','관리자'].includes(currentUser.role);
+        const canRelease = currentUser && ['매니저','담당자','관리자'].includes(currentUser.role);
+        const safeKey = groupKey.replace(/'/g, "\\'");
+        return `<tr style="background:${rowBg}; border-bottom:1px solid #e5e7eb;">
+            <td class="px-3 py-2" style="word-break:keep-all; font-size:0.88rem; font-weight:600; color:#1f2937;">${displayName}</td>
+            <td class="px-3 py-2 text-center" style="font-size:0.88rem; color:#1d4ed8; font-weight:600;">${totalStock}권</td>
+            <td class="px-3 py-2 text-center" style="font-size:0.88rem; color:#ea580c; font-weight:600;">${totalReleased}권</td>
+            <td class="px-3 py-2 text-center"><span style="${remainStyle}">${remaining}권${isLow ? ' ⚠️' : ''}</span></td>
+            <td class="px-3 py-2">
+                <div style="display:flex; flex-direction:column; gap:4px; align-items:stretch;">
+                    ${canStock ? `<button onclick="openGroupStockInModal('${safeKey}')"
+                        style="background:#16a34a;color:white;border:none;border-radius:8px;padding:7px 8px;font-size:0.8rem;font-weight:700;cursor:pointer;min-height:38px;touch-action:manipulation;">
+                        ＋ 입고</button>` : ''}
+                    ${canRelease ? `<button onclick="openGroupForceReleaseModal('${safeKey}')"
+                        style="background:#ea580c;color:white;border:none;border-radius:8px;padding:7px 8px;font-size:0.8rem;font-weight:700;cursor:pointer;min-height:38px;touch-action:manipulation;">
+                        📤 출고</button>` : ''}
+                    ${canStock ? `<button onclick="openGroupManageModal('${safeKey}')"
+                        style="background:#b45309;color:white;border:none;border-radius:8px;padding:7px 8px;font-size:0.8rem;font-weight:700;cursor:pointer;min-height:38px;touch-action:manipulation;">
+                        ✏️ 수정</button>` : ''}
+                    ${!canStock && !canRelease ? `<span style="font-size:0.78rem;color:#9ca3af;display:block;text-align:center;">-</span>` : ''}
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+// 그룹 입고 모달 열기
+function openGroupStockInModal(groupKey) {
+    if (!requireUser()) return;
+    if (!['매니저','담당자','관리자'].includes(currentUser.role)) {
+        showNotification('담당자/관리자만 입고 처리할 수 있습니다.', 'error'); return;
+    }
+    const displayName   = courses.find(c => getGroupKey(c.course_name) === groupKey)
+                          ? getGroupName(courses.find(c => getGroupKey(c.course_name) === groupKey).course_name)
+                          : groupKey;
+    const totalStock    = getGroupTotalStock(groupKey);
+    const totalReleased = getGroupTotalReleased(groupKey);
+    const remaining     = totalStock - totalReleased;
+
+    document.getElementById('group-stock-in-group-name').value = groupKey;
+    document.getElementById('group-stock-in-title').textContent = `📦 입고 처리 — ${displayName}`;
+    document.getElementById('group-stock-in-info').textContent =
+        `현재 재고: ${totalStock}권 / 출고: ${totalReleased}권 / 잔여: ${remaining}권`;
+    document.getElementById('group-stock-in-quantity').value = '';
+    document.getElementById('group-stock-in-notes').value = '';
+    document.getElementById('group-stock-in-modal').classList.remove('hidden');
+    document.getElementById('group-stock-in-modal').classList.add('flex');
+    setTimeout(() => document.getElementById('group-stock-in-quantity').focus(), 100);
+}
+
+function closeGroupStockInModal() {
+    document.getElementById('group-stock-in-modal').classList.add('hidden');
+    document.getElementById('group-stock-in-modal').classList.remove('flex');
+}
+
+// ══════════════════════════════════════════════
+// 📋 그룹 통합 관리 모달 (입고수정 + 출고수정)
+// ══════════════════════════════════════════════
+function openGroupManageModal(groupKey) {
+    if (!requireUser()) return;
+    if (!['매니저','담당자','관리자'].includes(currentUser.role)) {
+        showNotification('담당자/관리자만 수정할 수 있습니다.', 'error'); return;
+    }
+    const displayName   = courses.find(c => getGroupKey(c.course_name) === groupKey)
+                          ? getGroupName(courses.find(c => getGroupKey(c.course_name) === groupKey).course_name)
+                          : groupKey;
+    const totalStock    = getGroupTotalStock(groupKey);
+    const totalReleased = getGroupTotalReleased(groupKey);
+    const remaining     = totalStock - totalReleased;
+    const isLow         = remaining < 100;
+
+    document.getElementById('group-manage-group-name').value = groupKey;
+    document.getElementById('group-manage-title').textContent = `📋 재고 관리 — ${displayName}`;
+
+    // 현황 요약 카드
+    document.getElementById('group-manage-summary').innerHTML = `
+        <div style="background:#eff6ff; border-radius:10px; padding:10px; text-align:center;">
+            <div style="font-size:0.75rem; color:#6b7280; margin-bottom:4px;">총 입고</div>
+            <div style="font-size:1.4rem; font-weight:800; color:#1d4ed8;">${totalStock}권</div>
+        </div>
+        <div style="background:#fff7ed; border-radius:10px; padding:10px; text-align:center;">
+            <div style="font-size:0.75rem; color:#6b7280; margin-bottom:4px;">총 출고</div>
+            <div style="font-size:1.4rem; font-weight:800; color:#ea580c;">${totalReleased}권</div>
+        </div>
+        <div style="background:${isLow ? '#fef2f2' : '#f0fdf4'}; border-radius:10px; padding:10px; text-align:center;">
+            <div style="font-size:0.75rem; color:#6b7280; margin-bottom:4px;">잔여</div>
+            <div style="font-size:1.4rem; font-weight:800; color:${isLow ? '#dc2626' : '#15803d'};">${remaining}권${isLow ? ' ⚠️' : ''}</div>
+        </div>`;
+
+    // 섹션1: 입고량 수정 초기화
+    document.getElementById('group-stock-edit-current').textContent = `${totalStock}권`;
+    document.getElementById('group-stock-edit-current').dataset.current = totalStock;
+    document.getElementById('group-stock-edit-quantity').value = '';
+    document.getElementById('group-stock-edit-notes').value = '';
+    document.getElementById('group-stock-edit-diff').textContent = '';
+
+    // 섹션2: 출고 수정 목록
+    _renderReleaseEditList(groupKey);
+
+    document.getElementById('group-manage-modal').classList.remove('hidden');
+    document.getElementById('group-manage-modal').classList.add('flex');
+}
+
+function closeGroupManageModal() {
+    document.getElementById('group-manage-modal').classList.add('hidden');
+    document.getElementById('group-manage-modal').classList.remove('flex');
+}
+
+// ══════════════════════════════════════════════
+// 📤 강제 출고 모달
+// ══════════════════════════════════════════════
+function openGroupForceReleaseModal(groupKey) {
+    if (!requireUser()) return;
+    if (!['매니저','담당자','관리자'].includes(currentUser.role)) {
+        showNotification('출고 처리 권한이 없습니다.', 'error'); return;
+    }
+    const displayName   = (() => { const c = courses.find(x => getGroupKey(x.course_name) === groupKey); return c ? getGroupName(c.course_name) : groupKey; })();
+    const totalStock    = getGroupTotalStock(groupKey);
+    const totalReleased = getGroupTotalReleased(groupKey);
+    const remaining     = totalStock - totalReleased;
+    const isLow         = remaining < 100;
+
+    document.getElementById('force-release-group-key').value = groupKey;
+    document.getElementById('force-release-title').textContent = `📤 출고 처리 — ${displayName}`;
+
+    document.getElementById('force-release-summary').innerHTML = `
+        <div style="background:#eff6ff;border-radius:10px;padding:10px;text-align:center;">
+            <div style="font-size:0.75rem;color:#6b7280;margin-bottom:4px;">총 입고</div>
+            <div style="font-size:1.3rem;font-weight:800;color:#1d4ed8;">${totalStock}권</div>
+        </div>
+        <div style="background:#fff7ed;border-radius:10px;padding:10px;text-align:center;">
+            <div style="font-size:0.75rem;color:#6b7280;margin-bottom:4px;">출고됨</div>
+            <div style="font-size:1.3rem;font-weight:800;color:#ea580c;">${totalReleased}권</div>
+        </div>
+        <div style="background:${isLow?'#fef2f2':'#f0fdf4'};border-radius:10px;padding:10px;text-align:center;">
+            <div style="font-size:0.75rem;color:#6b7280;margin-bottom:4px;">가용 재고</div>
+            <div style="font-size:1.3rem;font-weight:800;color:${isLow?'#dc2626':'#15803d'};">${remaining}권</div>
+        </div>`;
+
+    _renderForceReleaseList(groupKey);
+
+    document.getElementById('group-force-release-modal').classList.remove('hidden');
+    document.getElementById('group-force-release-modal').classList.add('flex');
+}
+
+function closeGroupForceReleaseModal() {
+    document.getElementById('group-force-release-modal').classList.add('hidden');
+    document.getElementById('group-force-release-modal').classList.remove('flex');
+}
+
+function _renderForceReleaseList(groupKey) {
+    const container = document.getElementById('force-release-list');
+    // 입고완료 상태 과정만 (출고 가능)
+    const readyCourses = courses
+        .filter(c => getGroupKey(c.course_name) === groupKey && c.status === '입고완료')
+        .sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
+
+    const totalStock    = getGroupTotalStock(groupKey);
+    const totalReleased = getGroupTotalReleased(groupKey);
+    const groupAvail    = totalStock - totalReleased;
+
+    if (readyCourses.length === 0) {
+        container.innerHTML = `<div style="text-align:center;padding:24px;color:#9ca3af;font-size:0.9rem;">
+            출고 가능한 과정(입고완료 상태)이 없습니다.<br>
+            <span style="font-size:0.82rem;">입고 처리 후 출고하거나, 수정 메뉴를 이용하세요.</span>
+        </div>`;
+        return;
+    }
+
+    container.innerHTML = readyCourses.map(c => {
+        const safeId   = c.id.replace(/[^a-zA-Z0-9_-]/g, '_');
+        const safeName = c.course_name.replace(/'/g, "\\'");
+        return `
+        <div style="border:2px solid #fed7aa;border-radius:12px;padding:14px;background:#fff7ed;">
+            <div style="font-size:0.9rem;font-weight:700;color:#1f2937;word-break:keep-all;margin-bottom:6px;">${c.course_name}</div>
+            <div style="display:flex;gap:12px;font-size:0.82rem;color:#6b7280;margin-bottom:10px;flex-wrap:wrap;">
+                <span>📅 ${formatDate(c.start_date,'MM-DD')} 시작</span>
+                <span>👥 수강인원 ${c.student_count}명</span>
+                <span>📦 그룹 가용재고 ${groupAvail}권</span>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                <label style="font-size:0.85rem;font-weight:600;color:#374151;white-space:nowrap;">출고 수량</label>
+                <input type="number" id="force-qty-${safeId}" value="${c.student_count}" min="1" max="${groupAvail}"
+                    inputmode="numeric"
+                    style="width:90px;padding:10px;border:2px solid #fb923c;border-radius:8px;font-size:1.1rem;font-weight:800;text-align:center;">
+                <button onclick="submitForceRelease('${c.id}','${safeName}')"
+                    style="background:#ea580c;color:white;border:none;border-radius:10px;padding:10px 16px;font-size:0.9rem;font-weight:700;cursor:pointer;flex:1;min-height:44px;touch-action:manipulation;">
+                    📤 출고 처리</button>
+            </div>
+        </div>`; 
+    }).join('');
+}
+
+async function submitForceRelease(courseId, courseName) {
+    if (!requireUser()) return;
+    const safeId  = courseId.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const input   = document.getElementById(`force-qty-${safeId}`);
+    if (!input) return;
+    const outQty  = parseInt(input.value);
+    const groupKey = document.getElementById('force-release-group-key').value;
+
+    if (isNaN(outQty) || outQty < 1) { showNotification('출고 수량을 입력해주세요.', 'error'); return; }
+
+    const totalStock    = getGroupTotalStock(groupKey);
+    const totalReleased = getGroupTotalReleased(groupKey, courseId);
+    const avail         = totalStock - totalReleased;
+
+    if (outQty > avail) { showNotification(`가용 재고(${avail}권)를 초과할 수 없습니다.`, 'error'); return; }
+
+    const course = courses.find(c => c.id === courseId);
+    if (!course) return;
+
+    if (!confirm(`📤 출고 처리 확인\n\n과정: ${courseName}\n출고 수량: ${outQty}권\n출고 후 그룹 잔여: ${avail - outQty}권\n\n진행하시겠습니까?`)) return;
+
+    try {
+        const { error } = await sb.from('courses').update({
+            status: '출고완료',
+            released_quantity: outQty,
+            actual_release_date: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        }).eq('id', courseId);
+        if (error) throw error;
+
+        await createLog(courseId, '출고', '입고완료', '출고완료',
+            `출고 ${outQty}권 / 그룹 잔여 ${avail - outQty}권`, outQty);
+
+        showNotification(`출고 완료! ${courseName} — ${outQty}권`, 'success');
+        await loadCourses();
+        await loadDashboardData();
+
+        // 모달 내 재고 요약 갱신
+        const ts = getGroupTotalStock(groupKey);
+        const tr = getGroupTotalReleased(groupKey);
+        const rm = ts - tr;
+        const lw = rm < 100;
+        document.getElementById('force-release-summary').innerHTML = `
+            <div style="background:#eff6ff;border-radius:10px;padding:10px;text-align:center;">
+                <div style="font-size:0.75rem;color:#6b7280;margin-bottom:4px;">총 입고</div>
+                <div style="font-size:1.3rem;font-weight:800;color:#1d4ed8;">${ts}권</div>
+            </div>
+            <div style="background:#fff7ed;border-radius:10px;padding:10px;text-align:center;">
+                <div style="font-size:0.75rem;color:#6b7280;margin-bottom:4px;">출고됨</div>
+                <div style="font-size:1.3rem;font-weight:800;color:#ea580c;">${tr}권</div>
+            </div>
+            <div style="background:${lw?'#fef2f2':'#f0fdf4'};border-radius:10px;padding:10px;text-align:center;">
+                <div style="font-size:0.75rem;color:#6b7280;margin-bottom:4px;">가용 재고</div>
+                <div style="font-size:1.3rem;font-weight:800;color:${lw?'#dc2626':'#15803d'};">${rm}권</div>
+            </div>`;
+        _renderForceReleaseList(groupKey);
+        renderStockLists();
+    } catch(e) {
+        console.error('강제 출고 오류:', e);
+        showNotification('출고 처리 중 오류가 발생했습니다.', 'error');
+    }
+}
+
+// ══════════════════════════════════════════════
+// ✏️ 출고량 수량만 수정 (상태 유지)
+// ══════════════════════════════════════════════
+async function submitReleaseQtyEdit(courseId, courseName, currentStatus) {
+    if (!requireUser()) return;
+    if (!['매니저','담당자','관리자'].includes(currentUser.role)) {
+        showNotification('담당자/관리자만 수정할 수 있습니다.', 'error'); return;
+    }
+    const safeId  = courseId.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const input   = document.getElementById(`release-qty-${safeId}`);
+    if (!input) return;
+    const newQty  = parseInt(input.value);
+    if (isNaN(newQty) || newQty < 0) { showNotification('올바른 수량을 입력해주세요.', 'error'); return; }
+
+    const course = courses.find(c => c.id === courseId);
+    const oldQty = course?.released_quantity || 0;
+    if (newQty === oldQty) { showNotification('현재 출고량과 동일합니다.', 'info'); return; }
+
+    if (!confirm(`✏️ 출고량 수정 확인\n\n과정: ${courseName}\n${oldQty}권 → ${newQty}권\n상태(${currentStatus})는 유지됩니다.\n\n진행하시겠습니까?`)) return;
+
+    try {
+        const { error } = await sb.from('courses').update({
+            released_quantity: newQty,
+            updated_at: new Date().toISOString()
+        }).eq('id', courseId);
+        if (error) throw error;
+
+        await createLog(courseId, '수정', currentStatus, currentStatus,
+            `출고량 수정 ${oldQty}권 → ${newQty}권`);
+
+        showNotification(`출고량 수정 완료! ${courseName}: ${oldQty}권 → ${newQty}권`, 'success');
+        await loadCourses();
+        await loadDashboardData();
+        const groupKey = document.getElementById('group-manage-group-name').value;
+        _renderReleaseEditList(groupKey);
+        renderStockLists();
+    } catch(e) {
+        console.error('출고량 수정 오류:', e);
+        showNotification('출고량 수정 중 오류가 발생했습니다.', 'error');
+    }
+}
+
+function _renderReleaseEditList(groupKey) {
+    const isAdmin = ['매니저','담당자','관리자'].includes(currentUser?.role);
+    // 출고 이후 상태 과정 (세팅완료 포함)
+    const releasedStatuses = ['출고완료'];
+    const releasedCourses = courses
+        .filter(c => getGroupKey(c.course_name) === groupKey && releasedStatuses.includes(c.status))
+        .sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
+
+    const badge = document.getElementById('release-edit-badge');
+    badge.textContent = releasedCourses.length > 0 ? `${releasedCourses.length}건` : '';
+
+    const container = document.getElementById('release-edit-list');
+    if (releasedCourses.length === 0) {
+        container.innerHTML = `<div style="text-align:center; padding:20px; color:#9ca3af; font-size:0.9rem;">출고된 과정이 없습니다.</div>`;
+        return;
+    }
+
+    const statusColors = {
+        '출고완료':    '#d1fae5',
+        '출고확인':    '#fce7f3',
+        '세팅중':      '#e0e7ff',
+        '세팅완료대기': '#fef9c3',
+        '세팅완료':    '#bbf7d0',
+    };
+
+    container.innerHTML = releasedCourses.map(c => {
+        const canReset = ['매니저','담당자','관리자'].includes(currentUser?.role);
+        const relQty   = c.released_quantity || c.student_count || 0;
+        const bgColor  = statusColors[c.status] || '#f3f4f6';
+        const safeId   = c.id.replace(/[^a-zA-Z0-9_-]/g, '_');
+        const safeName = c.course_name.replace(/'/g, "\\'");
+        return `
+        <div style="border:1px solid #e5e7eb; border-radius:12px; padding:12px; background:white;">
+            <div style="margin-bottom:8px;">
+                <div style="font-size:0.88rem; font-weight:700; color:#1f2937; word-break:keep-all; margin-bottom:4px;">${c.course_name}</div>
+                <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                    <span style="background:${bgColor}; border-radius:20px; padding:2px 10px; font-size:0.78rem; font-weight:700;">${c.status}</span>
+                    <span style="font-size:0.82rem; color:#6b7280;">현재 출고 ${relQty}권</span>
+                    <span style="font-size:0.82rem; color:#6b7280;">${c.start_date ? formatDate(c.start_date, 'MM-DD') + ' 시작' : ''}</span>
+                </div>
+            </div>
+            ${canReset ? `
+            <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-top:8px; padding-top:8px; border-top:1px solid #f3f4f6;">
+                <input type="number" id="release-qty-${safeId}" value="${relQty}" min="0"
+                    inputmode="numeric"
+                    style="width:80px; padding:8px; border:2px solid #93c5fd; border-radius:8px; font-size:1rem; font-weight:700; text-align:center;">
+                <button onclick="submitReleaseQtyEdit('${c.id}','${safeName}','${c.status}')"
+                    style="background:#2563eb;color:white;border:none;border-radius:8px;padding:8px 12px;font-size:0.82rem;font-weight:700;cursor:pointer;min-height:38px;touch-action:manipulation;flex:1;">
+                    ✔️ 수량 수정</button>
+                <button onclick="confirmReleaseReset('${c.id}','${safeName}','${c.status}',${relQty})"
+                    style="background:#db2777;color:white;border:none;border-radius:8px;padding:8px 10px;font-size:0.82rem;font-weight:700;cursor:pointer;min-height:38px;touch-action:manipulation;white-space:nowrap;">
+                    🔄 초기화</button>
+            </div>` : `<div style="font-size:0.78rem;color:#9ca3af;margin-top:6px;">권한 없음</div>`}
+        </div>`;
+    }).join('');
+}
+
+// 출고 초기화 확인 → 실행
+async function confirmReleaseReset(courseId, courseName, currentStatus, releasedQty) {
+    if (!requireUser()) return;
+    if (!['매니저','담당자','관리자'].includes(currentUser.role)) {
+        showNotification('담당자/관리자만 출고를 초기화할 수 있습니다.', 'error'); return;
+    }
+
+    const msg = `🔄 출고 초기화 확인\n\n과정: ${courseName}\n현재 상태: ${currentStatus}\n출고 수량: ${releasedQty}권\n\n→ 상태가 [입고완료]로 돌아가며 다시 출고 처리할 수 있습니다.\n이력은 모두 보존됩니다.\n\n진행하시겠습니까?`;
+    if (!confirm(msg)) return;
+
+    try {
+        const course = courses.find(c => c.id === courseId);
+        if (!course) return;
+
+        const { error } = await sb.from('courses').update({
+            status: '입고완료',
+            released_quantity: 0,
+            actual_release_date: null,
+            confirmed_by: null,
+            confirmed_at: null,
+            updated_at: new Date().toISOString()
+        }).eq('id', courseId);
+        if (error) throw error;
+
+        await createLog(
+            courseId, '수정', currentStatus, '입고완료',
+            `출고 초기화 — 출고 ${releasedQty}권 취소, 입고완료 상태로 복원 (재출고 가능)`
+        );
+
+        showNotification(`출고 초기화 완료 — ${courseName} 다시 출고 처리할 수 있습니다.`, 'success');
+
+        // 모달 내 목록 갱신
+        await loadCourses();
+        await loadDashboardData();
+        const groupKey2 = document.getElementById('group-manage-group-name').value;
+        const totalStock2    = getGroupTotalStock(groupKey2);
+        const totalReleased2 = getGroupTotalReleased(groupKey2);
+        const remaining2     = totalStock2 - totalReleased2;
+        const isLow2         = remaining2 < 100;
+        document.getElementById('group-manage-summary').innerHTML = `
+            <div style="background:#eff6ff; border-radius:10px; padding:10px; text-align:center;">
+                <div style="font-size:0.75rem; color:#6b7280; margin-bottom:4px;">총 입고</div>
+                <div style="font-size:1.4rem; font-weight:800; color:#1d4ed8;">${totalStock2}권</div>
+            </div>
+            <div style="background:#fff7ed; border-radius:10px; padding:10px; text-align:center;">
+                <div style="font-size:0.75rem; color:#6b7280; margin-bottom:4px;">총 출고</div>
+                <div style="font-size:1.4rem; font-weight:800; color:#ea580c;">${totalReleased2}권</div>
+            </div>
+            <div style="background:${isLow2 ? '#fef2f2' : '#f0fdf4'}; border-radius:10px; padding:10px; text-align:center;">
+                <div style="font-size:0.75rem; color:#6b7280; margin-bottom:4px;">잔여</div>
+                <div style="font-size:1.4rem; font-weight:800; color:${isLow2 ? '#dc2626' : '#15803d'};">${remaining2}권${isLow2 ? ' ⚠️' : ''}</div>
+            </div>`;
+        _renderReleaseEditList(groupKey2);
+        renderStockLists();
+    } catch(e) {
+        console.error('출고 초기화 오류:', e);
+        showNotification('출고 초기화 중 오류가 발생했습니다.', 'error');
+    }
+}
+
+function calcGroupStockEditDiff() {
+    const current = parseInt(document.getElementById('group-stock-edit-current').dataset.current) || 0;
+    const newVal  = parseInt(document.getElementById('group-stock-edit-quantity').value);
+    const el      = document.getElementById('group-stock-edit-diff');
+    if (isNaN(newVal)) { el.textContent = ''; return; }
+    const diff = newVal - current;
+    if (diff === 0) {
+        el.textContent = '변경 없음';
+        el.style.color = '#6b7280';
+    } else if (diff > 0) {
+        el.textContent = `▲ ${diff}권 증가 (${current}권 → ${newVal}권)`;
+        el.style.color = '#16a34a';
+    } else {
+        el.textContent = `▼ ${Math.abs(diff)}권 감소 (${current}권 → ${newVal}권)`;
+        el.style.color = '#dc2626';
+    }
+}
+
+async function submitGroupStockEdit() {
+    if (!requireUser()) return;
+    const groupKey   = document.getElementById('group-manage-group-name').value;
+    const displayName = (() => {
+        const c = courses.find(x => getGroupKey(x.course_name) === groupKey);
+        return c ? getGroupName(c.course_name) : groupKey;
+    })();
+    const qtyInput  = document.getElementById('group-stock-edit-quantity').value;
+    const notes     = document.getElementById('group-stock-edit-notes').value.trim();
+    const current   = parseInt(document.getElementById('group-stock-edit-current').dataset.current) || 0;
+
+    if (qtyInput === '') { showNotification('수정할 재고 수량을 입력해주세요.', 'error'); return; }
+    const newTotal = parseInt(qtyInput);
+    if (isNaN(newTotal) || newTotal < 0) { showNotification('올바른 수량을 입력해주세요.', 'error'); return; }
+    if (!notes) { showNotification('수정 사유를 입력해주세요.', 'error'); return; }
+    if (newTotal === current) { showNotification('현재 재고와 동일합니다.', 'info'); return; }
+
+    const diff = newTotal - current;
+    const diffText = diff > 0 ? `+${diff}권` : `${diff}권`;
+
+    if (!confirm(`✏️ 재고 수정 확인\n\n그룹: ${displayName}\n현재: ${current}권 → 수정: ${newTotal}권 (${diffText})\n사유: ${notes}\n\n진행하시겠습니까?`)) return;
+
+    // 그룹 내 과정들 중 stock_quantity > 0인 첫 번째 과정, 없으면 첫 번째 과정
+    const groupCourses = courses
+        .filter(c => getGroupKey(c.course_name) === groupKey)
+        .sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
+    const target = groupCourses.find(c => (c.stock_quantity || 0) > 0) || groupCourses[0];
+    if (!target) { showNotification('대상 과정을 찾을 수 없습니다.', 'error'); return; }
+
+    // 차이만큼만 해당 과정 stock_quantity에 반영
+    const targetNewStock = Math.max(0, (target.stock_quantity || 0) + diff);
+
+    try {
+        const { error } = await sb.from('courses').update({
+            stock_quantity: targetNewStock,
+            updated_at: new Date().toISOString()
+        }).eq('id', target.id);
+        if (error) throw error;
+
+        await createLog(
+            target.id, '수정', target.status, target.status,
+            `재고 수정 (${diffText}) — 그룹 총 재고 ${current}권→${newTotal}권 / 사유: ${notes}`,
+            Math.abs(diff)
+        );
+
+        showNotification(`재고 수정 완료! ${displayName}: ${current}권 → ${newTotal}권 (${diffText})`, 'success');
+        // 모달 내 현황 갱신 (닫지 않고 유지)
+        await loadCourses();
+        await loadStockManagement();
+        await loadDashboardData();
+        // 현황 요약 재렌더
+        const ts2 = getGroupTotalStock(groupKey);
+        const tr2 = getGroupTotalReleased(groupKey);
+        const rm2 = ts2 - tr2;
+        const lw2 = rm2 < 100;
+        document.getElementById('group-stock-edit-current').textContent = `${ts2}권`;
+        document.getElementById('group-stock-edit-current').dataset.current = ts2;
+        document.getElementById('group-stock-edit-quantity').value = '';
+        document.getElementById('group-stock-edit-diff').textContent = '';
+        document.getElementById('group-manage-summary').innerHTML = `
+            <div style="background:#eff6ff; border-radius:10px; padding:10px; text-align:center;">
+                <div style="font-size:0.75rem; color:#6b7280; margin-bottom:4px;">총 입고</div>
+                <div style="font-size:1.4rem; font-weight:800; color:#1d4ed8;">${ts2}권</div>
+            </div>
+            <div style="background:#fff7ed; border-radius:10px; padding:10px; text-align:center;">
+                <div style="font-size:0.75rem; color:#6b7280; margin-bottom:4px;">총 출고</div>
+                <div style="font-size:1.4rem; font-weight:800; color:#ea580c;">${tr2}권</div>
+            </div>
+            <div style="background:${lw2 ? '#fef2f2' : '#f0fdf4'}; border-radius:10px; padding:10px; text-align:center;">
+                <div style="font-size:0.75rem; color:#6b7280; margin-bottom:4px;">잔여</div>
+                <div style="font-size:1.4rem; font-weight:800; color:${lw2 ? '#dc2626' : '#15803d'};">${rm2}권${lw2 ? ' ⚠️' : ''}</div>
+            </div>`;
+    } catch(e) {
+        console.error('재고 수정 오류:', e);
+        showNotification('재고 수정 중 오류가 발생했습니다.', 'error');
+    }
+}
+
+// 그룹 입고 처리
+async function submitGroupStockIn() {
+    if (!requireUser()) return;
+    const groupKey    = document.getElementById('group-stock-in-group-name').value;
+    const displayName = (() => {
+        const c = courses.find(x => getGroupKey(x.course_name) === groupKey);
+        return c ? getGroupName(c.course_name) : groupKey;
+    })();
+    const qtyInput  = document.getElementById('group-stock-in-quantity').value;
+    const notes     = document.getElementById('group-stock-in-notes').value.trim();
+
+    if (qtyInput === '' || qtyInput === null) {
+        showNotification('입고 수량을 입력해주세요.', 'error'); return;
+    }
+    const qty = parseInt(qtyInput);
+    if (isNaN(qty) || qty < 0) {
+        showNotification('올바른 수량을 입력해주세요.', 'error'); return;
+    }
+
+    // 그룹 내 과정들 (시작일 순)
+    const groupCourses = courses
+        .filter(c => getGroupKey(c.course_name) === groupKey)
+        .sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
+
+    if (groupCourses.length === 0) {
+        showNotification('해당 그룹의 과정을 찾을 수 없습니다.', 'error'); return;
+    }
+
+    // 첫 번째 '입고대기' 과정 우선, 없으면 첫 번째 과정
+    const target = groupCourses.find(c => c.status === '입고대기') || groupCourses[0];
+
+    if (qty === 0) {
+        if (!confirm(`📦 입고 수량 0권으로 입고 처리합니다.\n\n그룹: ${displayName}\n대상 과정: ${target.course_name}\n\n재고 없이 상태만 입고완료로 변경됩니다. 진행하시겠습니까?`)) return;
+    } else {
+        if (!confirm(`📦 입고 처리 확인\n\n그룹: ${displayName}\n대상 과정: ${target.course_name}\n입고 수량: ${qty}권\n${notes ? '비고: ' + notes : ''}\n\n진행하시겠습니까?`)) return;
+    }
+
+    try {
+        const newStock = (target.stock_quantity || 0) + qty;
+        const newStatus = target.status === '입고대기' ? '입고완료' : target.status;
+        const { error } = await sb.from('courses').update({
+            stock_quantity: newStock,
+            status: newStatus,
+            updated_at: new Date().toISOString()
+        }).eq('id', target.id);
+        if (error) throw error;
+
+        const logNote = qty === 0
+            ? `입고 0권 처리 (재고 없음)${notes ? ' / ' + notes : ''}`
+            : `입고 ${qty}권 (누적 재고 ${newStock}권)${notes ? ' / ' + notes : ''}`;
+
+        await createLog(target.id, '입고', target.status, newStatus, logNote, qty);
+
+        if (qty === 0) {
+            showNotification(`입고 처리 완료 (0권) — ${target.course_name}`, 'info');
+        } else {
+            showNotification(`입고 완료! ${qty}권 추가 → ${displayName} 재고 ${newStock}권`, 'success');
+        }
+        closeGroupStockInModal();
+        await loadCourses();
+        await loadStockManagement();
+        await loadDashboardData();
+    } catch(e) {
+        console.error('그룹 입고 오류:', e);
+        showNotification('입고 처리 중 오류가 발생했습니다.', 'error');
+    }
 }
 
 // 실제 목록 렌더링 (검색 or 주차 필터 적용)
 function renderStockLists() {
+    if (!currentStockWeekStart) return;
     const weekEnd = new Date(currentStockWeekStart);
     weekEnd.setDate(currentStockWeekStart.getDate() + 6);
     weekEnd.setHours(23, 59, 59, 999);
 
-    let filtered = courses;
-    if (stockSearchTerm) {
-        // 검색 모드: 주차 무관, 과정명으로 전체 검색
-        filtered = courses.filter(c =>
-            c.course_name.toLowerCase().includes(stockSearchTerm.toLowerCase()));
-        const stockIn  = filtered.filter(c => ['입고대기','입고완료'].includes(c.status))
-            .sort((a,b) => new Date(a.start_date)-new Date(b.start_date));
-        const stockOut = filtered.filter(c => ['입고완료','출고대기','출고완료','출고확인'].includes(c.status))
-            .sort((a,b) => new Date(a.start_date)-new Date(b.start_date));
-        updateStockInList(stockIn);
-        updateStockOutList(stockOut);
-    } else {
-        // 주차 필터 모드 (기존 로직)
-        const stockIn = courses.filter(c => {
-            const sd = new Date(c.start_date);
-            const inWeek = sd >= currentStockWeekStart && sd <= weekEnd;
-            return inWeek && (c.status === '입고대기' || c.status === '입고완료');
-        }).sort((a,b) => new Date(a.start_date)-new Date(b.start_date));
-
-        const stockOut = courses.filter(c => {
-            const sd = new Date(c.start_date);
-            const inWeek = sd >= currentStockWeekStart && sd <= weekEnd;
-            const needsAction = ['출고완료','출고확인'].includes(c.status);
-            return (inWeek && ['입고완료','출고대기'].includes(c.status)) || needsAction;
-        }).sort((a,b) => new Date(a.start_date)-new Date(b.start_date));
-
-        updateStockInList(stockIn);
-        updateStockOutList(stockOut);
-    }
+    // 해당 주차 시작 과정 전체 (입고대기/입고완료/출고완료 모두)
+    const stockOut = courses.filter(c => {
+        const sd = new Date(c.start_date);
+        return sd >= currentStockWeekStart && sd <= weekEnd;
+    }).sort((a,b) => new Date(a.start_date)-new Date(b.start_date));
+    updateStockOutList(stockOut);
 }
 
-// 입출고 관리
-async function loadStockManagement() {
+// ── 입고 탭 로드
+async function loadStockInPage() {
     await loadCourses();
     stockSearchTerm = document.getElementById('stock-search-input')?.value.trim() || '';
+    updateStockInventoryTable();
+}
+
+// ── 출고 탭 로드
+async function loadStockOutPage() {
+    await loadCourses();
     renderStockLists();
+}
+
+// 입출고 관리 (다른 함수에서 호출 시 현재 활성 탭 기준으로 갱신)
+async function loadStockManagement() {
+    await loadCourses();
+    const activePage = document.querySelector('.nav-btn.active-nav')?.getAttribute('data-page');
+    if (activePage === 'stockin') {
+        stockSearchTerm = document.getElementById('stock-search-input')?.value.trim() || '';
+        updateStockInventoryTable();
+    } else if (activePage === 'stockout') {
+        renderStockLists();
+    } else {
+        // 탭 무관 갱신 (모달 내부 등)
+        updateStockInventoryTable();
+        renderStockLists();
+    }
 }
 
 function updateStockInList(list) {
@@ -4430,18 +5279,18 @@ function updateStockInList(list) {
         container.innerHTML = `<div class="text-center py-10 text-gray-400"><div class="text-4xl mb-2">📦</div><p>입고 대기 중인 과정이 없습니다.</p></div>`;
         return;
     }
-    const canProcess = currentUser && (currentUser.role === '담당자' || currentUser.role === '관리자');
+    const canProcess = currentUser && (['매니저','담당자','관리자'].includes(currentUser.role));
     container.innerHTML = list.map(course => {
         const isWaiting   = course.status === '입고대기';
         const isCompleted = course.status === '입고완료';
         const cardBg = isWaiting ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50';
         // ── 그룹 통합재고 계산 ──
-        const groupName    = getGroupName(course.course_name);
+        const groupName    = getGroupKey(course.course_name);
         const groupStock   = getGroupTotalStock(groupName);
         const groupRelease = getGroupTotalReleased(groupName);
         const groupAvail   = groupStock - groupRelease;
         const stockOk      = groupAvail >= course.student_count;
-        const sameGroupCourses = courses.filter(c => getGroupName(c.course_name) === groupName && c.id !== course.id);
+        const sameGroupCourses = courses.filter(c => getGroupKey(c.course_name) === groupName && c.id !== course.id);
         const isGrouped = sameGroupCourses.length > 0;
         return `
         <div class="course-card ${cardBg}">
@@ -4475,7 +5324,7 @@ function updateStockInList(list) {
                     </button>` : ''}
                 ${isCompleted && !canProcess ? `
                     <p class="text-xs text-gray-400 italic py-2">담당자만 수정 가능</p>` : ''}
-                ${currentUser?.role === '관리자' && isCompleted ? `
+                ${['매니저','담당자','관리자'].includes(currentUser?.role) && isCompleted ? `
                     <button onclick="adminRollback('${course.id}','${course.status}')"
                         class="btn-action btn-gray flex-shrink-0 px-3 text-xs">↩ 롤백</button>` : ''}
             </div>
@@ -4486,94 +5335,53 @@ function updateStockInList(list) {
 function updateStockOutList(list) {
     const container = document.getElementById('stock-out-list');
     if (list.length === 0) {
-        container.innerHTML = `<div class="text-center py-10 text-gray-400"><div class="text-4xl mb-2">🚛</div><p>출고 대기/완료 과정이 없습니다.</p></div>`;
+        container.innerHTML = `<div class="text-center py-10 text-gray-400"><div class="text-4xl mb-2">🚛</div><p>이번 주 출고 대상 과정이 없습니다.</p></div>`;
         return;
     }
-    const canDoStock  = currentUser && ['매니저','담당자','관리자'].includes(currentUser.role);
-    const canConfirm  = currentUser && ['담당자','관리자'].includes(currentUser.role);
-    const canEdit     = currentUser && ['담당자','관리자'].includes(currentUser.role);
+    const canDo = currentUser && ['매니저','담당자','관리자'].includes(currentUser.role);
 
     container.innerHTML = list.map(course => {
-        const isReady     = course.status === '입고완료';   // 출고 처리 가능
-        const isWaiting   = course.status === '출고대기';
-        const isCompleted = course.status === '출고완료';   // 담당자 확인 필요
-        const isConfirmed = course.status === '출고확인';   // 세팅 가능
-        // ── 그룹 통합재고 계산 ──
-        const groupName      = getGroupName(course.course_name);
-        const groupStock     = getGroupTotalStock(groupName);
-        const groupOtherRel  = getGroupTotalReleased(groupName, course.id);  // 다른 차수 출고량
-        const groupAvail     = groupStock - groupOtherRel;                   // 이 과정이 쓸 수 있는 재고
-        const sameGroup      = courses.filter(c => getGroupName(c.course_name) === groupName && c.id !== course.id);
-        const isGrouped      = sameGroup.length > 0;
-        const releasedQty    = course.released_quantity ?? course.student_count;
-        const remainAfter    = groupAvail - (isCompleted || isConfirmed ? releasedQty : 0);
+        const isReady     = course.status === '입고완료';
+        const isDone      = course.status === '출고완료';
 
-        let cardBg = isConfirmed ? 'border-pink-200 bg-pink-50'
-                   : isCompleted ? 'border-green-200 bg-green-50'
-                   : isWaiting   ? 'border-yellow-200 bg-yellow-50'
-                   : 'border-blue-200 bg-blue-50';
+        const groupKey    = getGroupKey(course.course_name);
+        const groupStock  = getGroupTotalStock(groupKey);
+        const otherRel    = getGroupTotalReleased(groupKey, course.id);
+        const groupAvail  = groupStock - otherRel;
+        const releasedQty = course.released_quantity || 0;
 
-        // ── 출고 처리 버튼 (모달 방식) ──
-        const stockOutBtn = (isReady || isWaiting) && canDoStock ? `
-            <button onclick="openStockOutModal('${course.id}')"
-                class="btn-action btn-orange w-full" style="min-height:48px; margin-top:12px;">
-                🚚 출고 처리
-            </button>` : '';
-
-        // ── 출고완료 상태: 수량 표시 + 담당자 확인 버튼 ──
-        const completedSection = isCompleted ? `
-            <div class="mt-3 pt-3 border-t border-green-200">
-                <div class="flex items-center flex-wrap gap-2 mb-3">
-                    <span class="text-green-700 font-bold text-sm">✔️ 출고 완료</span>
-                    <span class="bg-white border border-green-300 rounded-lg px-3 py-1 text-xs font-semibold">출고 ${releasedQty}권</span>
-                    <span class="bg-white border border-blue-200 rounded-lg px-3 py-1 text-xs font-semibold text-blue-700">잔여 ${remainAfter}권</span>
-                    ${canEdit ? `<button onclick="openStockOutEditModal('${course.id}')"
-                        class="px-3 py-1 bg-amber-500 text-white text-xs rounded-lg font-bold">✏️ 수정</button>` : ''}
-                    ${currentUser?.role === '관리자' ? `<button onclick="adminRollback('${course.id}','${course.status}')" class="px-3 py-1 bg-gray-500 text-white text-xs rounded-lg font-bold">↩ 롤백</button>` : ''}
-                </div>
-                ${canConfirm
-                    ? `<button onclick="confirmStockOut('${course.id}')"
-                        class="btn-action btn-pink w-full" style="min-height:48px; background:#db2777;">
-                        ✅ 담당자 출고 확인 완료
-                       </button>`
-                    : `<div class="text-center py-2 text-sm text-gray-400 italic">⏳ 담당자 확인 대기 중</div>`
-                }
-            </div>` : '';
-
-        // ── 출고확인 상태: 세팅 가능 표시 ──
-        const confirmedSection = isConfirmed ? `
-            <div class="mt-3 pt-3 border-t border-pink-200">
-                <div class="flex items-center flex-wrap gap-2">
-                    <span class="px-3 py-1 bg-pink-600 text-white text-xs rounded-full font-bold">✅ 담당자 확인 완료 — 세팅 가능</span>
-                    <span class="text-xs text-gray-500">출고 ${releasedQty}권 / 잔여 ${remainAfter}권</span>
-                    <span class="text-xs text-gray-400">확인자: ${course.confirmed_by || '-'}</span>
-                </div>
-            </div>` : '';
+        const cardBg = isDone  ? 'border-green-200 bg-green-50'
+                     : isReady ? 'border-blue-200 bg-blue-50'
+                     : 'border-gray-200 bg-gray-50';
 
         return `
         <div class="course-card ${cardBg}">
-            <div class="flex items-start gap-2 mb-2">
+            <div class="flex items-start justify-between gap-2 mb-2 flex-wrap">
                 <div class="flex-1 min-w-0">
-                    <div class="flex items-center flex-wrap gap-2 mb-2">
+                    <div class="flex items-center flex-wrap gap-2 mb-1">
                         <h4 class="font-bold text-base leading-tight" style="word-break:keep-all;">${course.course_name}</h4>
                         <span class="status-badge status-${course.status}">${course.status}</span>
-                        ${isReady ? `<span class="px-2 py-0.5 bg-blue-600 text-white text-xs rounded-full font-bold">출고 준비완료</span>` : ''}
-                        ${isGrouped ? `<span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs rounded-full font-bold">📚 통합재고</span>` : ''}
                     </div>
-                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs text-gray-500">
-                        <div class="flex flex-col"><span>필요 교재</span><span class="font-bold text-gray-800 text-sm">${course.student_count}권</span></div>
-                        <div class="flex flex-col"><span>${isGrouped ? '그룹 가용재고' : '현재 재고'}</span><span class="font-bold text-blue-700 text-sm">${groupAvail}권</span></div>
-                        <div class="flex flex-col"><span>출고 예정</span><span class="font-bold text-gray-800 text-sm">${course.scheduled_release_date ? formatDate(course.scheduled_release_date,'MM-DD') : '-'}</span></div>
-                        <div class="flex flex-col"><span>과정 시작</span><span class="font-bold text-gray-800 text-sm">${formatDate(course.start_date,'MM-DD')}</span></div>
+                    <div class="flex gap-3 text-xs text-gray-500 flex-wrap">
+                        <span>📅 ${formatDate(course.start_date,'MM-DD')} 시작</span>
+                        <span>📦 잔여재고 <b class="text-blue-700">${groupAvail}권</b></span>
+                        ${isDone ? `<span>✔️ 출고 <b class="text-green-700">${releasedQty}권</b></span>` : ''}
                     </div>
-                    ${isGrouped ? `<div class="mt-2 text-xs text-indigo-600 bg-indigo-50 rounded-lg px-3 py-1">
-                        📦 그룹 총 입고 ${groupStock}권 / 타 차수 출고 ${groupOtherRel}권 / 이 과정 가용 ${groupAvail}권
-                    </div>` : ''}
                 </div>
+                ${isDone && canDo ? `
+                <div class="flex gap-2 flex-shrink-0">
+                    <button onclick="openStockOutEditModal('${course.id}')"
+                        class="px-3 py-1 bg-amber-500 text-white text-xs rounded-lg font-bold" style="min-height:36px;">✏️ 수정</button>
+                    <button onclick="adminRollback('${course.id}','${course.status}')"
+                        class="px-3 py-1 bg-gray-500 text-white text-xs rounded-lg font-bold" style="min-height:36px;">↩ 초기화</button>
+                </div>` : ''}
             </div>
-            ${stockOutBtn}
-            ${completedSection}
-            ${confirmedSection}
+            ${isReady && canDo ? `
+            <button onclick="openStockOutModal('${course.id}')"
+                class="btn-action btn-orange w-full" style="min-height:48px; margin-top:8px;">
+                🚚 출고 처리
+            </button>` : ''}
+            ${!isReady && !isDone ? `<p class="text-xs text-gray-400 mt-2 text-center">입고 처리 후 출고 가능합니다</p>` : ''}
         </div>`;
     }).join('');
 }
@@ -4588,11 +5396,11 @@ function openStockOutModal(courseId) {
     const course = courses.find(c => c.id === courseId);
     if (!course) return;
     // 그룹 통합재고 기준으로 가용 재고 계산
-    const groupName  = getGroupName(course.course_name);
+    const groupName  = getGroupKey(course.course_name);
     const groupStock = getGroupTotalStock(groupName);
     const otherRel   = getGroupTotalReleased(groupName, courseId);
     const avail      = groupStock - otherRel;   // 이 과정이 쓸 수 있는 재고
-    const isGrouped  = courses.filter(c => getGroupName(c.course_name) === groupName && c.id !== courseId).length > 0;
+    const isGrouped  = courses.filter(c => getGroupKey(c.course_name) === groupName && c.id !== courseId).length > 0;
     const infoText   = isGrouped
         ? `그룹 총 입고 ${groupStock}권 / 타 차수 출고 ${otherRel}권 / 가용 재고 ${avail}권 / 필요 교재 ${course.student_count}권`
         : `현재 재고: ${avail}권 / 필요 교재: ${course.student_count}권`;
@@ -4631,7 +5439,7 @@ async function submitStockOutModal() {
     if (outQty > stock) { showNotification(`출고 수량(${outQty})이 가용 재고(${stock})를 초과합니다.`, 'error'); return; }
     const course = courses.find(c => c.id === courseId);
     if (!course) return;
-    const groupName  = getGroupName(course.course_name);
+    const groupName  = getGroupKey(course.course_name);
     const groupStock = getGroupTotalStock(groupName);
     const otherRel   = getGroupTotalReleased(groupName, courseId);
     const remain     = groupStock - otherRel - outQty;
@@ -4652,13 +5460,13 @@ async function submitStockOutModal() {
 // 담당자 출고 확인 (출고완료 → 출고확인)
 async function confirmStockOut(courseId) {
     if (!requireUser()) return;
-    if (!['담당자','관리자'].includes(currentUser.role)) {
+    if (!['매니저','담당자','관리자'].includes(currentUser.role)) {
         showNotification('담당자/관리자만 확인할 수 있습니다.', 'error'); return;
     }
     const course = courses.find(c => c.id === courseId);
     if (!course) return;
     const relQty     = course.released_quantity ?? course.student_count;
-    const groupName  = getGroupName(course.course_name);
+    const groupName  = getGroupKey(course.course_name);
     const groupStock = getGroupTotalStock(groupName);
     const otherRel   = getGroupTotalReleased(groupName, courseId);
     const remain     = groupStock - otherRel - relQty;
@@ -4731,9 +5539,9 @@ function updateSetupList(containerId, list, statusType, logsMap = {}) {
         return;
     }
 
-    const canStartSetup    = currentUser && ['매니저','관리자'].includes(currentUser.role);
-    const canCompleteSetup = currentUser && ['매니저','관리자'].includes(currentUser.role);
-    const canFinalConfirm  = currentUser && currentUser.role === '관리자';
+    const canStartSetup    = currentUser && ['매니저','담당자','관리자'].includes(currentUser.role);
+    const canCompleteSetup = currentUser && ['매니저','담당자','관리자'].includes(currentUser.role);
+    const canFinalConfirm  = currentUser && ['매니저','담당자','관리자'].includes(currentUser.role);
     const canExtraRelease  = currentUser && ['매니저','담당자','관리자'].includes(currentUser.role);
 
     container.innerHTML = list.map(course => {
@@ -4826,7 +5634,7 @@ function updateSetupList(containerId, list, statusType, logsMap = {}) {
                     ${statusType === '세팅중'      && canCompleteSetup ? `<button onclick="completeSetup('${course.id}')" class="btn-action btn-success flex-1 sm:flex-none px-5" style="min-height:46px;">✔️ 세팅 완료</button>` : ''}
                     ${statusType === '세팅완료대기' && canFinalConfirm  ? `<button onclick="finalConfirmSetup('${course.id}')" class="btn-action btn-primary flex-1 sm:flex-none px-5" style="min-height:46px;background:#1d4ed8;">✅ 관리자 최종 확인</button>` : ''}
                     ${statusType === '세팅완료'    && canExtraRelease  ? `<button onclick="openExtraReleaseModal('${course.id}')" class="btn-action flex-1 sm:flex-none px-5" style="min-height:46px;background:#d97706;color:white;border:none;border-radius:12px;font-weight:700;">📤 추가 출고</button>` : ''}
-                    ${currentUser?.role === '관리자' ? `<button onclick="adminRollback('${course.id}','${course.status}')" class="btn-action flex-shrink-0 px-3" style="min-height:46px;background:#6b7280;font-size:0.85rem;" title="관리자 상태 롤백">↩ 롤백</button>` : ''}
+                    ${['매니저','담당자','관리자'].includes(currentUser?.role) ? `<button onclick="adminRollback('${course.id}','${course.status}')" class="btn-action flex-shrink-0 px-3" style="min-height:46px;background:#6b7280;font-size:0.85rem;" title="관리자 상태 롤백">↩ 롤백</button>` : ''}
                 </div>
             </div>
         </div>`;
@@ -4860,8 +5668,8 @@ async function loadAdminCourses() {
 
 function updateAdminStatistics(weekCourses) {
     document.getElementById('admin-total-courses').textContent    = weekCourses.length;
-    document.getElementById('admin-complete-courses').textContent = weekCourses.filter(c => c.status === '세팅완료').length;
-    document.getElementById('admin-progress-courses').textContent = weekCourses.filter(c => c.status !== '세팅완료' && c.status !== '입고대기').length;
+    document.getElementById('admin-complete-courses').textContent = weekCourses.filter(c => c.status === '출고완료').length;
+    document.getElementById('admin-progress-courses').textContent = weekCourses.filter(c => c.status === '입고완료').length;
     document.getElementById('admin-waiting-courses').textContent  = weekCourses.filter(c => c.status === '입고대기').length;
 }
 
@@ -5029,15 +5837,10 @@ function goToUrgentTask(courseId, targetPage) {
     });
 
     // 대상 탭의 주차 변수와 셀렉터 업데이트
-    if (targetPage === 'stock') {
+    if (targetPage === 'stockout') {
         currentStockWeekStart = new Date(availableWeeks[weekIdx]);
         updateStockWeekSelector();
         const sel = document.getElementById('stock-week-selector');
-        if (sel) sel.value = weekIdx;
-    } else if (targetPage === 'setup') {
-        currentSetupWeekStart = new Date(availableWeeks[weekIdx]);
-        updateSetupWeekSelector();
-        const sel = document.getElementById('setup-week-selector');
         if (sel) sel.value = weekIdx;
     }
 
@@ -5046,8 +5849,7 @@ function goToUrgentTask(courseId, targetPage) {
 
     // 해당 과정 하이라이트 (0.4초 후 스크롤)
     setTimeout(() => {
-        // 카드 ID 기반으로 찾거나, 과정명으로 검색
-        const allCards = document.querySelectorAll('#stock-in-list .course-card, #stock-out-list .course-card, #setup-waiting-list > div, #setup-progress-list > div');
+        const allCards = document.querySelectorAll('#stock-inventory-table tr, #stock-out-list .course-card');
         allCards.forEach(card => {
             if (card.textContent.includes(course.course_name)) {
                 card.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -5058,7 +5860,7 @@ function goToUrgentTask(courseId, targetPage) {
         });
     }, 400);
 
-    showNotification(`📍 ${course.course_name} — ${targetPage === 'stock' ? '입출고' : '세팅'} 관리로 이동했습니다.`, 'info');
+    showNotification(`📍 ${course.course_name} — ${targetPage === 'stockin' ? '입고' : '출고'} 관리로 이동했습니다.`, 'info');
 }
 
 function viewCourseDetail(id)  { editCourse(id); }
@@ -5101,7 +5903,7 @@ async function deleteAdminCourse(courseId) {
 // 입고/출고 처리 모달
 function openStockInAction(courseId) {
     if (!requireUser()) return;
-    if (currentUser.role !== '담당자' && currentUser.role !== '관리자') {
+    if (!['매니저','담당자','관리자'].includes(currentUser.role)) {
         showNotification('입고 처리는 관리자/담당자만 가능합니다.', 'error'); return;
     }
     const course = courses.find(c => c.id === courseId);
@@ -5172,7 +5974,7 @@ async function handleActionSubmit(e) {
 }
 
 async function approveStockIn(courseId) {
-    if (!currentUser || currentUser.role !== '관리자') { showNotification('관리자만 승인할 수 있습니다.', 'error'); return; }
+    if (!currentUser || !['매니저','담당자','관리자'].includes(currentUser.role)) { showNotification('관리자만 승인할 수 있습니다.', 'error'); return; }
     const course = courses.find(c => c.id === courseId);
     if (!course || !confirm('입고를 승인하시겠습니까?')) return;
     try {
@@ -5185,19 +5987,20 @@ async function approveStockIn(courseId) {
 }
 
 async function approveStockOut(courseId) {
-    if (!currentUser || currentUser.role !== '관리자') { showNotification('관리자만 승인할 수 있습니다.', 'error'); return; }
+    if (!currentUser || !['매니저','담당자','관리자'].includes(currentUser.role)) { showNotification('관리자만 승인할 수 있습니다.', 'error'); return; }
     const course = courses.find(c => c.id === courseId);
     if (!course || !confirm('출고를 승인하시겠습니까?')) return;
     try {
         await createLog(courseId, '승인', course.status, course.status, '관리자 출고 승인');
         showNotification('출고가 승인되었습니다.', 'success');
-        await loadStockManagement(); await loadSetupManagement(); await loadDashboardData();
+        await loadStockManagement();
+ await loadDashboardData();
     } catch (error) { console.error('승인 오류:', error); showNotification('승인 중 오류가 발생했습니다.', 'error'); }
 }
 
 async function startSetup(courseId) {
     if (!requireUser()) return;
-    if (!['매니저','관리자'].includes(currentUser.role)) {
+    if (!['매니저','담당자','관리자'].includes(currentUser.role)) {
         showNotification('세팅 시작은 매니저/관리자만 할 수 있습니다.', 'error'); return;
     }
     const course = courses.find(c => c.id === courseId);
@@ -5207,13 +6010,13 @@ async function startSetup(courseId) {
         if (error) throw error;
         await createLog(courseId, '세팅', '출고확인', '세팅중', '세팅 시작');
         showNotification('세팅이 시작되었습니다.', 'success');
-        await loadSetupManagement(); await loadDashboardData();
+ await loadDashboardData();
     } catch (e) { console.error(e); showNotification('세팅 시작 중 오류가 발생했습니다.', 'error'); }
 }
 
 async function completeSetup(courseId) {
     if (!requireUser()) return;
-    if (!['매니저','관리자'].includes(currentUser.role)) {
+    if (!['매니저','담당자','관리자'].includes(currentUser.role)) {
         showNotification('세팅 완료는 매니저/관리자만 할 수 있습니다.', 'error'); return;
     }
     const course = courses.find(c => c.id === courseId);
@@ -5226,7 +6029,7 @@ async function completeSetup(courseId) {
         await createLog(courseId, '완료', '세팅중', '세팅완료대기', `매니저 세팅 완료 — 담당자 최종확인 대기`);
         showNotification('세팅 완료! 관리자 최종 확인을 기다립니다.', 'success');
         notifyAction('세팅 완료', course.course_name, '관리자'); // 관리자에게 알림
-        await loadSetupManagement(); await loadDashboardData();
+ await loadDashboardData();
     } catch (e) { console.error(e); showNotification('세팅 완료 처리 중 오류가 발생했습니다.', 'error'); }
 }
 
@@ -5244,7 +6047,7 @@ async function finalConfirmSetup(courseId) {
         if (error) throw error;
         await createLog(courseId, '완료', '세팅완료대기', '세팅완료', `관리자 최종확인 완료`);
         showNotification('✅ 관리자 최종 확인 완료!', 'success');
-        await loadSetupManagement(); await loadDashboardData();
+ await loadDashboardData();
     } catch (e) { console.error(e); showNotification('최종 확인 중 오류가 발생했습니다.', 'error'); }
 }
 
@@ -5342,7 +6145,7 @@ function showNotification(message, type = 'info') {
 // 출고 수량 수정 모달 (담당자/관리자만)
 function openStockOutEditModal(courseId) {
     if (!currentUser) { showNotification('작업자를 먼저 선택해주세요.', 'error'); return; }
-    if (currentUser.role !== '담당자' && currentUser.role !== '관리자') {
+    if (!['매니저','담당자','관리자'].includes(currentUser.role)) {
         showNotification('출고 수량 수정은 담당자/관리자만 가능합니다.', 'error'); return;
     }
     const course = courses.find(c => c.id === courseId);
@@ -5401,7 +6204,7 @@ function calcOutEditRemain() {
 }
 
 async function submitStockOutEdit() {
-    if (!currentUser || (currentUser.role !== '담당자' && currentUser.role !== '관리자')) {
+    if (!currentUser || (!['매니저','담당자','관리자'].includes(currentUser.role))) {
         showNotification('담당자/관리자만 수정 가능합니다.', 'error'); return;
     }
     const courseId = document.getElementById('stock-out-edit-course-id').value;
@@ -5426,7 +6229,7 @@ async function submitStockOutEdit() {
 // 입고 수량 수정 모달 (담당자/관리자만)
 function openStockEditModal(courseId) {
     if (!requireUser()) return;
-    if (currentUser.role !== '담당자' && currentUser.role !== '관리자') {
+    if (!['매니저','담당자','관리자'].includes(currentUser.role)) {
         showNotification('입고 수량 수정은 담당자만 가능합니다.', 'error'); return;
     }
     const course = courses.find(c => c.id === courseId);
@@ -5446,7 +6249,7 @@ function closeStockEditModal() {
 }
 
 async function submitStockEdit() {
-    if (!currentUser || (currentUser.role !== '담당자' && currentUser.role !== '관리자')) {
+    if (!currentUser || (!['매니저','담당자','관리자'].includes(currentUser.role))) {
         showNotification('담당자만 수정 가능합니다.', 'error'); return;
     }
     const courseId = document.getElementById('stock-edit-course-id').value;
@@ -5468,19 +6271,15 @@ async function submitStockEdit() {
 // ============================================================
 //  관리자 롤백 (모든 단계)
 // ============================================================
-const STATUS_FLOW = ['입고대기','입고완료','출고완료','출고확인','세팅중','세팅완료대기','세팅완료'];
+const STATUS_FLOW = ['입고대기','입고완료','출고완료'];
 const STATUS_LABELS = {
-    '입고대기':    '입고대기',
-    '입고완료':    '입고완료',
-    '출고완료':    '출고완료',
-    '출고확인':    '출고확인 (담당자)',
-    '세팅중':      '세팅중',
-    '세팅완료대기': '세팅완료대기',
-    '세팅완료':    '세팅완료',
+    '입고대기': '입고대기',
+    '입고완료': '입고완료',
+    '출고완료': '출고완료',
 };
 
 async function adminRollback(courseId, currentStatus) {
-    if (!currentUser || currentUser.role !== '관리자') {
+    if (!currentUser || !['매니저','담당자','관리자'].includes(currentUser.role)) {
         showNotification('관리자만 롤백할 수 있습니다.', 'error'); return;
     }
     const course = courses.find(c => c.id === courseId);
@@ -5514,7 +6313,6 @@ async function adminRollback(courseId, currentStatus) {
         // 롤백 시 관련 필드 초기화
         if (targetStatus === '입고대기') { updates.stock_quantity = 0; updates.released_quantity = null; }
         if (['출고대기','입고완료','입고대기'].includes(targetStatus)) { updates.released_quantity = null; updates.confirmed_by = null; updates.confirmed_at = null; }
-        if (['출고확인','출고완료','출고대기','입고완료','입고대기'].includes(targetStatus)) { updates.setup_complete_date = null; }
 
         const { error } = await sb.from('courses').update(updates).eq('id', courseId);
         if (error) throw error;
@@ -5525,7 +6323,6 @@ async function adminRollback(courseId, currentStatus) {
         showNotification(`✅ 롤백 완료: ${currentStatus} → ${targetStatus}`, 'success');
         await loadCourses();
         await loadStockManagement();
-        await loadSetupManagement();
         await loadDashboardData();
     } catch(e) { console.error(e); showNotification('롤백 중 오류가 발생했습니다.', 'error'); }
 }
@@ -5572,8 +6369,8 @@ function updateNavBadges() {
     const stockNeeds = courses.filter(c => ['출고완료'].includes(c.status)).length;
     const setupNeeds = courses.filter(c => ['세팅완료대기'].includes(c.status)).length;
 
-    const stockBtn = document.querySelector('[data-page="stock"]');
-    const setupBtn = document.querySelector('[data-page="setup"]');
+    const stockBtn = document.querySelector('[data-page="stockin"]') || document.querySelector('[data-page="stockout"]');
+    // 세팅 버튼 없음
 
     if (stockBtn) {
         stockBtn.innerHTML = stockNeeds > 0
@@ -5687,7 +6484,6 @@ async function submitExtraRelease() {
 
         showNotification(`추가 출고 완료! ${extraQty}권 (잔여 ${stock - released - extraQty}권)`, 'success');
         closeExtraReleaseModal();
-        await loadSetupManagement();
     } catch(e) {
         console.error('추가출고 오류:', e);
         showNotification('추가 출고 중 오류가 발생했습니다.', 'error');
