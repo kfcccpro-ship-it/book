@@ -161,70 +161,105 @@
             .stock-out-actions .note-input { width: 100%; }
         }
 
-        /* ── 텍스트 줄바꿈 제어 (글자 단위 줄바꿈 방지) ── */
+        /* ── 텍스트 줄바꿈 제어 ── */
         * { word-break: keep-all; overflow-wrap: break-word; }
 
-        /* ── 모바일 최소 글자 크기: text-xs(0.75rem) → 0.85rem ── */
-        .text-xs { font-size: 0.85rem !important; }
-        /* status-badge 내 강제 크기 예외 처리 */
-        .status-badge { font-size: 0.82rem !important; }
+        /* ════════════════════════════════
+           PC 기본 폰트 크기 (768px 이상)
+        ════════════════════════════════ */
+        body { font-size: 1rem; }
 
-        /* ── 나브 버튼 글자 크기 ── */
-        .nav-btn { font-size: 0.9rem; }
+        /* 네비 탭 */
+        .nav-btn { font-size: 1rem; font-weight: 600; }
 
-        /* ── 테이블 헤더/셀 최소 크기 ── */
-        table th, table td { font-size: 0.85rem !important; }
+        /* 상태뱃지 */
+        .status-badge { font-size: 0.88rem !important; }
 
-        /* ── 카드 내 보조 텍스트 ── */
-        .course-card .text-xs { font-size: 0.85rem !important; }
+        /* 보조 텍스트 (Tailwind text-xs = 0.75rem → PC에서 0.88rem) */
+        .text-xs { font-size: 0.88rem !important; }
 
-        /* ── 상태별 모니터링 소글씨 ── */
-        #admin-monitor-content .text-xs { font-size: 0.82rem !important; }
+        /* 테이블 */
+        table th { font-size: 0.92rem !important; font-weight: 700; }
+        table td { font-size: 0.95rem !important; }
 
-        /* ── 긴급작업 상태 뱃지 인라인 ── */
-        .status-badge[style*="0.7rem"] { font-size: 0.82rem !important; }
-        .status-badge[style*="0.65rem"] { font-size: 0.82rem !important; }
+        /* 카드 내 보조 텍스트 */
+        .course-card .text-xs { font-size: 0.88rem !important; }
 
-        /* ── iOS Safari 입력필드 줌 방지 (font-size 16px 이상 필수) ── */
+        /* 재고현황 테이블 */
+        #stock-inventory-table th { font-size: 0.9rem !important; padding: 10px !important; }
+        #stock-inventory-table td { font-size: 0.95rem !important; padding: 12px 10px !important; vertical-align: middle; }
+
+        /* 버튼 */
+        .btn-action { font-size: 1rem !important; }
+
+        /* 모달 입력 */
+        .modal-input { font-size: 1rem !important; }
+
+        /* 입력 필드 기본 크기 */
         input[type="text"],
         input[type="number"],
         input[type="date"],
         textarea,
         select {
-            font-size: 16px !important;
+            font-size: 1rem !important;
         }
-        /* 단, 모달 large 입력은 더 크게 유지 */
-        .modal-input-lg {
-            font-size: 1.5rem !important;
+        .modal-input-lg { font-size: 1.5rem !important; }
+
+        /* ════════════════════════════════
+           모바일 전용 (767px 이하)
+           iOS Safari 줌 방지 = 16px 필수
+        ════════════════════════════════ */
+        @media (max-width: 767px) {
+            body { font-size: 0.95rem; }
+
+            .nav-btn { font-size: 0.88rem; padding: 10px 12px; }
+            .status-badge { font-size: 0.82rem !important; }
+            .text-xs { font-size: 0.85rem !important; }
+            table th { font-size: 0.85rem !important; }
+            table td { font-size: 0.85rem !important; }
+            #stock-inventory-table td { padding: 10px 8px !important; }
+            #stock-inventory-table th { padding: 8px !important; }
+
+            /* iOS Safari 줌 방지 (반드시 16px 이상) */
+            input[type="text"],
+            input[type="number"],
+            input[type="date"],
+            textarea,
+            select {
+                font-size: 16px !important;
+            }
+            .modal-input-lg { font-size: 1.4rem !important; }
         }
 
-        /* ── 재고현황 테이블 모바일 최적화 ── */
-        #stock-inventory-table td {
-            padding: 10px 8px !important;
-            vertical-align: middle;
-        }
-        #stock-inventory-table th {
-            padding: 8px !important;
+        /* ════════════════════════════════
+           PC 최적화 추가 (1024px 이상)
+        ════════════════════════════════ */
+        @media (min-width: 1024px) {
+            body { font-size: 1.05rem; }
+            .nav-btn { font-size: 1.05rem; padding: 14px 18px; }
+            .status-badge { font-size: 0.9rem !important; }
+            .text-xs { font-size: 0.92rem !important; }
+            table th { font-size: 0.95rem !important; }
+            table td { font-size: 1rem !important; }
+            .course-card { padding: 20px; }
+            #stock-inventory-table th { font-size: 0.95rem !important; padding: 12px !important; }
+            #stock-inventory-table td { font-size: 1rem !important; padding: 14px 12px !important; }
+            .btn-action { font-size: 1.05rem !important; min-height: 48px !important; }
+            .modal-input { font-size: 1.05rem !important; }
         }
 
-        /* ── 터치 버튼 최소 영역 보장 ── */
-        button {
-            touch-action: manipulation;
-        }
-        .btn-action {
-            min-height: 52px !important;
-        }
+        /* ── 터치/클릭 공통 ── */
+        button { touch-action: manipulation; }
+        .btn-action { min-height: 52px !important; }
 
-        /* ── 모바일 모달 여백 ── */
+        /* ── 모달 여백 ── */
         @media (max-width: 480px) {
-            .modal-box {
-                margin: 0 8px;
-                max-height: 95vh;
-            }
-            .modal-box .p-5 {
-                padding: 16px !important;
-            }
+            .modal-box { margin: 0 8px; max-height: 95vh; }
+            .modal-box .p-5 { padding: 16px !important; }
         }
+
+        /* ── 관리자 모니터링 소글씨 ── */
+        #admin-monitor-content .text-xs { font-size: 0.82rem !important; }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -3996,12 +4031,11 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // ── 4. 초기 설정 ──
     updateCurrentDate();
-    initializeWeeks();
 
     // ── 5. 데이터 로드 ──
     updateLoadingOverlay('📊 데이터 로딩 중...');
-    await loadUsers();   // ← currentUser 복원 포함 (localStorage + 브라우저 자동완성)
-    await loadCourses();
+    await loadUsers();
+    await loadCourses();   // ← initializeWeeks(courses) 내부 호출
 
     // ── 6. 화면 표시 ──
     hideLoadingOverlay();
@@ -4079,7 +4113,7 @@ function updateCurrentDate() {
     document.getElementById('current-date').textContent = now.toLocaleDateString('ko-KR', { year:'numeric', month:'long', day:'numeric', weekday:'short' });
 }
 
-function initializeWeeks() {
+function initializeWeeks(courseList) {
     const today = new Date();
     const dayOfWeek = today.getDay();
     const thisMonday = new Date(today);
@@ -4087,24 +4121,44 @@ function initializeWeeks() {
     thisMonday.setHours(0, 0, 0, 0);
 
     availableWeeks = [];
-    // 2026-03-02(월)부터 2026-12-28(월)까지 모든 주차 생성
-    const yearStart = new Date(2026, 2, 2); // 3월 2일 (월)
-    const yearEnd   = new Date(2026, 11, 28); // 12월 28일
-    let ws = new Date(yearStart);
-    while (ws <= yearEnd) {
+
+    // 시작: DB 과정 중 가장 이른 날짜 or 올해 1월 첫 월요일
+    let minDate = new Date(today.getFullYear(), 0, 1);
+    let maxDate = new Date(today.getFullYear(), 11, 31);
+
+    if (courseList && courseList.length > 0) {
+        const dates = courseList.map(c => new Date(c.start_date)).filter(d => !isNaN(d));
+        if (dates.length > 0) {
+            minDate = new Date(Math.min(...dates));
+            maxDate = new Date(Math.max(...dates));
+        }
+    }
+
+    // 앞뒤로 4주 여유
+    minDate.setDate(minDate.getDate() - 28);
+    maxDate.setDate(maxDate.getDate() + 28);
+
+    // minDate를 월요일로 맞추기
+    const startDay = minDate.getDay();
+    minDate.setDate(minDate.getDate() - (startDay === 0 ? 6 : startDay - 1));
+    minDate.setHours(0, 0, 0, 0);
+
+    let ws = new Date(minDate);
+    while (ws <= maxDate) {
         availableWeeks.push(new Date(ws));
         ws.setDate(ws.getDate() + 7);
     }
-    // 이번 주 인덱스 찾기
+
+    // 이번 주 인덱스
     const todayMs = thisMonday.getTime();
     let todayIdx = 0;
     availableWeeks.forEach((w, i) => { if (w.getTime() <= todayMs) todayIdx = i; });
 
-    currentWeekStart = new Date(availableWeeks[todayIdx]);
-    currentAdminWeekStart = new Date(availableWeeks[todayIdx]);
+    currentWeekStart        = new Date(availableWeeks[todayIdx]);
+    currentAdminWeekStart   = new Date(availableWeeks[todayIdx]);
     currentCoursesWeekStart = new Date(availableWeeks[todayIdx]);
-    currentStockWeekStart = new Date(availableWeeks[todayIdx]);
-    currentSetupWeekStart = new Date(availableWeeks[todayIdx]);
+    currentStockWeekStart   = new Date(availableWeeks[todayIdx]);
+    currentSetupWeekStart   = new Date(availableWeeks[todayIdx]);
 
     updateWeekSelector();
     updateAdminWeekSelector();
@@ -4324,6 +4378,9 @@ async function loadCourses() {
         if (error) throw error;
         courses = data || [];
 
+        // ── 새 과정 추가 시 주차 범위 동적 확장 ──
+        initializeWeeks(courses);
+
         let items = [...courses];
 
         // 주차 필터 (과정 조회 탭)
@@ -4346,7 +4403,7 @@ async function loadCourses() {
             items = items.filter(i => new Date(i.start_date).toDateString() === fd.toDateString());
         }
         updateCoursesTable(items);
-        updateTabBadge(); // 탭 뱃지 업데이트
+        updateTabBadge();
         return items;
     } catch (error) { console.error('과정 로드 오류:', error); return []; }
 }
@@ -6024,6 +6081,14 @@ async function handleCourseSubmit(e) {
         closeCourseModal();
         await loadCourses();
         await loadDashboardData();
+        // ── 현재 활성 탭 갱신 ──
+        const activePage = document.querySelector('.nav-btn.active-nav')?.getAttribute('data-page');
+        if (activePage === 'stockin')  { updateStockInventoryTable(); }
+        if (activePage === 'stockout') { renderStockLists(); }
+        if (activePage === 'admin')    { renderAdminCoursesList(); }
+        // 새 과정이면 입고 탭도 자동 갱신 (탭 무관)
+        updateStockInventoryTable();
+        renderAdminCoursesList();
     } catch (error) { console.error('저장 오류:', error); showNotification('저장 중 오류가 발생했습니다.', 'error'); }
 }
 
@@ -6087,29 +6152,32 @@ function editAdminCourse(id) { openCourseModal(id); }
 
 async function deleteCourse(id) {
     if (!currentUser) { showNotification('작업자를 먼저 선택해주세요.', 'error'); return; }
-    if (!confirm('정말 삭제하시겠습니까?')) return;
+    if (!confirm('정말 삭제하시겠습니까?\n삭제된 과정은 복구할 수 없습니다.')) return;
     try {
         const { error } = await sb.from('courses').delete().eq('id', id);
         if (error) throw error;
         showNotification('과정이 삭제되었습니다.', 'success');
         await loadCourses();
         await loadDashboardData();
+        updateStockInventoryTable();
+        renderAdminCoursesList();
     } catch (error) { console.error('삭제 오류:', error); showNotification('삭제 중 오류가 발생했습니다.', 'error'); }
 }
 
 async function deleteAdminCourse(courseId) {
-    if (!currentUser || (currentUser.role !== '관리자' && currentUser.role !== '담당자')) {
-        showNotification('권한이 없습니다.', 'error'); return;
-    }
+    if (!currentUser) { showNotification('작업자를 먼저 선택해주세요.', 'error'); return; }
     const course = courses.find(c => c.id === courseId);
     if (!course) return;
     if (!confirm(`"${course.course_name}" 과정을 삭제하시겠습니까?\n이 작업은 취소할 수 없습니다.`)) return;
     try {
         const { error } = await sb.from('courses').delete().eq('id', courseId);
         if (error) throw error;
-        await createLog(courseId, '삭제', course.status, '삭제됨', `과정 삭제: ${course.course_name}`, null, course.course_name);
+        await createLog(courseId, '삭제', course.status, '삭제됨', `과정 삭제: ${course.course_name}`);
         showNotification('과정이 삭제되었습니다.', 'success');
-        await loadAdminCourses();
+        await loadCourses();
+        await loadDashboardData();
+        updateStockInventoryTable();
+        renderAdminCoursesList();
     } catch (error) { console.error('과정 삭제 오류:', error); showNotification('과정 삭제 중 오류가 발생했습니다.', 'error'); }
 }
 
