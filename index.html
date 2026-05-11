@@ -699,21 +699,23 @@
 </div>
 
 <!-- 시작 안내 팝업 (작업자 선택 요청) -->
-<div id="startup-popup" class="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8 text-center">
-        <div class="text-5xl mb-4">👋</div>
-        <h3 class="text-xl font-bold text-gray-800 mb-2">안녕하세요!</h3>
-        <p class="text-gray-600 mb-2 text-sm leading-relaxed">
-            인재개발원 교재관리 시스템입니다.
-        </p>
-        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
-            <p class="text-blue-800 font-bold text-base">📌 상단의 <span class="underline">작업자 선택</span>을 먼저 해주세요!</p>
-            <p class="text-blue-600 text-xs mt-1">작업자 선택 후 모든 기능을 사용할 수 있습니다.</p>
+<div id="startup-popup" class="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
+        <div class="text-5xl mb-3">📚</div>
+        <h3 class="text-xl font-bold text-gray-800 mb-1">인재개발원 교재관리</h3>
+        <p class="text-gray-500 text-sm mb-5">작업자를 선택하면 바로 시작됩니다.</p>
+
+        <!-- 팝업 내부 작업자 선택 -->
+        <div class="bg-gray-50 rounded-xl p-4 mb-4">
+            <label class="block text-sm font-bold text-gray-700 mb-2">👤 작업자 선택</label>
+            <select id="startup-user-select"
+                class="w-full px-4 py-3 border-2 border-blue-300 rounded-xl text-base font-bold text-gray-800 bg-white cursor-pointer"
+                onchange="selectStartupUser(this.value)">
+                <option value="">— 이름을 선택하세요 —</option>
+            </select>
         </div>
-        <button onclick="closeStartupPopup()"
-            class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-lg transition">
-            확인
-        </button>
+
+        <p class="text-xs text-gray-400">선택 후 자동으로 시작됩니다</p>
     </div>
 </div>
 
@@ -3859,9 +3861,25 @@ let statusChart = null;
 // 시작 팝업
 function closeStartupPopup() {
     const el = document.getElementById('startup-popup');
-    if (el) { el.style.display = 'none'; }
-    // 닫은 후 작업자 선택에 포커스
-    setTimeout(() => document.getElementById('current-user').focus(), 200);
+    if (el) el.style.display = 'none';
+}
+
+// 팝업 내부에서 작업자 선택 시 즉시 로그인
+function selectStartupUser(name) {
+    if (!name) return;
+    const found = users.find(u => u.name === name);
+    if (!found) return;
+    currentUser = found;
+    localStorage.setItem('textbook_last_user', found.name);
+    // 상단 드롭다운도 동기화
+    const sel = document.getElementById('current-user');
+    if (sel) sel.value = found.name;
+    document.getElementById('user-selector-wrap')?.classList.remove('no-user');
+    updateNavTabsForRole();
+    showNotification(`✅ ${found.name}(${found.role})로 시작합니다.`, 'success');
+    // 팝업 닫기 (약간의 딜레이로 알림 보이게)
+    setTimeout(() => closeStartupPopup(), 500);
+    console.log('✅ 팝업에서 작업자 선택:', found.name);
 }
 
 // 로딩 오버레이 제어
@@ -3904,29 +3922,29 @@ document.addEventListener('keydown', e => {
     }
 });
 
-// 역할별 탭 색상/접근 업데이트
 function updateNavTabsForRole() {
     const role = currentUser?.role;
-    const tabPermissions = {
-        '관리자': ['dashboard','courses','stockin','stockout','logs','admin'],
-        '담당자': ['dashboard','courses','stockin','stockout','logs','admin'],
-        '매니저': ['dashboard','courses','stockin','stockout','logs','admin'],
-    };
-    const allowed = role ? (tabPermissions[role] || ['dashboard']) : ['dashboard'];
     document.querySelectorAll('.nav-btn').forEach(btn => {
-        const page = btn.getAttribute('data-page');
-        if (allowed.includes(page)) {
+        if (role) {
+            // 작업자 선택됨 → 모든 탭 활성화
             btn.style.opacity = '1';
             btn.style.filter = 'none';
             btn.style.cursor = 'pointer';
             btn.style.pointerEvents = 'auto';
             btn.title = '';
         } else {
-            btn.style.opacity = '0.4';
-            btn.style.filter = 'grayscale(60%)';
-            btn.style.cursor = role ? 'not-allowed' : 'default';
-            btn.style.pointerEvents = role ? 'none' : 'auto';
-            btn.title = role ? '접근 권한 없음' : '작업자를 먼저 선택하세요';
+            // 작업자 미선택 → 대시보드만 완전 활성, 나머지는 시각적으로 dim (클릭은 허용)
+            const page = btn.getAttribute('data-page');
+            if (page === 'dashboard') {
+                btn.style.opacity = '1';
+                btn.style.filter = 'none';
+                btn.style.cursor = 'pointer';
+            } else {
+                btn.style.opacity = '0.45';
+                btn.style.filter = 'grayscale(50%)';
+                btn.style.cursor = 'pointer'; // 클릭 허용 (showPage에서 팝업 표시)
+            }
+            btn.style.pointerEvents = 'auto';
         }
     });
 }
@@ -4256,29 +4274,24 @@ function goToTodaySetup() {
 }
 
 function showPage(pageName) {
-    // 대시보드 외: 작업자 미선택 시 차단 (드롭다운 값까지 재확인)
-    if (pageName !== 'dashboard') {
-        // currentUser가 없으면 드롭다운에서 다시 읽기 시도
-        if (!currentUser) {
-            const sel = document.getElementById('current-user');
-            const name = sel?.value;
-            if (name && Array.isArray(users) && users.length > 0) {
-                const found = users.find(u => u.name === name);
-                if (found) {
-                    currentUser = found;
-                    localStorage.setItem('textbook_last_user', found.name);
-                    document.getElementById('user-selector-wrap')?.classList.remove('no-user');
-                    updateNavTabsForRole();
-                }
+    // 대시보드 외: 작업자 없으면 팝업 다시 띄우기 (드롭다운 재시도 포함)
+    if (pageName !== 'dashboard' && !currentUser) {
+        // 드롭다운 현재값으로 재시도
+        const sel = document.getElementById('current-user');
+        const name = sel?.value;
+        if (name && users.length > 0) {
+            const found = users.find(u => u.name === name);
+            if (found) {
+                currentUser = found;
+                localStorage.setItem('textbook_last_user', found.name);
+                document.getElementById('user-selector-wrap')?.classList.remove('no-user');
+                updateNavTabsForRole();
             }
         }
+        // 그래도 없으면 팝업 표시
         if (!currentUser) {
-            showNotification('⚠️ 상단에서 작업자를 먼저 선택해주세요.', 'error');
-            const wrap = document.getElementById('user-selector-wrap');
-            if (wrap) { wrap.style.transform = 'scale(1.05)'; setTimeout(() => { wrap.style.transform = ''; }, 400); }
-            // 드롭다운 열어주기
-            const sel = document.getElementById('current-user');
-            if (sel) { sel.focus(); try { sel.click(); } catch(e) {} }
+            const popup = document.getElementById('startup-popup');
+            if (popup) popup.style.display = 'flex';
             return;
         }
     }
@@ -4288,12 +4301,12 @@ function showPage(pageName) {
     document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active-nav'));
     document.querySelector(`[data-page="${pageName}"]`)?.classList.add('active-nav');
 
-    if (pageName === 'dashboard')     { loadDashboardData(); }
-    else if (pageName === 'admin')    { updateAdminWeekSelector(); loadAdminCourses(); }
-    else if (pageName === 'courses')  { updateCoursesWeekSelector(); loadCourses(); }
-    else if (pageName === 'stockin')  { loadStockInPage(); }
-    else if (pageName === 'stockout') { updateStockWeekSelector(); loadStockOutPage(); }
-    else if (pageName === 'logs')     { loadLogs(); }
+    if      (pageName === 'dashboard')  { loadDashboardData(); }
+    else if (pageName === 'admin')      { updateAdminWeekSelector(); loadAdminCourses(); }
+    else if (pageName === 'courses')    { updateCoursesWeekSelector(); loadCourses(); }
+    else if (pageName === 'stockin')    { loadStockInPage(); }
+    else if (pageName === 'stockout')   { updateStockWeekSelector(); loadStockOutPage(); }
+    else if (pageName === 'logs')       { loadLogs(); }
 }
 
 const FALLBACK_USERS = [
@@ -4339,12 +4352,25 @@ async function loadUsers() {
         userSelect.appendChild(option);
     });
 
+    // ── startup-popup 드롭다운도 동기화 ──
+    const startupSel = document.getElementById('startup-user-select');
+    if (startupSel) {
+        startupSel.innerHTML = '<option value="">— 이름을 선택하세요 —</option>';
+        users.forEach(user => {
+            const opt = document.createElement('option');
+            opt.value = user.name;
+            opt.textContent = `${user.name} (${user.role})`;
+            startupSel.appendChild(opt);
+        });
+    }
+
     // ── 작업자 복원: localStorage > 이전값 ──
     const savedUser = localStorage.getItem('textbook_last_user') || prevValue;
     if (savedUser) {
         const found = users.find(u => u.name === savedUser);
         if (found) {
             userSelect.value = found.name;
+            if (startupSel) startupSel.value = found.name;
             currentUser = found;
             localStorage.setItem('textbook_last_user', found.name);
             document.getElementById('user-selector-wrap')?.classList.remove('no-user');
@@ -4729,6 +4755,7 @@ function renderAdminCoursesList() {
     const container = document.getElementById('admin-courses-list');
     const countEl   = document.getElementById('admin-course-count');
     if (!container) return;
+    if (!currentAdminWeekStart) return; // 초기화 전 호출 방지
 
     let list;
     if (adminSearchTerm) {
