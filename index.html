@@ -530,6 +530,7 @@
                             <th class="px-3 py-2 text-center text-xs font-bold text-blue-600" style="min-width:60px;">입고량</th>
                             <th class="px-3 py-2 text-center text-xs font-bold text-orange-600" style="min-width:60px;">출고량</th>
                             <th class="px-3 py-2 text-center text-xs font-bold text-green-700" style="min-width:60px;">잔여</th>
+                            <th class="px-3 py-2 text-center text-xs font-bold text-purple-600" style="min-width:60px;">부교재</th>
                             <th class="px-3 py-2 text-center text-xs font-bold text-gray-600" style="min-width:100px;">처리</th>
                         </tr>
                     </thead>
@@ -537,6 +538,20 @@
                         <tr><td colspan="5" class="text-center py-8 text-gray-400">데이터 로딩 중...</td></tr>
                     </tbody>
                 </table>
+            </div>
+        </div>
+    </div>
+
+        <!-- 📊 부교재 재고 현황 테이블 -->
+        <div class="bg-white rounded-xl shadow-sm p-4 mt-4">
+            <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+                <h3 class="text-base font-bold text-gray-800">📗 부교재 재고 현황
+                    <span class="text-xs font-normal text-gray-400 ml-1">(과정별 부교재 목록)</span>
+                </h3>
+                <span class="text-xs text-purple-600 font-semibold">🟣 부교재 관리 중 표시</span>
+            </div>
+            <div id="sub-book-inventory-table">
+                <div class="text-center py-6 text-gray-400 text-sm">데이터 로딩 중...</div>
             </div>
         </div>
     </div>
@@ -914,6 +929,82 @@
                     class="btn-action btn-gray flex-1" style="min-height:52px;">취소</button>
                 <button onclick="submitExtraRelease()"
                     class="btn-action flex-1" style="min-height:52px;background:#d97706;color:white;border:none;border-radius:12px;font-weight:700;">📤 추가 출고</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 부교재 관리 모달 -->
+<div id="sub-book-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+    <div class="modal-box" style="max-width:540px;">
+        <div class="flex items-center justify-between p-4 border-b">
+            <h3 class="text-lg font-bold text-gray-800" id="sub-book-modal-title">📗 부교재 관리</h3>
+            <button onclick="closeSubBookModal()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">✕</button>
+        </div>
+        <div class="p-4" style="overflow-y:auto; max-height:82vh;">
+            <input type="hidden" id="sub-book-group-key">
+            <input type="hidden" id="sub-book-group-name">
+
+            <!-- 부교재 목록 -->
+            <div id="sub-book-list" class="space-y-3 mb-4"></div>
+
+            <!-- 부교재 추가 폼 -->
+            <details id="sub-book-add-section">
+                <summary style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:12px 16px; font-size:0.95rem; font-weight:700; color:#15803d; cursor:pointer; list-style:none; display:flex; align-items:center; justify-content:space-between;">
+                    <span>➕ 새 부교재 추가</span>
+                    <span style="font-size:0.8rem; font-weight:400; color:#16a34a;">책 이름 입력 후 등록</span>
+                </summary>
+                <div style="border:1px solid #bbf7d0; border-top:none; border-radius:0 0 12px 12px; padding:16px; background:#f0fdf4;">
+                    <div class="mb-3">
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">부교재 이름 <span class="text-red-500">*</span></label>
+                        <input type="text" id="sub-book-new-name" placeholder="예: 여신기본 워크북, 실습자료집"
+                            class="modal-input" style="font-size:1rem;">
+                    </div>
+                    <button onclick="addSubBook()"
+                        class="btn-action btn-success w-full" style="min-height:44px;">📗 부교재 등록</button>
+                </div>
+            </details>
+        </div>
+        <div class="p-4 border-t">
+            <button onclick="closeSubBookModal()"
+                class="btn-action btn-gray w-full" style="min-height:46px;">닫기</button>
+        </div>
+    </div>
+</div>
+
+<!-- 부교재 입출고 처리 모달 -->
+<div id="sub-book-action-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+    <div class="modal-box" style="max-width:460px;">
+        <div class="flex items-center justify-between p-4 border-b">
+            <h3 class="text-lg font-bold text-gray-800" id="sub-book-action-title">📗 부교재 입고</h3>
+            <button onclick="closeSubBookActionModal()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">✕</button>
+        </div>
+        <div class="p-4">
+            <input type="hidden" id="sub-book-action-id">
+            <input type="hidden" id="sub-book-action-type">
+            <div id="sub-book-action-info" class="bg-purple-50 border border-purple-200 rounded-xl p-3 mb-4 text-sm text-purple-900"></div>
+            <div class="mb-4">
+                <label class="block text-sm font-semibold text-gray-700 mb-1">📅 처리 날짜 <span class="text-xs font-normal text-gray-400">(소급 가능)</span></label>
+                <input type="date" id="sub-book-action-date" class="modal-input" style="font-size:1rem;">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-semibold text-gray-700 mb-1" id="sub-book-qty-label">수량 (권)</label>
+                <input type="number" id="sub-book-action-qty" min="0"
+                    class="modal-input modal-input-lg" inputmode="numeric" pattern="[0-9]*"
+                    style="font-size:1.4rem; font-weight:800; text-align:center;">
+                <div id="sub-book-qty-hint" class="mt-1 text-center text-sm text-gray-500" style="min-height:20px;"></div>
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">메모 (선택)</label>
+                <textarea id="sub-book-action-notes" rows="2" placeholder="입출고 관련 메모"
+                    class="modal-input"></textarea>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="closeSubBookActionModal()"
+                    class="btn-action btn-gray flex-1" style="min-height:50px;">취소</button>
+                <button onclick="submitSubBookAction()"
+                    id="sub-book-action-submit"
+                    class="btn-action btn-primary flex-1" style="min-height:50px;">✔️ 처리 완료</button>
             </div>
         </div>
     </div>
@@ -4138,9 +4229,7 @@ function initializeWeeks(courseList) {
     thisMonday.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
     thisMonday.setHours(0, 0, 0, 0);
 
-    availableWeeks = [];
-
-    // 시작: DB 과정 중 가장 이른 날짜 or 올해 1월 첫 월요일
+    // ── availableWeeks 재계산 ──
     let minDate = new Date(today.getFullYear(), 0, 1);
     let maxDate = new Date(today.getFullYear(), 11, 31);
 
@@ -4151,33 +4240,32 @@ function initializeWeeks(courseList) {
             maxDate = new Date(Math.max(...dates));
         }
     }
-
-    // 앞뒤로 4주 여유
     minDate.setDate(minDate.getDate() - 28);
     maxDate.setDate(maxDate.getDate() + 28);
-
-    // minDate를 월요일로 맞추기
     const startDay = minDate.getDay();
     minDate.setDate(minDate.getDate() - (startDay === 0 ? 6 : startDay - 1));
     minDate.setHours(0, 0, 0, 0);
 
+    availableWeeks = [];
     let ws = new Date(minDate);
     while (ws <= maxDate) {
         availableWeeks.push(new Date(ws));
         ws.setDate(ws.getDate() + 7);
     }
 
-    // 이번 주 인덱스
+    // ── 이번 주 인덱스 ──
     const todayMs = thisMonday.getTime();
     let todayIdx = 0;
     availableWeeks.forEach((w, i) => { if (w.getTime() <= todayMs) todayIdx = i; });
 
-    currentWeekStart        = new Date(availableWeeks[todayIdx]);
-    currentAdminWeekStart   = new Date(availableWeeks[todayIdx]);
-    currentCoursesWeekStart = new Date(availableWeeks[todayIdx]);
-    currentStockWeekStart   = new Date(availableWeeks[todayIdx]);
-    currentSetupWeekStart   = new Date(availableWeeks[todayIdx]);
+    // ── 각 탭의 현재 주차 변수: null이면 오늘로 초기화, 이미 설정됐으면 유지 ──
+    if (!currentWeekStart)        currentWeekStart        = new Date(availableWeeks[todayIdx]);
+    if (!currentAdminWeekStart)   currentAdminWeekStart   = new Date(availableWeeks[todayIdx]);
+    if (!currentCoursesWeekStart) currentCoursesWeekStart = new Date(availableWeeks[todayIdx]);
+    if (!currentStockWeekStart)   currentStockWeekStart   = new Date(availableWeeks[todayIdx]);
+    if (!currentSetupWeekStart)   currentSetupWeekStart   = new Date(availableWeeks[todayIdx]);
 
+    // ── 셀렉터 UI 갱신 ──
     updateWeekSelector();
     updateAdminWeekSelector();
     updateCoursesWeekSelector();
@@ -4726,7 +4814,296 @@ function clearStockSearch() {
     updateStockInventoryTable();
 }
 
-// ── 잔여 정렬 토글
+// ══════════════════════════════════════════════
+// 📗 부교재 관리 (sub_books / sub_book_logs)
+// ══════════════════════════════════════════════
+let subBooks = [];
+
+async function loadSubBooks() {
+    try {
+        const { data, error } = await sb.from('sub_books').select('*').order('course_group_name');
+        if (error) throw error;
+        subBooks = data || [];
+    } catch(e) {
+        console.error('부교재 로드 오류:', e);
+        subBooks = [];
+    }
+}
+
+// 그룹에 부교재가 있는지 확인
+function hasSubBooks(groupKey) {
+    return subBooks.some(sb => sb.course_group_key === groupKey);
+}
+
+// 부교재 재고 현황 테이블 렌더
+function renderSubBookInventory() {
+    const container = document.getElementById('sub-book-inventory-table');
+    if (!container) return;
+    if (subBooks.length === 0) {
+        container.innerHTML = `<div class="text-center py-6 text-gray-400 text-sm">등록된 부교재가 없습니다.<br><span class="text-xs">과정관리 또는 입고 화면에서 과정의 🟣 부교재 버튼을 눌러 추가하세요.</span></div>`;
+        return;
+    }
+    // 그룹별 집계
+    const grouped = {};
+    subBooks.forEach(sb => {
+        if (!grouped[sb.course_group_key]) {
+            grouped[sb.course_group_key] = { name: sb.course_group_name, books: [] };
+        }
+        grouped[sb.course_group_key].books.push(sb);
+    });
+
+    container.innerHTML = Object.entries(grouped).map(([gk, g]) => `
+        <div class="mb-4">
+            <div style="font-size:0.9rem; font-weight:700; color:#4c1d95; margin-bottom:6px; padding:6px 10px; background:#f5f3ff; border-radius:8px;">
+                📗 ${g.name}
+                <button onclick="openSubBookModal('${gk}','${g.name.replace(/'/g,"\\'")}','fromInventory')"
+                    style="float:right; background:#7c3aed; color:white; border:none; border-radius:6px; padding:3px 10px; font-size:0.8rem; cursor:pointer;">
+                    ⚙️ 관리</button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full" style="border-collapse:collapse; font-size:0.9rem;">
+                    <thead>
+                        <tr style="background:#ede9fe; border-bottom:1px solid #c4b5fd;">
+                            <th class="px-3 py-2 text-left font-semibold text-purple-800" style="min-width:140px;">부교재명</th>
+                            <th class="px-3 py-2 text-center font-semibold text-blue-700" style="min-width:70px;">입고</th>
+                            <th class="px-3 py-2 text-center font-semibold text-orange-600" style="min-width:70px;">출고</th>
+                            <th class="px-3 py-2 text-center font-semibold text-green-700" style="min-width:70px;">잔여</th>
+                            <th class="px-3 py-2 text-center font-semibold text-gray-600" style="min-width:120px;">처리</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${g.books.map((b,i) => {
+                            const rem = b.stock_quantity - b.released_quantity;
+                            const isLow = rem < 10;
+                            const bg = i%2===0 ? '#fff' : '#faf5ff';
+                            return `<tr style="background:${bg}; border-bottom:1px solid #e9d5ff;">
+                                <td class="px-3 py-2" style="font-weight:600; color:#1f2937; word-break:keep-all;">${b.book_name}</td>
+                                <td class="px-3 py-2 text-center" style="color:#1d4ed8; font-weight:600;">${b.stock_quantity}권</td>
+                                <td class="px-3 py-2 text-center" style="color:#ea580c; font-weight:600;">${b.released_quantity}권</td>
+                                <td class="px-3 py-2 text-center">
+                                    <span style="font-weight:700; color:${isLow?'#dc2626':'#15803d'}; ${isLow?'background:#fef2f2; border-radius:6px; padding:2px 6px;':''}">${rem}권${isLow?' ⚠️':''}</span>
+                                </td>
+                                <td class="px-3 py-2">
+                                    <div style="display:flex; gap:4px; justify-content:center;">
+                                        <button onclick="openSubBookActionModal('${b.id}','입고','${b.book_name.replace(/'/g,"\\'")}',${b.stock_quantity},${b.released_quantity})"
+                                            style="background:#16a34a;color:white;border:none;border-radius:6px;padding:5px 8px;font-size:0.8rem;font-weight:700;cursor:pointer;min-height:34px;">입고</button>
+                                        <button onclick="openSubBookActionModal('${b.id}','출고','${b.book_name.replace(/'/g,"\\'")}',${b.stock_quantity},${b.released_quantity})"
+                                            style="background:#ea580c;color:white;border:none;border-radius:6px;padding:5px 8px;font-size:0.8rem;font-weight:700;cursor:pointer;min-height:34px;">출고</button>
+                                    </div>
+                                </td>
+                            </tr>`;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>`).join('');
+}
+
+// 부교재 버튼 HTML 생성 (과정 카드용)
+function getSubBookBtnHtml(groupKey, groupName) {
+    const has = hasSubBooks(groupKey);
+    const safeKey  = groupKey.replace(/'/g, "\\'");
+    const safeName = groupName.replace(/'/g, "\\'");
+    if (has) {
+        return `<button onclick="openSubBookModal('${safeKey}','${safeName}')"
+            style="background:#7c3aed;color:white;border:none;border-radius:8px;padding:7px 10px;font-size:0.82rem;font-weight:700;cursor:pointer;min-height:36px;touch-action:manipulation;">
+            📗 부교재</button>`;
+    } else {
+        return `<button onclick="openSubBookModal('${safeKey}','${safeName}')"
+            style="background:#d1d5db;color:#6b7280;border:none;border-radius:8px;padding:7px 10px;font-size:0.82rem;font-weight:700;cursor:pointer;min-height:36px;touch-action:manipulation;">
+            📗 부교재</button>`;
+    }
+}
+
+// 부교재 모달 열기
+function openSubBookModal(groupKey, groupName, from='') {
+    if (!requireUser()) return;
+    document.getElementById('sub-book-group-key').value = groupKey;
+    document.getElementById('sub-book-group-name').value = groupName;
+    document.getElementById('sub-book-modal-title').textContent = `📗 부교재 관리 — ${groupName}`;
+    document.getElementById('sub-book-new-name').value = '';
+    renderSubBookList(groupKey);
+    document.getElementById('sub-book-modal').classList.remove('hidden');
+    document.getElementById('sub-book-modal').classList.add('flex');
+}
+function closeSubBookModal() {
+    document.getElementById('sub-book-modal').classList.add('hidden');
+    document.getElementById('sub-book-modal').classList.remove('flex');
+}
+
+// 모달 내 부교재 목록 렌더
+function renderSubBookList(groupKey) {
+    const container = document.getElementById('sub-book-list');
+    const books = subBooks.filter(b => b.course_group_key === groupKey);
+    if (books.length === 0) {
+        container.innerHTML = `<div class="text-center py-4 text-gray-400 text-sm">등록된 부교재가 없습니다. 아래에서 추가하세요.</div>`;
+        return;
+    }
+    container.innerHTML = books.map(b => {
+        const rem = b.stock_quantity - b.released_quantity;
+        const isLow = rem < 10;
+        return `
+        <div style="border:2px solid #e9d5ff; border-radius:12px; padding:14px; background:#faf5ff;">
+            <div style="font-size:0.95rem; font-weight:700; color:#4c1d95; margin-bottom:8px; word-break:keep-all;">📗 ${b.book_name}</div>
+            <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-bottom:10px;">
+                <div style="background:white; border-radius:8px; padding:8px; text-align:center;">
+                    <div style="font-size:0.72rem; color:#6b7280;">입고</div>
+                    <div style="font-size:1.2rem; font-weight:800; color:#1d4ed8;">${b.stock_quantity}권</div>
+                </div>
+                <div style="background:white; border-radius:8px; padding:8px; text-align:center;">
+                    <div style="font-size:0.72rem; color:#6b7280;">출고</div>
+                    <div style="font-size:1.2rem; font-weight:800; color:#ea580c;">${b.released_quantity}권</div>
+                </div>
+                <div style="background:${isLow?'#fef2f2':'white'}; border-radius:8px; padding:8px; text-align:center;">
+                    <div style="font-size:0.72rem; color:#6b7280;">잔여</div>
+                    <div style="font-size:1.2rem; font-weight:800; color:${isLow?'#dc2626':'#15803d'};">${rem}권${isLow?' ⚠️':''}</div>
+                </div>
+            </div>
+            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                <button onclick="openSubBookActionModal('${b.id}','입고','${b.book_name.replace(/'/g,"\\'")}',${b.stock_quantity},${b.released_quantity})"
+                    style="flex:1; background:#16a34a;color:white;border:none;border-radius:8px;padding:8px;font-size:0.88rem;font-weight:700;cursor:pointer;min-height:40px;">
+                    ＋ 입고</button>
+                <button onclick="openSubBookActionModal('${b.id}','출고','${b.book_name.replace(/'/g,"\\'")}',${b.stock_quantity},${b.released_quantity})"
+                    style="flex:1; background:#ea580c;color:white;border:none;border-radius:8px;padding:8px;font-size:0.88rem;font-weight:700;cursor:pointer;min-height:40px;">
+                    📤 출고</button>
+                <button onclick="deleteSubBook('${b.id}','${b.book_name.replace(/'/g,"\\'")}')"
+                    style="background:#ef4444;color:white;border:none;border-radius:8px;padding:8px 12px;font-size:0.88rem;font-weight:700;cursor:pointer;min-height:40px;">
+                    🗑️</button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+// 부교재 추가
+async function addSubBook() {
+    if (!requireUser()) return;
+    const groupKey  = document.getElementById('sub-book-group-key').value;
+    const groupName = document.getElementById('sub-book-group-name').value;
+    const name      = document.getElementById('sub-book-new-name').value.trim();
+    if (!name) { showNotification('부교재 이름을 입력해주세요.', 'error'); return; }
+    try {
+        const { error } = await sb.from('sub_books').insert({
+            course_group_key:  groupKey,
+            course_group_name: groupName,
+            book_name: name,
+            stock_quantity: 0,
+            released_quantity: 0
+        });
+        if (error) throw error;
+        showNotification(`"${name}" 부교재가 등록되었습니다.`, 'success');
+        document.getElementById('sub-book-new-name').value = '';
+        await loadSubBooks();
+        renderSubBookList(groupKey);
+        renderSubBookInventory();
+        updateStockInventoryTable(); // 버튼 색상 갱신
+        renderAdminCoursesList();
+    } catch(e) {
+        console.error('부교재 추가 오류:', e);
+        showNotification('부교재 추가 중 오류가 발생했습니다.', 'error');
+    }
+}
+
+// 부교재 삭제
+async function deleteSubBook(id, name) {
+    if (!confirm(`"${name}" 부교재를 삭제하시겠습니까?\n모든 입출고 기록도 삭제됩니다.`)) return;
+    try {
+        const { error } = await sb.from('sub_books').delete().eq('id', id);
+        if (error) throw error;
+        showNotification(`"${name}" 삭제 완료`, 'success');
+        const groupKey = document.getElementById('sub-book-group-key').value;
+        await loadSubBooks();
+        renderSubBookList(groupKey);
+        renderSubBookInventory();
+        updateStockInventoryTable();
+        renderAdminCoursesList();
+    } catch(e) {
+        console.error('부교재 삭제 오류:', e);
+        showNotification('삭제 중 오류가 발생했습니다.', 'error');
+    }
+}
+
+// 부교재 입출고 모달 열기
+function openSubBookActionModal(subBookId, actionType, bookName, stock, released) {
+    const today = new Date().toISOString().split('T')[0];
+    const rem   = stock - released;
+    document.getElementById('sub-book-action-id').value   = subBookId;
+    document.getElementById('sub-book-action-type').value = actionType;
+    document.getElementById('sub-book-action-title').textContent = `📗 부교재 ${actionType} — ${bookName}`;
+    document.getElementById('sub-book-action-info').innerHTML =
+        `<b>${bookName}</b><br>현재 입고 ${stock}권 / 출고 ${released}권 / 잔여 <b>${rem}권</b>`;
+    document.getElementById('sub-book-action-date').value  = today;
+    document.getElementById('sub-book-action-qty').value   = '';
+    document.getElementById('sub-book-action-notes').value = '';
+    document.getElementById('sub-book-qty-label').textContent = actionType === '입고' ? '입고 수량 (권)' : '출고 수량 (권)';
+    document.getElementById('sub-book-qty-hint').textContent  = actionType === '출고' ? `출고 후 잔여: ${rem}권` : '';
+    const btn = document.getElementById('sub-book-action-submit');
+    btn.textContent  = actionType === '입고' ? '✔️ 입고 완료' : '📤 출고 완료';
+    btn.style.background = actionType === '입고' ? '#16a34a' : '#ea580c';
+    document.getElementById('sub-book-action-modal').classList.remove('hidden');
+    document.getElementById('sub-book-action-modal').classList.add('flex');
+    setTimeout(() => document.getElementById('sub-book-action-qty').focus(), 100);
+}
+function closeSubBookActionModal() {
+    document.getElementById('sub-book-action-modal').classList.add('hidden');
+    document.getElementById('sub-book-action-modal').classList.remove('flex');
+}
+
+// 부교재 입출고 처리
+async function submitSubBookAction() {
+    if (!requireUser()) return;
+    const id         = document.getElementById('sub-book-action-id').value;
+    const actionType = document.getElementById('sub-book-action-type').value;
+    const qty        = parseInt(document.getElementById('sub-book-action-qty').value);
+    const date       = document.getElementById('sub-book-action-date').value;
+    const notes      = document.getElementById('sub-book-action-notes').value.trim();
+    const book       = subBooks.find(b => b.id === id);
+    if (!book) return;
+    if (isNaN(qty) || qty < 1) { showNotification('수량을 입력해주세요.', 'error'); return; }
+    if (!date) { showNotification('날짜를 입력해주세요.', 'error'); return; }
+
+    const rem = book.stock_quantity - book.released_quantity;
+    if (actionType === '출고' && qty > rem) {
+        showNotification(`잔여 재고(${rem}권)를 초과할 수 없습니다.`, 'error'); return;
+    }
+    if (!confirm(`📗 부교재 ${actionType} 확인\n\n${book.book_name}\n날짜: ${date}\n수량: ${qty}권\n${notes ? '메모: '+notes : ''}\n\n진행하시겠습니까?`)) return;
+
+    try {
+        const newStock    = actionType === '입고' ? book.stock_quantity + qty : book.stock_quantity;
+        const newReleased = actionType === '출고' ? book.released_quantity + qty : book.released_quantity;
+        const { error: ue } = await sb.from('sub_books').update({
+            stock_quantity:    newStock,
+            released_quantity: newReleased,
+            updated_at: new Date().toISOString()
+        }).eq('id', id);
+        if (ue) throw ue;
+
+        await sb.from('sub_book_logs').insert({
+            sub_book_id: id,
+            action_type: actionType,
+            quantity:    qty,
+            action_date: new Date(date + 'T09:00:00').toISOString(),
+            user_name:   currentUser.name,
+            user_role:   currentUser.role,
+            notes: notes || `${actionType} ${qty}권`
+        });
+
+        showNotification(`부교재 ${actionType} 완료! ${book.book_name} ${qty}권`, 'success');
+        closeSubBookActionModal();
+        await loadSubBooks();
+        renderSubBookInventory();
+        // 부교재 관리 모달이 열려있으면 목록 갱신
+        const modal = document.getElementById('sub-book-modal');
+        if (!modal.classList.contains('hidden')) {
+            const groupKey = document.getElementById('sub-book-group-key').value;
+            renderSubBookList(groupKey);
+        }
+    } catch(e) {
+        console.error('부교재 입출고 오류:', e);
+        showNotification('처리 중 오류가 발생했습니다.', 'error');
+    }
+}
+
+
 function toggleInventorySort() {
     inventorySortAsc = !inventorySortAsc;
     const btn = document.getElementById('inventory-sort-btn');
@@ -4799,7 +5176,8 @@ function renderAdminCoursesList() {
                         ${c.end_date ? `<span>~ ${formatDate(c.end_date,'MM-DD')}</span>` : ''}
                     </div>
                 </div>
-                <div class="flex gap-2 flex-shrink-0">
+                <div class="flex gap-2 flex-shrink-0 flex-wrap">
+                    ${getSubBookBtnHtml(getGroupKey(c.course_name), getGroupName(c.course_name))}
                     <button onclick="editAdminCourse('${c.id}')"
                         style="background:#3b82f6;color:white;border:none;border-radius:8px;padding:8px 12px;font-size:0.85rem;font-weight:700;cursor:pointer;min-height:38px;touch-action:manipulation;">
                         ✏️ 수정</button>
@@ -4951,6 +5329,7 @@ function updateStockInventoryTable() {
             <td class="px-3 py-2 text-center" style="font-size:0.88rem; color:#1d4ed8; font-weight:600;">${totalStock}권</td>
             <td class="px-3 py-2 text-center" style="font-size:0.88rem; color:#ea580c; font-weight:600;">${totalReleased}권</td>
             <td class="px-3 py-2 text-center"><span style="${remainStyle}">${remaining}권${isLow ? ' ⚠️' : ''}</span></td>
+            <td class="px-3 py-2 text-center">${getSubBookBtnHtml(groupKey, displayName)}</td>
             <td class="px-3 py-2">
                 <div style="display:flex; flex-direction:column; gap:4px; align-items:stretch;">
                     ${canStock ? `<button onclick="openGroupStockInModal('${safeKey}')"
@@ -5548,8 +5927,10 @@ function renderStockLists() {
 // ── 입고 탭 로드
 async function loadStockInPage() {
     await loadCourses();
+    await loadSubBooks();
     stockSearchTerm = document.getElementById('stock-search-input')?.value.trim() || '';
     updateStockInventoryTable();
+    renderSubBookInventory();
 }
 
 // ── 출고 탭 로드
@@ -5951,6 +6332,7 @@ async function loadAdminCourses() {
         const { data, error } = await sb.from('courses').select('*').order('start_date');
         if (error) throw error;
         courses = data || [];
+        await loadSubBooks(); // 부교재 데이터 갱신 (버튼 색상 반영)
         const weekEnd = new Date(currentAdminWeekStart);
         weekEnd.setDate(currentAdminWeekStart.getDate() + 6);
         weekEnd.setHours(23, 59, 59, 999);
