@@ -277,15 +277,17 @@
             </div>
             <div class="flex items-center gap-2 flex-1 justify-end min-w-0">
                 <span class="text-xs text-blue-200 hidden sm:block" id="current-date"></span>
-                <div id="user-selector-wrap" class="no-user flex-1 sm:flex-none" style="max-width:220px;">
+                <div id="user-selector-wrap" class="no-user flex-1 sm:flex-none" style="max-width:200px;">
                     <span class="user-icon">👤</span>
                     <select id="current-user" style="color:white;background-color:transparent;">
                         <option value="" style="background-color:#1e40af;color:white;">▼ 작업자 선택</option>
                     </select>
                 </div>
-                <button onclick="openResetModal()" title="데이터 초기화"
-                    class="bg-red-700 hover:bg-red-800 active:bg-red-900 px-3 py-2 rounded-lg text-xs flex-shrink-0">
-                    🗑️
+                <!-- 헤더 확인 버튼 -->
+                <button onclick="confirmHeaderUser()"
+                    title="작업자 선택 확인"
+                    style="background:#22c55e; color:white; border:none; border-radius:8px; padding:8px 14px; font-size:0.88rem; font-weight:700; cursor:pointer; flex-shrink:0; min-height:38px; touch-action:manipulation; white-space:nowrap;">
+                    ✅ 확인
                 </button>
             </div>
         </div>
@@ -3885,7 +3887,7 @@ const INITIAL_COURSES = [
 // 초기화는 DOMContentLoaded에서 처리됨
 
 // 초기화 비밀번호 모달
-const RESET_PASSWORD = '2026';
+const RESET_PASSWORDS = ['0525', '2026']; // 둘 다 허용
 function openResetModal() {
     document.getElementById('reset-password-input').value = '';
     document.getElementById('reset-password-error').classList.add('hidden');
@@ -3899,7 +3901,7 @@ function closeResetModal() {
 }
 function confirmReset() {
     const pwd = document.getElementById('reset-password-input').value;
-    if (pwd !== RESET_PASSWORD) {
+    if (!RESET_PASSWORDS.includes(pwd)) {
         document.getElementById('reset-password-error').classList.remove('hidden');
         document.getElementById('reset-password-input').value = '';
         document.getElementById('reset-password-input').focus();
@@ -3907,6 +3909,39 @@ function confirmReset() {
     }
     closeResetModal();
     resetAllData();
+}
+
+// 헤더 확인 버튼 클릭
+function confirmHeaderUser() {
+    const sel  = document.getElementById('current-user');
+    const name = sel?.value?.trim();
+    if (!name) {
+        showNotification('⚠️ 작업자를 선택해주세요.', 'error');
+        sel?.focus();
+        return;
+    }
+    // 강력 매칭
+    let found = users.find(u => u.name === name)
+             || users.find(u => u.name.trim() === name)
+             || (typeof FALLBACK_USERS !== 'undefined' ? FALLBACK_USERS.find(u => u.name.trim() === name) : null);
+    if (!found) {
+        // option 텍스트에서 role 추출
+        const opt  = sel.options[sel.selectedIndex];
+        const text = opt?.textContent || '';
+        const rm   = text.match(/\(([^)]+)\)/);
+        if (rm) found = { name: name, role: rm[1].trim(), active: true };
+    }
+    if (!found) { showNotification('작업자 정보를 찾을 수 없습니다.', 'error'); return; }
+
+    currentUser = found;
+    localStorage.setItem('textbook_last_user', found.name);
+    document.getElementById('user-selector-wrap')?.classList.remove('no-user');
+    updateNavTabsForRole();
+    // 팝업도 닫기
+    const popup = document.getElementById('startup-popup');
+    if (popup) popup.style.display = 'none';
+    showNotification(`✅ ${found.name}(${found.role}) — 시작합니다.`, 'success');
+    console.log('✅ 헤더 확인:', found.name);
 }
 
 // 전체 데이터 초기화 (Supabase)
@@ -7330,5 +7365,16 @@ function debounce(func, wait) {
     };
 }
 </script>
+<!-- 최하단 초기화 버튼 -->
+<div style="text-align:center; padding:32px 16px 48px; margin-top:32px; border-top:1px solid #e5e7eb;">
+    <p style="font-size:0.8rem; color:#9ca3af; margin-bottom:12px;">⚠️ 아래 버튼은 관리자 전용입니다</p>
+    <button onclick="openResetModal()"
+        style="background:#dc2626; color:white; border:none; border-radius:10px; padding:10px 24px; font-size:0.9rem; font-weight:700; cursor:pointer; touch-action:manipulation; opacity:0.7;"
+        onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">
+        🗑️ 전체 데이터 초기화
+    </button>
+    <p style="font-size:0.75rem; color:#d1d5db; margin-top:8px;">비밀번호 필요 · 되돌릴 수 없음</p>
+</div>
+
 </body>
 </html>
