@@ -718,19 +718,25 @@
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
         <div class="text-5xl mb-3">📚</div>
         <h3 class="text-xl font-bold text-gray-800 mb-1">인재개발원 교재관리</h3>
-        <p class="text-gray-500 text-sm mb-5">작업자를 선택하면 바로 시작됩니다.</p>
+        <p class="text-gray-500 text-sm mb-5">작업자를 선택 후 <b>확인</b> 버튼을 눌러 시작하세요.</p>
 
-        <!-- 팝업 내부 작업자 선택 -->
-        <div class="bg-gray-50 rounded-xl p-4 mb-4">
+        <!-- 작업자 선택 -->
+        <div class="bg-gray-50 rounded-xl p-4 mb-3">
             <label class="block text-sm font-bold text-gray-700 mb-2">👤 작업자 선택</label>
             <select id="startup-user-select"
-                class="w-full px-4 py-3 border-2 border-blue-300 rounded-xl text-base font-bold text-gray-800 bg-white cursor-pointer"
-                onchange="selectStartupUser(this.value)">
+                class="w-full px-4 py-3 border-2 border-blue-300 rounded-xl text-base font-bold text-gray-800 bg-white cursor-pointer">
                 <option value="">— 이름을 선택하세요 —</option>
             </select>
+            <div id="startup-user-error" class="text-red-500 text-xs mt-2 hidden">⚠️ 작업자를 선택해주세요.</div>
         </div>
 
-        <p class="text-xs text-gray-400">선택 후 자동으로 시작됩니다</p>
+        <!-- 확인 버튼 -->
+        <button onclick="confirmStartupUser()"
+            class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-lg transition-colors"
+            style="min-height:56px;">
+            ✅ 확인 — 시작하기
+        </button>
+        <p class="text-xs text-gray-400 mt-3">선택하지 않으면 대시보드만 조회 가능합니다.</p>
     </div>
 </div>
 
@@ -3955,22 +3961,75 @@ function closeStartupPopup() {
     if (el) el.style.display = 'none';
 }
 
-// 팝업 내부에서 작업자 선택 시 즉시 로그인
-function selectStartupUser(name) {
-    if (!name) return;
-    const found = users.find(u => u.name === name);
-    if (!found) return;
+// 팝업 확인 버튼 클릭
+function confirmStartupUser() {
+    const sel  = document.getElementById('startup-user-select');
+    const name = sel?.value?.trim();
+    const errEl = document.getElementById('startup-user-error');
+
+    if (!name) {
+        if (errEl) errEl.classList.remove('hidden');
+        sel?.focus();
+        return;
+    }
+    if (errEl) errEl.classList.add('hidden');
+
+    // 1순위: DB users 배열에서 정확히 매칭
+    let found = users.find(u => u.name === name);
+
+    // 2순위: 공백 제거 후 매칭 (인코딩/공백 차이 대응)
+    if (!found) found = users.find(u => u.name.trim() === name.trim());
+
+    // 3순위: FALLBACK_USERS에서 매칭
+    if (!found && typeof FALLBACK_USERS !== 'undefined') {
+        found = FALLBACK_USERS.find(u => u.name.trim() === name.trim());
+    }
+
+    // 4순위: 드롭다운 option에서 role 직접 추출 (최후 수단)
+    if (!found) {
+        const selectedOpt = sel.options[sel.selectedIndex];
+        const text = selectedOpt?.textContent || '';
+        const roleMatch = text.match(/\(([^)]+)\)/);
+        if (roleMatch) {
+            found = { name: name.trim(), role: roleMatch[1].trim(), active: true };
+            console.warn('⚠️ DB 매칭 실패, 드롭다운 텍스트에서 역할 추출:', found);
+        }
+    }
+
+    if (!found) {
+        showNotification('⚠️ 작업자 정보를 찾을 수 없습니다. 다시 선택해주세요.', 'error');
+        console.error('사용자 매칭 실패. name:', name, 'users:', users);
+        return;
+    }
+
+    // currentUser 설정
     currentUser = found;
     localStorage.setItem('textbook_last_user', found.name);
-    // 상단 드롭다운도 동기화
-    const sel = document.getElementById('current-user');
-    if (sel) sel.value = found.name;
+
+    // 상단 드롭다운 동기화
+    const topSel = document.getElementById('current-user');
+    if (topSel) {
+        // 드롭다운에 해당 이름 옵션이 없으면 추가
+        let opt = Array.from(topSel.options).find(o => o.value.trim() === found.name.trim());
+        if (!opt) {
+            opt = document.createElement('option');
+            opt.value = found.name;
+            opt.textContent = `${found.name} (${found.role})`;
+            topSel.appendChild(opt);
+        }
+        topSel.value = found.name;
+    }
+
     document.getElementById('user-selector-wrap')?.classList.remove('no-user');
     updateNavTabsForRole();
     showNotification(`✅ ${found.name}(${found.role})로 시작합니다.`, 'success');
-    // 팝업 닫기 (약간의 딜레이로 알림 보이게)
-    setTimeout(() => closeStartupPopup(), 500);
-    console.log('✅ 팝업에서 작업자 선택:', found.name);
+    closeStartupPopup();
+    console.log('✅ 작업자 확인 완료:', found.name, found.role);
+}
+
+// 기존 호환용 (onchange 방식 제거됐으므로 빈 함수)
+function selectStartupUser(name) {
+    // confirmStartupUser()로 대체됨
 }
 
 // 로딩 오버레이 제어
@@ -4177,8 +4236,19 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // 작업자 변경 핸들러 (change + input 둘 다 청취 — iOS Safari 호환성)
     const handleUserChange = function(e) {
-        const userName = e.target.value;
-        currentUser = users.find(u => u.name === userName) || null;
+        const name = e.target.value?.trim();
+        if (!name) {
+            currentUser = null;
+            localStorage.removeItem('textbook_last_user');
+            document.getElementById('user-selector-wrap')?.classList.add('no-user');
+            updateNavTabsForRole();
+            return;
+        }
+        // 공백 차이 대응 강력 매칭
+        currentUser = users.find(u => u.name === name)
+                   || users.find(u => u.name.trim() === name)
+                   || (typeof FALLBACK_USERS !== 'undefined' ? FALLBACK_USERS.find(u => u.name.trim() === name) : null)
+                   || null;
         const wrap = document.getElementById('user-selector-wrap');
         if (currentUser) {
             localStorage.setItem('textbook_last_user', currentUser.name);
@@ -4190,6 +4260,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         } else {
             localStorage.removeItem('textbook_last_user');
             wrap?.classList.add('no-user');
+            console.warn('사용자 매칭 실패:', name, users);
         }
         updateNavTabsForRole();
     };
@@ -4568,7 +4639,7 @@ async function loadDashboardData() {
         document.getElementById('stat-total-courses').textContent    = weekCourses.length;
         document.getElementById('stat-stock-waiting').textContent    = weekCourses.filter(c => c.status === '입고대기').length;
         document.getElementById('stat-release-waiting').textContent  = weekCourses.filter(c => c.status === '입고완료').length;
-        document.getElementById('stat-setup-complete').textContent   = weekCourses.filter(c => c.status === '출고완료').length;
+        document.getElementById('stat-setup-complete').textContent   = weekCourses.filter(c => RELEASED_STATUSES.includes(c.status)).length;
 
         updateWeekSummary(weekCourses);
         updateTimeline(weekCourses);
@@ -4587,7 +4658,7 @@ async function loadDashboardData() {
 
 function updateWeekSummary(weekCourses) {
     const total    = weekCourses.length;
-    const complete = weekCourses.filter(c => c.status === '출고완료').length;
+    const complete = weekCourses.filter(c => RELEASED_STATUSES.includes(c.status)).length;
     const progress = weekCourses.filter(c => c.status === '입고완료').length;
     const rate = total > 0 ? Math.round((complete / total) * 100) : 0;
     document.getElementById('week-total-courses').textContent    = total;
@@ -4707,7 +4778,7 @@ function updateUrgentTasks(courseList) {
     const today = new Date(); today.setHours(0,0,0,0);
     const urgent = courseList.filter(c => {
         const d = Math.ceil((new Date(c.start_date) - today) / (1000 * 60 * 60 * 24));
-        return d <= 3 && d >= 0 && c.status !== '출고완료';
+        return d <= 3 && d >= 0 && !RELEASED_STATUSES.includes(c.status);
     });
     if (urgent.length === 0) {
         container.innerHTML = `<div class="text-center py-6 text-gray-500">✅<p>긴급 작업이 없습니다.</p></div>`;
@@ -4744,7 +4815,7 @@ function updateStatusChart(courseList) {
     const statusCounts = {
         '입고대기': courseList.filter(c => c.status === '입고대기').length,
         '입고완료': courseList.filter(c => c.status === '입고완료').length,
-        '출고완료': courseList.filter(c => c.status === '출고완료').length,
+        '출고완료': courseList.filter(c => RELEASED_STATUSES.includes(c.status)).length,
     };
     if (statusChart) statusChart.destroy();
     statusChart = new Chart(ctx, {
@@ -4784,12 +4855,15 @@ function getGroupTotalStock(groupKey) {
         .reduce((sum, c) => sum + (c.stock_quantity || 0), 0);
 }
 
-// 그룹 총 출고량 (이미 출고된 수량 합산)
+// 그룹 총 출고량 — released_quantity가 있는 모든 완료 상태 포함
+// (구 워크플로우: 출고확인/세팅중/세팅완료대기/세팅완료 포함)
+const RELEASED_STATUSES = ['출고완료','출고확인','세팅중','세팅완료대기','세팅완료'];
+
 function getGroupTotalReleased(groupKey, excludeCourseId = null) {
     return courses
         .filter(c => getGroupKey(c.course_name) === groupKey && c.id !== excludeCourseId)
         .reduce((sum, c) => {
-            const released = ['출고완료'].includes(c.status)
+            const released = RELEASED_STATUSES.includes(c.status)
                 ? (c.released_quantity || 0) : 0;
             return sum + released;
         }, 0);
@@ -5626,10 +5700,9 @@ async function submitReleaseQtyEdit(courseId, courseName, currentStatus) {
 
 function _renderReleaseEditList(groupKey) {
     const isAdmin = ['매니저','담당자','관리자'].includes(currentUser?.role);
-    // 출고 이후 상태 과정 (세팅완료 포함)
-    const releasedStatuses = ['출고완료'];
+    // 구 워크플로우 상태 포함 전체
     const releasedCourses = courses
-        .filter(c => getGroupKey(c.course_name) === groupKey && releasedStatuses.includes(c.status))
+        .filter(c => getGroupKey(c.course_name) === groupKey && RELEASED_STATUSES.includes(c.status))
         .sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
 
     const badge = document.getElementById('release-edit-badge');
@@ -5916,7 +5989,9 @@ function renderStockLists() {
     weekEnd.setDate(currentStockWeekStart.getDate() + 6);
     weekEnd.setHours(23, 59, 59, 999);
 
-    // 해당 주차 시작 과정 전체 (입고대기/입고완료/출고완료 모두)
+    // 해당 주차 시작 과정 전체 표시
+    // (입고대기/입고완료/출고완료 + 구 워크플로우 상태 모두 포함)
+    const allReleased = [...RELEASED_STATUSES, '입고대기', '입고완료'];
     const stockOut = courses.filter(c => {
         const sd = new Date(c.start_date);
         return sd >= currentStockWeekStart && sd <= weekEnd;
@@ -6023,18 +6098,23 @@ function updateStockOutList(list) {
     const canDo = currentUser && ['매니저','담당자','관리자'].includes(currentUser.role);
 
     container.innerHTML = list.map(course => {
-        const isReady     = course.status === '입고완료';
-        const isDone      = course.status === '출고완료';
+        const isReady = course.status === '입고완료';
+        // 출고완료 + 구 워크플로우 상태 모두 "출고됨"으로 처리
+        const isDone  = RELEASED_STATUSES.includes(course.status);
 
-        const groupKey    = getGroupKey(course.course_name);
-        const groupStock  = getGroupTotalStock(groupKey);
-        const otherRel    = getGroupTotalReleased(groupKey, course.id);
-        const groupAvail  = groupStock - otherRel;
+        const groupKey   = getGroupKey(course.course_name);
+        const groupStock = getGroupTotalStock(groupKey);
+        const otherRel   = getGroupTotalReleased(groupKey, course.id);
+        const groupAvail = groupStock - otherRel;
         const releasedQty = course.released_quantity || 0;
 
         const cardBg = isDone  ? 'border-green-200 bg-green-50'
                      : isReady ? 'border-blue-200 bg-blue-50'
                      : 'border-gray-200 bg-gray-50';
+
+        // 구 워크플로우 상태면 레이블 표시
+        const legacyNote = isDone && course.status !== '출고완료'
+            ? `<span class="text-xs text-gray-400">(${course.status})</span>` : '';
 
         return `
         <div class="course-card ${cardBg}">
@@ -6043,6 +6123,7 @@ function updateStockOutList(list) {
                     <div class="flex items-center flex-wrap gap-2 mb-1">
                         <h4 class="font-bold text-base leading-tight" style="word-break:keep-all;">${course.course_name}</h4>
                         <span class="status-badge status-${course.status}">${course.status}</span>
+                        ${legacyNote}
                     </div>
                     <div class="flex gap-3 text-xs text-gray-500 flex-wrap">
                         <span>📅 ${formatDate(course.start_date,'MM-DD')} 시작</span>
@@ -6064,7 +6145,7 @@ function updateStockOutList(list) {
                 🚚 출고 처리
             </button>` : ''}
             ${!isReady && !isDone ? `<p class="text-xs text-gray-400 mt-2 text-center">입고 처리 후 출고 가능합니다</p>` : ''}
-        </div>`;
+        </div>`; 
     }).join('');
 }
 
