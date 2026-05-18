@@ -632,12 +632,12 @@
             <input type="hidden" id="course-id">
             <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-1">과정명 (교재명) *</label>
-                <input type="text" id="course-name" required class="modal-input">
+                <input type="text" id="course-name" class="modal-input" placeholder="예: 여신기본(L) 1차">
             </div>
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">시작일 *</label>
-                    <input type="date" id="course-start-date" required class="modal-input">
+                    <input type="date" id="course-start-date" class="modal-input">
                 </div>
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">종료일</label>
@@ -645,7 +645,7 @@
                 </div>
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">수강 인원 *</label>
-                    <input type="number" id="course-students" required min="1"
+                    <input type="number" id="course-students" min="0" value="0"
                         class="modal-input" inputmode="numeric">
                 </div>
                 <div>
@@ -654,7 +654,7 @@
                         class="modal-input" inputmode="numeric">
                 </div>
                 <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">출고 예정일 *</label>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">출고 예정일</label>
                     <input type="date" id="course-release-date" class="modal-input">
                 </div>
                 <div>
@@ -6661,7 +6661,7 @@ async function handleCourseSubmit(e) {
     if (!requireUser()) return;
     const id = document.getElementById('course-id').value;
 
-    // 안전한 날짜 변환 헬퍼
+    // 안전한 날짜 변환
     const safeDate = (fieldId) => {
         const val = document.getElementById(fieldId)?.value;
         if (!val) return null;
@@ -6669,48 +6669,102 @@ async function handleCourseSubmit(e) {
         return isNaN(d.getTime()) ? null : d.toISOString();
     };
 
+    const courseName  = document.getElementById('course-name').value.trim();
+    const startDate   = safeDate('course-start-date');
+    const studentCount = parseInt(document.getElementById('course-students').value) || 0;
+
+    // JS 레벨 검증
+    if (!courseName)  { showNotification('❗ 과정명을 입력해주세요.', 'error'); document.getElementById('course-name').focus(); return; }
+    if (!startDate)   { showNotification('❗ 시작일을 선택해주세요.', 'error'); document.getElementById('course-start-date').focus(); return; }
+    if (studentCount <= 0) { showNotification('❗ 수강 인원을 입력해주세요. (1명 이상)', 'error'); document.getElementById('course-students').focus(); return; }
+
     const data = {
-        course_name:             document.getElementById('course-name').value.trim(),
-        start_date:              safeDate('course-start-date'),
-        end_date:                safeDate('course-end-date'),
-        student_count:           parseInt(document.getElementById('course-students').value) || 0,
-        stock_quantity:          parseInt(document.getElementById('course-stock').value) || 0,
-        scheduled_release_date:  safeDate('course-release-date'),
-        classroom:               document.getElementById('course-classroom').value.trim(),
-        notes:                   document.getElementById('course-notes').value.trim(),
-        updated_by:              currentUser.name,
-        updated_at:              new Date().toISOString()
+        course_name:            courseName,
+        start_date:             startDate,
+        end_date:               safeDate('course-end-date'),
+        student_count:          studentCount,
+        stock_quantity:         parseInt(document.getElementById('course-stock').value) || 0,
+        released_quantity:      0,
+        scheduled_release_date: safeDate('course-release-date'),
+        classroom:              document.getElementById('course-classroom').value.trim(),
+        notes:                  document.getElementById('course-notes').value.trim(),
+        updated_by:             currentUser.name,
+        updated_at:             new Date().toISOString()
     };
 
-    if (!data.course_name) { showNotification('과정명을 입력해주세요.', 'error'); return; }
-    if (!data.start_date)  { showNotification('시작일을 입력해주세요.', 'error'); return; }
+    // 저장 버튼 비활성화 (중복 제출 방지)
+    const submitBtn = document.querySelector('#course-form button[type="submit"]');
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = '저장 중...'; }
 
     try {
+        let savedId = id;
         if (id) {
             const { error } = await sb.from('courses').update(data).eq('id', id);
             if (error) throw error;
-            await createLog(id, '수정', null, null, '과정 정보 수정');
+            await createLog(id, '수정', null, null, `과정 수정: ${courseName}`);
+            showNotification(`✅ "${courseName}" 수정 완료`, 'success');
         } else {
-            data.id = 'c_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 6);
-            data.status = '입고대기';
+            // UUID 생성 (crypto.randomUUID() 우선, 없으면 fallback)
+            const newId = typeof crypto !== 'undefined' && crypto.randomUUID
+                ? crypto.randomUUID()
+                : 'c_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 9);
+            data.id        = newId;
+            data.status    = '입고대기';
             data.created_by = currentUser.name;
-            const { error } = await sb.from('courses').insert(data);
+            data.created_at = new Date().toISOString();
+            savedId = newId;
+
+            console.log('📝 과정 추가 시도:', data);
+            const { data: inserted, error } = await sb.from('courses').insert(data).select();
             if (error) throw error;
+            console.log('✅ 과정 추가 성공:', inserted);
+
+            await createLog(newId, '추가', null, '입고대기', `과정 추가: ${courseName}`);
+            showNotification(`✅ "${courseName}" 추가 완료!`, 'success');
         }
-        showNotification(id ? '과정이 수정되었습니다.' : '과정이 추가되었습니다.', 'success');
+
         closeCourseModal();
+
+        // 전체 데이터 새로고침
         await loadCourses();
         await loadDashboardData();
-        // 현재 활성 탭 및 관련 탭 갱신
-        const activePage = document.querySelector('.nav-btn.active-nav')?.getAttribute('data-page');
-        if (activePage === 'stockin')  { updateStockInventoryTable(); }
-        if (activePage === 'stockout') { renderStockLists(); }
-        if (activePage === 'admin')    { renderAdminCoursesList(); }
+
+        // 모든 탭 동시 갱신
         updateStockInventoryTable();
         renderAdminCoursesList();
+
+        // 과정관리 탭에 있으면 검색 초기화 후 새 과정이 보이도록
+        const activePage = document.querySelector('.nav-btn.active-nav')?.getAttribute('data-page');
+        if (activePage === 'admin' && !id) {
+            // 새 과정이 속한 주차로 이동
+            const newCourse = courses.find(c => c.id === savedId);
+            if (newCourse) {
+                const startD = new Date(newCourse.start_date);
+                const dow = startD.getDay();
+                const mon = new Date(startD);
+                mon.setDate(startD.getDate() - (dow === 0 ? 6 : dow - 1));
+                mon.setHours(0,0,0,0);
+                // 해당 주차 찾기
+                const idx = availableWeeks.findIndex(w => w.getTime() === mon.getTime());
+                if (idx >= 0) {
+                    currentAdminWeekStart = new Date(availableWeeks[idx]);
+                    document.getElementById('admin-week-selector').value = idx;
+                    updateAdminWeekSelector();
+                }
+                // 검색창 비우고 과정 이름으로 검색
+                adminSearchTerm = courseName;
+                const searchEl = document.getElementById('admin-search-input');
+                if (searchEl) searchEl.value = courseName;
+                renderAdminCoursesList();
+            }
+        }
+
     } catch (err) {
-        console.error('과정 저장 오류:', err);
-        showNotification(`과정 저장 실패: ${err.message || '알 수 없는 오류'}`, 'error');
+        console.error('❌ 과정 저장 오류:', err);
+        const msg = err.message || err.details || JSON.stringify(err);
+        showNotification(`❗ 저장 실패: ${msg}`, 'error');
+    } finally {
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '💾 저장'; }
     }
 }
 
@@ -7034,14 +7088,24 @@ function downloadTemplate() {
 function showNotification(message, type = 'info') {
     const existing = document.getElementById('notification');
     if (existing) existing.remove();
-    const colors = { success: 'bg-green-500', error: 'bg-red-500', info: 'bg-blue-500' };
-    const icons  = { success: '✅', error: '❗', info: 'ℹ️' };
+    const colors = { success: '#16a34a', error: '#dc2626', info: '#2563eb', warning: '#d97706' };
+    const icons  = { success: '✅', error: '❗', info: 'ℹ️', warning: '⚠️' };
     const notification = document.createElement('div');
     notification.id = 'notification';
-    notification.className = `fixed top-4 right-4 ${colors[type]} text-white px-6 py-4 rounded-lg shadow-lg z-50 flex items-center space-x-3`;
-    notification.innerHTML = `<span style="font-size:1.2em">${icons[type]}</span><span>${message}</span>`;
+    notification.style.cssText = `
+        position:fixed; top:16px; right:16px; z-index:99999;
+        background:${colors[type]||colors.info}; color:white;
+        padding:14px 20px; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.3);
+        display:flex; align-items:center; gap:10px; max-width:340px;
+        font-size:0.95rem; font-weight:600; cursor:pointer;
+        word-break:keep-all; line-height:1.4;
+    `;
+    notification.innerHTML = `<span style="font-size:1.2em;flex-shrink:0;">${icons[type]||'ℹ️'}</span><span>${message}</span>`;
+    notification.onclick = () => notification.remove();
     document.body.appendChild(notification);
-    setTimeout(() => notification.remove(), 3000);
+    // 에러는 10초, 성공/정보는 4초
+    setTimeout(() => { if (notification.parentNode) notification.remove(); },
+        type === 'error' ? 10000 : 4000);
 }
 
 // 출고 수량 수정 모달 (담당자/관리자만)
