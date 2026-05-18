@@ -6704,20 +6704,23 @@ async function handleCourseSubmit(e) {
             await createLog(id, '수정', null, null, `과정 수정: ${courseName}`);
             showNotification(`✅ "${courseName}" 수정 완료`, 'success');
         } else {
-            // UUID 생성 (crypto.randomUUID() 우선, 없으면 fallback)
-            const newId = typeof crypto !== 'undefined' && crypto.randomUUID
-                ? crypto.randomUUID()
-                : 'c_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 9);
-            data.id        = newId;
-            data.status    = '입고대기';
+            // ID 생성 (TEXT 타입 사용)
+            const newId = 'c_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 8);
+            data.id         = newId;
+            data.status     = '입고대기';
             data.created_by = currentUser.name;
             data.created_at = new Date().toISOString();
             savedId = newId;
 
-            console.log('📝 과정 추가 시도:', data);
-            const { data: inserted, error } = await sb.from('courses').insert(data).select();
-            if (error) throw error;
-            console.log('✅ 과정 추가 성공:', inserted);
+            console.log('📝 과정 추가 시도:', JSON.stringify(data));
+
+            // select() 없이 insert (RLS SELECT 권한 불필요)
+            const { error } = await sb.from('courses').insert(data);
+            if (error) {
+                console.error('❌ Insert 에러 상세:', error);
+                throw error;
+            }
+            console.log('✅ Insert 완료, ID:', newId);
 
             await createLog(newId, '추가', null, '입고대기', `과정 추가: ${courseName}`);
             showNotification(`✅ "${courseName}" 추가 완료!`, 'success');
@@ -6760,9 +6763,11 @@ async function handleCourseSubmit(e) {
         }
 
     } catch (err) {
-        console.error('❌ 과정 저장 오류:', err);
-        const msg = err.message || err.details || JSON.stringify(err);
+        console.error('❌ 과정 저장 오류 전체:', err);
+        const msg = err.message || err.details || err.hint || JSON.stringify(err);
         showNotification(`❗ 저장 실패: ${msg}`, 'error');
+        // alert로 반드시 표시
+        alert(`❗ 과정 저장 실패\n\n오류: ${msg}\n\n※ F12 콘솔(Console)에서 상세 내용을 확인하세요.`);
     } finally {
         if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '💾 저장'; }
     }
