@@ -6704,26 +6704,40 @@ async function handleCourseSubmit(e) {
             await createLog(id, '수정', null, null, `과정 수정: ${courseName}`);
             showNotification(`✅ "${courseName}" 수정 완료`, 'success');
         } else {
-            // ID 생성 (TEXT 타입 사용)
             const newId = 'c_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 8);
-            data.id         = newId;
-            data.status     = '입고대기';
-            data.created_by = currentUser.name;
-            data.created_at = new Date().toISOString();
             savedId = newId;
 
-            console.log('📝 과정 추가 시도:', JSON.stringify(data));
+            // INITIAL_COURSES와 동일한 컬럼만 사용 (DB 스키마 기준)
+            const insertData = {
+                id:                     newId,
+                course_name:            courseName,
+                start_date:             startDate,
+                end_date:               safeDate('course-end-date'),
+                student_count:          studentCount,
+                stock_quantity:         parseInt(document.getElementById('course-stock').value) || 0,
+                scheduled_release_date: safeDate('course-release-date'),
+                classroom:              document.getElementById('course-classroom').value.trim(),
+                status:                 '입고대기',
+                notes:                  document.getElementById('course-notes').value.trim(),
+                created_by:             currentUser.name,
+                updated_by:             currentUser.name,
+                created_at:             new Date().toISOString()
+            };
 
-            // select() 없이 insert (RLS SELECT 권한 불필요)
-            const { error } = await sb.from('courses').insert(data);
+            console.log('📝 과정 추가 시도 (insertData):', JSON.stringify(insertData));
+
+            const { error } = await sb.from('courses').insert(insertData);
             if (error) {
-                console.error('❌ Insert 에러 상세:', error);
+                console.error('❌ Insert 에러 전체:', JSON.stringify(error));
                 throw error;
             }
             console.log('✅ Insert 완료, ID:', newId);
 
-            await createLog(newId, '추가', null, '입고대기', `과정 추가: ${courseName}`);
-            showNotification(`✅ "${courseName}" 추가 완료!`, 'success');
+            try {
+                await createLog(newId, '추가', null, '입고대기', `과정 추가: ${courseName}`);
+            } catch(logErr) { console.warn('로그 생성 실패 (무시):', logErr); }
+
+            showNotification('✅ "' + courseName + '" 추가 완료!', 'success');
         }
 
         closeCourseModal();
