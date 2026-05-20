@@ -6658,6 +6658,26 @@ function closeCourseModal() {
 
 async function handleCourseSubmit(e) {
     e.preventDefault();
+
+    // ── currentUser 자동 복원 (드롭다운 실수로 해제된 경우 대비) ──
+    if (!currentUser) {
+        const saved = localStorage.getItem('textbook_last_user');
+        if (saved) {
+            currentUser = users.find(u => u.name === saved)
+                       || FALLBACK_USERS.find(u => u.name === saved)
+                       || null;
+        }
+        // 그래도 없으면 헤더 드롭다운 현재값으로 시도
+        if (!currentUser) {
+            const sel  = document.getElementById('current-user');
+            const name = sel?.value?.trim();
+            if (name) {
+                currentUser = users.find(u => u.name === name)
+                           || FALLBACK_USERS.find(u => u.name === name)
+                           || null;
+            }
+        }
+    }
     if (!requireUser()) return;
     const id = document.getElementById('course-id').value;
 
@@ -6779,9 +6799,17 @@ async function handleCourseSubmit(e) {
     } catch (err) {
         console.error('❌ 과정 저장 오류 전체:', err);
         const msg = err.message || err.details || err.hint || JSON.stringify(err);
-        showNotification(`❗ 저장 실패: ${msg}`, 'error');
-        // alert로 반드시 표시
-        alert(`❗ 과정 저장 실패\n\n오류: ${msg}\n\n※ F12 콘솔(Console)에서 상세 내용을 확인하세요.`);
+        // 화면 중앙에 사라지지 않는 에러 표시
+        const errBox = document.createElement('div');
+        errBox.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;padding:20px;';
+        errBox.innerHTML = `<div style="background:white;border-radius:16px;padding:24px;max-width:480px;width:100%;">
+            <h3 style="color:#dc2626;font-size:1.2rem;font-weight:800;margin-bottom:12px;">❗ 저장 실패</h3>
+            <p style="background:#fef2f2;border-radius:8px;padding:12px;font-size:0.9rem;color:#7f1d1d;word-break:break-all;">${msg}</p>
+            <button onclick="this.closest('div').parentNode.remove()"
+                style="width:100%;margin-top:16px;padding:12px;background:#2563eb;color:white;border:none;border-radius:8px;font-size:1rem;font-weight:700;cursor:pointer;">
+                닫기</button>
+        </div>`;
+        document.body.appendChild(errBox);
     } finally {
         if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '💾 저장'; }
     }
