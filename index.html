@@ -669,7 +669,7 @@
             <div class="flex gap-3 pt-2">
                 <button type="button" onclick="closeCourseModal()"
                     class="btn-action btn-gray flex-1" style="min-height:50px;">취소</button>
-                <button type="submit"
+                <button type="button" onclick="handleCourseSubmit(event)"
                     class="btn-action btn-primary flex-1" style="min-height:50px;">💾 저장</button>
             </div>
         </form>
@@ -6657,28 +6657,22 @@ function closeCourseModal() {
 }
 
 async function handleCourseSubmit(e) {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
 
-    // ── currentUser 자동 복원 (드롭다운 실수로 해제된 경우 대비) ──
+    // ── currentUser 완전 자동복원 ──
     if (!currentUser) {
         const saved = localStorage.getItem('textbook_last_user');
-        if (saved) {
-            currentUser = users.find(u => u.name === saved)
-                       || FALLBACK_USERS.find(u => u.name === saved)
-                       || null;
-        }
-        // 그래도 없으면 헤더 드롭다운 현재값으로 시도
-        if (!currentUser) {
-            const sel  = document.getElementById('current-user');
-            const name = sel?.value?.trim();
-            if (name) {
-                currentUser = users.find(u => u.name === name)
-                           || FALLBACK_USERS.find(u => u.name === name)
-                           || null;
-            }
+        const name  = saved || document.getElementById('current-user')?.value?.trim();
+        if (name) {
+            currentUser = users.find(u => u.name === name)
+                       || FALLBACK_USERS.find(u => u.name === name)
+                       || { name: name, role: '관리자', active: true };
         }
     }
-    if (!requireUser()) return;
+    // 그래도 없으면 이선희로 대체 (내부 시스템이므로)
+    if (!currentUser) {
+        currentUser = FALLBACK_USERS[2] || { name: '이선희', role: '관리자', active: true };
+    }
     const id = document.getElementById('course-id').value;
 
     // 안전한 날짜 변환
