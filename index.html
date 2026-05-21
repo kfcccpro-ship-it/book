@@ -4089,15 +4089,52 @@ function hideLoadingOverlay() {
 
 // 작업자 미선택 팝업
 function requireUser() {
+    // ── 1. 이미 설정됨
     if (currentUser) return true;
-    // 드롭다운 강조 애니메이션
+
+    // ── 2. 헤더 드롭다운 현재 선택값으로 즉시 복원 시도
+    const sel  = document.getElementById('current-user');
+    const name = sel?.value?.trim();
+    if (name) {
+        const found = (users || []).find(u => u.name === name)
+                   || (users || []).find(u => u.name.trim() === name)
+                   || FALLBACK_USERS.find(u => u.name === name)
+                   || FALLBACK_USERS.find(u => u.name.trim() === name)
+                   || null;
+        if (found) {
+            currentUser = found;
+            localStorage.setItem('textbook_last_user', found.name);
+            document.getElementById('user-selector-wrap')?.classList.remove('no-user');
+            updateNavTabsForRole();
+            console.log('✅ requireUser 자동복원:', found.name);
+            return true;
+        }
+    }
+
+    // ── 3. localStorage 복원 시도
+    const saved = localStorage.getItem('textbook_last_user');
+    if (saved) {
+        const found = (users || []).find(u => u.name === saved)
+                   || FALLBACK_USERS.find(u => u.name === saved)
+                   || null;
+        if (found) {
+            currentUser = found;
+            if (sel) sel.value = found.name;
+            document.getElementById('user-selector-wrap')?.classList.remove('no-user');
+            updateNavTabsForRole();
+            console.log('✅ requireUser localStorage복원:', found.name);
+            return true;
+        }
+    }
+
+    // ── 4. 복원 실패 → 선택 요청
     const wrap = document.getElementById('user-selector-wrap');
     if (wrap) {
         wrap.classList.add('no-user');
         wrap.style.transform = 'scale(1.05)';
         setTimeout(() => { wrap.style.transform = ''; }, 400);
     }
-    showNotification('⚠️ 상단에서 작업자를 먼저 선택해주세요.', 'error');
+    showNotification('⚠️ 상단에서 작업자를 먼저 선택 후 ✅ 확인을 눌러주세요.', 'error');
     return false;
 }
 function closeNoUserPopup() {
@@ -4285,25 +4322,33 @@ document.addEventListener('DOMContentLoaded', async function() {
             updateNavTabsForRole();
             return;
         }
-        // 공백 차이 대응 강력 매칭
-        currentUser = users.find(u => u.name === name)
-                   || users.find(u => u.name.trim() === name)
-                   || (typeof FALLBACK_USERS !== 'undefined' ? FALLBACK_USERS.find(u => u.name.trim() === name) : null)
+        // 4단계 매칭
+        const found = (users || []).find(u => u.name === name)
+                   || (users || []).find(u => u.name.trim() === name)
+                   || FALLBACK_USERS.find(u => u.name.trim() === name)
+                   || FALLBACK_USERS.find(u => u.name === name)
                    || null;
-        const wrap = document.getElementById('user-selector-wrap');
-        if (currentUser) {
-            localStorage.setItem('textbook_last_user', currentUser.name);
-            showNotification(`${currentUser.name}(${currentUser.role})로 전환되었습니다.`, 'info');
-            wrap?.classList.remove('no-user');
+
+        if (found) {
+            currentUser = found;
+            localStorage.setItem('textbook_last_user', found.name);
+            document.getElementById('user-selector-wrap')?.classList.remove('no-user');
+            // startup-popup 자동 닫기
             const sp = document.getElementById('startup-popup');
             if (sp) sp.style.display = 'none';
-            console.log('✅ 작업자 변경:', currentUser.name);
+            updateNavTabsForRole();
+            showNotification(`✅ ${found.name}(${found.role}) — 시작합니다.`, 'success');
+            console.log('✅ 작업자 선택:', found.name);
         } else {
-            localStorage.removeItem('textbook_last_user');
-            wrap?.classList.add('no-user');
-            console.warn('사용자 매칭 실패:', name, users);
+            // 매칭 실패해도 FALLBACK으로 강제 처리
+            const fallback = FALLBACK_USERS.find(u => u.name.includes(name) || name.includes(u.name))
+                          || { name: name, role: '매니저', active: true };
+            currentUser = fallback;
+            localStorage.setItem('textbook_last_user', fallback.name);
+            document.getElementById('user-selector-wrap')?.classList.remove('no-user');
+            updateNavTabsForRole();
+            console.warn('⚠️ 부분매칭 처리:', fallback.name);
         }
-        updateNavTabsForRole();
     };
     document.getElementById('current-user').addEventListener('change', handleUserChange);
     document.getElementById('current-user').addEventListener('input', handleUserChange);
