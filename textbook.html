@@ -6068,13 +6068,17 @@ async function submitGroupStockIn() {
 let _renderingStockLists = false;
 function renderStockLists() {
     if (!currentStockWeekStart) return;
-    if (_renderingStockLists) return; // 중복 호출 방지
+    if (_renderingStockLists) return;
     _renderingStockLists = true;
     try {
         const weekEnd = new Date(currentStockWeekStart);
         weekEnd.setDate(currentStockWeekStart.getDate() + 6);
         weekEnd.setHours(23, 59, 59, 999);
+        // ID 기준 중복 제거 후 필터
+        const seen = new Set();
         const stockOut = courses.filter(c => {
+            if (seen.has(c.id)) return false;
+            seen.add(c.id);
             const sd = new Date(c.start_date);
             return sd >= currentStockWeekStart && sd <= weekEnd;
         }).sort((a,b) => new Date(a.start_date)-new Date(b.start_date));
@@ -6882,20 +6886,36 @@ async function deleteCourse(id) {
 }
 
 async function deleteAdminCourse(courseId) {
-    if (!currentUser) { showNotification('작업자를 먼저 선택해주세요.', 'error'); return; }
     const course = courses.find(c => c.id === courseId);
     if (!course) return;
-    if (!confirm(`"${course.course_name}" 과정을 삭제하시겠습니까?\n이 작업은 취소할 수 없습니다.`)) return;
+
+    // confirm() 대신 커스텀 모달
+    const confirmed = await showConfirmModal(
+        `⚠️ 과정 삭제`,
+        `"${course.course_name}" 과정을 삭제하시겠습니까?\n\n이 작업은 취소할 수 없습니다.`,
+        '🗑️ 삭제', '#dc2626'
+    );
+    if (!confirmed) return;
+
+    // currentUser 자동복원
+    if (!currentUser) {
+        const saved = localStorage.getItem('textbook_last_user');
+        if (saved) currentUser = users.find(u=>u.name===saved)||FALLBACK_USERS.find(u=>u.name===saved)||{name:saved,role:'관리자',active:true};
+    }
+
     try {
         const { error } = await sb.from('courses').delete().eq('id', courseId);
         if (error) throw error;
-        await createLog(courseId, '삭제', course.status, '삭제됨', `과정 삭제: ${course.course_name}`);
-        showNotification('과정이 삭제되었습니다.', 'success');
+        try { await createLog(courseId, '삭제', course.status, '삭제됨', `과정 삭제: ${course.course_name}`); } catch(e){}
+        showNotification(`✅ "${course.course_name}" 삭제 완료`, 'success');
         await loadCourses();
         await loadDashboardData();
         updateStockInventoryTable();
         renderAdminCoursesList();
-    } catch (error) { console.error('과정 삭제 오류:', error); showNotification('과정 삭제 중 오류가 발생했습니다.', 'error'); }
+    } catch (err) {
+        console.error('과정 삭제 오류:', err);
+        showNotification(`❗ 삭제 실패: ${err.message}`, 'error');
+    }
 }
 
 // 입고/출고 처리 모달
@@ -7124,6 +7144,26 @@ function downloadTemplate() {
     a.href = url; a.download = '과정_가져오기_템플릿.txt'; a.click();
     URL.revokeObjectURL(url);
     showNotification('템플릿 파일이 다운로드되었습니다.', 'success');
+}
+
+// ── 커스텀 확인 모달 (confirm() 대체 - GitHub Pages 호환) ──
+function showConfirmModal(title, message, confirmText = '확인', confirmColor = '#2563eb') {
+    return new Promise(resolve => {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;padding:20px;';
+        overlay.innerHTML = `
+            <div style="background:white;border-radius:16px;padding:24px;max-width:400px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.3);">
+                <h3 style="font-size:1.1rem;font-weight:800;color:#1f2937;margin-bottom:12px;">${title}</h3>
+                <p style="font-size:0.95rem;color:#4b5563;line-height:1.6;white-space:pre-line;margin-bottom:20px;">${message}</p>
+                <div style="display:flex;gap:10px;">
+                    <button id="confirm-cancel" style="flex:1;padding:12px;background:#e5e7eb;color:#374151;border:none;border-radius:8px;font-size:0.95rem;font-weight:700;cursor:pointer;">취소</button>
+                    <button id="confirm-ok" style="flex:1;padding:12px;background:${confirmColor};color:white;border:none;border-radius:8px;font-size:0.95rem;font-weight:700;cursor:pointer;">${confirmText}</button>
+                </div>
+            </div>`;
+        document.body.appendChild(overlay);
+        overlay.querySelector('#confirm-ok').onclick    = () => { overlay.remove(); resolve(true); };
+        overlay.querySelector('#confirm-cancel').onclick = () => { overlay.remove(); resolve(false); };
+    });
 }
 
 function showNotification(message, type = 'info') {
