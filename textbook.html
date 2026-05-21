@@ -559,10 +559,29 @@
             </div>
         </div>
 
+        <!-- 과정명 검색 -->
+        <div class="bg-white rounded-xl shadow-sm p-4 mb-4">
+            <div class="flex items-center gap-2">
+                <span class="text-sm font-semibold text-gray-600">🔍 과정명 검색</span>
+                <div class="flex-1 relative">
+                    <input type="text" id="stockout-search-input"
+                        placeholder="과정명 입력 (1~2글자만 입력해도 검색)"
+                        oninput="applyStockOutSearch()"
+                        class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg text-sm focus:border-blue-400 focus:outline-none"
+                        style="font-size:16px;">
+                </div>
+                <button onclick="clearStockOutSearch()"
+                    class="px-3 py-2 bg-gray-200 text-gray-600 rounded-lg text-sm font-semibold whitespace-nowrap">
+                    × 초기화
+                </button>
+            </div>
+            <p class="text-xs text-gray-400 mt-1">※ 검색 시 전체 주차에서 검색 · 빈칸이면 선택한 주차 목록 표시</p>
+        </div>
+
         <!-- 출고 목록 (차수별) -->
         <div class="bg-white rounded-xl shadow-sm p-4">
             <h3 class="text-base font-bold mb-3 text-gray-800">🚚 출고 목록
-                <span class="text-xs font-normal text-gray-400">(과정명+차수 · 출고완료 포함)</span>
+                <span class="text-xs font-normal text-gray-400" id="stockout-list-label">(과정명+차수 · 출고완료 포함)</span>
             </h3>
             <div id="stock-out-list" class="space-y-3"></div>
         </div>
@@ -6094,6 +6113,44 @@ async function loadStockInPage() {
     await loadSubBooks();
     stockSearchTerm = document.getElementById('stock-search-input')?.value.trim() || '';
     updateStockInventoryTable();
+}
+
+// ── 출고탭 검색 ──
+let stockOutSearchTerm = '';
+
+function applyStockOutSearch() {
+    stockOutSearchTerm = (document.getElementById('stockout-search-input')?.value || '').trim();
+    const label = document.getElementById('stockout-list-label');
+
+    if (stockOutSearchTerm) {
+        // 전체 주차에서 유사 검색 (글자 포함 + 앞글자 일치 우선 정렬)
+        const term = stockOutSearchTerm.toLowerCase();
+        const matched = courses
+            .filter(c => c.course_name.toLowerCase().includes(term))
+            .sort((a, b) => {
+                const aName = a.course_name.toLowerCase();
+                const bName = b.course_name.toLowerCase();
+                // 앞글자 일치 우선
+                const aStarts = aName.startsWith(term) ? 0 : 1;
+                const bStarts = bName.startsWith(term) ? 0 : 1;
+                if (aStarts !== bStarts) return aStarts - bStarts;
+                return new Date(a.start_date) - new Date(b.start_date);
+            });
+        if (label) label.textContent = `검색: "${stockOutSearchTerm}" — ${matched.length}건`;
+        updateStockOutList(matched);
+    } else {
+        if (label) label.textContent = '(과정명+차수 · 출고완료 포함)';
+        renderStockLists();
+    }
+}
+
+function clearStockOutSearch() {
+    stockOutSearchTerm = '';
+    const input = document.getElementById('stockout-search-input');
+    if (input) input.value = '';
+    const label = document.getElementById('stockout-list-label');
+    if (label) label.textContent = '(과정명+차수 · 출고완료 포함)';
+    renderStockLists();
 }
 
 // ── 출고 탭 로드
