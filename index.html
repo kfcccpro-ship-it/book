@@ -568,12 +568,10 @@
                         placeholder="과정명 입력 (1~2글자만 입력해도 검색)"
                         oninput="applyStockOutSearch()"
                         class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg text-sm focus:border-blue-400 focus:outline-none"
-                        style="font-size:16px;">
+                        style="font-size:16px; padding-right:36px;">
+                    <button onclick="clearStockOutSearch()" title="검색 초기화"
+                        style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:#9ca3af;font-size:1.1rem;cursor:pointer;padding:2px 6px;line-height:1;">✕</button>
                 </div>
-                <button onclick="clearStockOutSearch()"
-                    class="px-3 py-2 bg-gray-200 text-gray-600 rounded-lg text-sm font-semibold whitespace-nowrap">
-                    × 초기화
-                </button>
             </div>
             <p class="text-xs text-gray-400 mt-1">※ 검색 시 전체 주차에서 검색 · 빈칸이면 선택한 주차 목록 표시</p>
         </div>
@@ -6289,27 +6287,26 @@ function updateStockOutList(list) {
     const canDo = currentUser != null;
 
     container.innerHTML = list.map(course => {
-        const isReady = course.status === '입고완료';
-        // 출고완료 + 구 워크플로우 상태 모두 "출고됨"으로 처리
-        const isDone  = RELEASED_STATUSES.includes(course.status);
-
+        const isDone     = RELEASED_STATUSES.includes(course.status);
         const groupKey   = getGroupKey(course.course_name);
         const groupStock = getGroupTotalStock(groupKey);
         const otherRel   = getGroupTotalReleased(groupKey, course.id);
         const groupAvail = groupStock - otherRel;
         const releasedQty = course.released_quantity || 0;
 
-        const cardBg = isDone  ? 'border-green-200 bg-green-50'
-                     : isReady ? 'border-blue-200 bg-blue-50'
+        // ── 핵심 변경: 그룹 재고가 있으면 상태 무관하게 출고 가능 ──
+        const canRelease = !isDone && groupAvail > 0;  // 미출고 + 잔여재고 있음
+        const hasNoStock = !isDone && groupAvail <= 0; // 재고 없음
+
+        const cardBg = isDone      ? 'border-green-200 bg-green-50'
+                     : canRelease  ? 'border-blue-200 bg-blue-50'
                      : 'border-gray-200 bg-gray-50';
 
-        // 구 워크플로우 상태면 레이블 표시
         const legacyNote = isDone && course.status !== '출고완료'
             ? `<span class="text-xs text-gray-400">(${course.status})</span>` : '';
 
-        // 해당 그룹의 부교재 목록
-        const courseGroupKey = getGroupKey(course.course_name);
-        const courseSubBooks = subBooks.filter(b => b.course_group_key === courseGroupKey);
+        // 부교재
+        const courseSubBooks = subBooks.filter(b => b.course_group_key === groupKey);
         const subBookSection = courseSubBooks.length > 0 ? `
             <div style="margin-top:10px; padding-top:10px; border-top:1px dashed #e9d5ff;">
                 <div style="font-size:0.82rem; font-weight:700; color:#6d28d9; margin-bottom:6px;">📗 부교재</div>
@@ -6349,7 +6346,7 @@ function updateStockOutList(list) {
                     </div>
                     <div class="flex gap-3 text-xs text-gray-500 flex-wrap">
                         <span>📅 ${formatDate(course.start_date,'MM-DD')} 시작</span>
-                        <span>📦 잔여재고 <b class="text-blue-700">${groupAvail}권</b></span>
+                        <span>📦 잔여재고 <b class="${groupAvail > 0 ? 'text-blue-700' : 'text-red-500'}">${groupAvail}권</b></span>
                         ${isDone ? `<span>✔️ 출고 <b class="text-green-700">${releasedQty}권</b></span>` : ''}
                     </div>
                 </div>
@@ -6361,12 +6358,12 @@ function updateStockOutList(list) {
                         class="px-3 py-1 bg-gray-500 text-white text-xs rounded-lg font-bold" style="min-height:36px;">↩ 초기화</button>
                 </div>` : ''}
             </div>
-            ${isReady && canDo ? `
+            ${canRelease && canDo ? `
             <button onclick="openStockOutModal('${course.id}')"
                 class="btn-action btn-orange w-full" style="min-height:48px; margin-top:8px;">
                 🚚 출고 처리
             </button>` : ''}
-            ${!isReady && !isDone ? `<p class="text-xs text-gray-400 mt-2 text-center">입고 처리 후 출고 가능합니다</p>` : ''}
+            ${hasNoStock ? `<p class="text-xs text-red-400 mt-2 text-center">⚠️ 재고가 없습니다. 입출고 탭에서 먼저 입고 처리해주세요.</p>` : ''}
             ${subBookSection}
         </div>`; 
     }).join('');
@@ -6419,25 +6416,29 @@ async function submitStockOutModal() {
     const courseId = document.getElementById('stock-out-modal-course-id').value;
     const input    = document.getElementById('stock-out-modal-quantity');
     const outQty   = parseInt(input.value);
-    const stock    = parseInt(input.dataset.stock) || 0;
     const notes    = document.getElementById('stock-out-modal-notes').value || '출고 처리';
     if (isNaN(outQty) || outQty < 1) { showNotification('출고 수량을 입력해주세요.', 'error'); return; }
-    if (outQty > stock) { showNotification(`출고 수량(${outQty})이 가용 재고(${stock})를 초과합니다.`, 'error'); return; }
     const course = courses.find(c => c.id === courseId);
     if (!course) return;
-    const groupName  = getGroupKey(course.course_name);
-    const groupStock = getGroupTotalStock(groupName);
-    const otherRel   = getGroupTotalReleased(groupName, courseId);
-    const remain     = groupStock - otherRel - outQty;
+    const groupKey   = getGroupKey(course.course_name);
+    const groupStock = getGroupTotalStock(groupKey);
+    const otherRel   = getGroupTotalReleased(groupKey, courseId);
+    const groupAvail = groupStock - otherRel;
+    if (outQty > groupAvail) {
+        showNotification(`출고 수량(${outQty})이 그룹 잔여 재고(${groupAvail})를 초과합니다.`, 'error'); return;
+    }
+    const remain = groupAvail - outQty;
     try {
+        // 입고대기 상태라도 바로 출고완료로 전환 (그룹 재고 기반)
         const { error } = await sb.from('courses').update({
-            status: '출고완료', released_quantity: outQty,
-            actual_release_date: new Date().toISOString(), updated_at: new Date().toISOString()
+            status: '출고완료',
+            released_quantity: outQty,
+            updated_at: new Date().toISOString()
         }).eq('id', courseId);
         if (error) throw error;
-        await createLog(courseId, '출고', course.status, '출고완료', `출고 ${outQty}권 / 그룹 잔여 ${remain}권 / ${notes}`, outQty);
-        showNotification(`출고 완료! 출고 ${outQty}권 / 그룹 잔여 ${remain}권`, 'success');
-        notifyAction('출고 처리', course.course_name, '담당자');
+        await createLog(courseId, '출고', course.status, '출고완료',
+            `출고 ${outQty}권 / 그룹 잔여 ${remain}권 / ${notes}`, outQty);
+        showNotification(`✅ 출고 완료! ${outQty}권 출고 / 잔여 ${remain}권`, 'success');
         closeStockOutModal();
         await loadCourses(); await loadStockManagement(); await loadDashboardData();
     } catch(e) { console.error(e); showNotification('출고 처리 중 오류가 발생했습니다.', 'error'); }
