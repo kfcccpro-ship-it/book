@@ -258,7 +258,7 @@
             .modal-box .p-5 { padding: 16px !important; }
         }
 
-        /* ── 작업 모니터링 소글씨 ── */
+        /* ── 관리자 모니터링 소글씨 ── */
         #admin-monitor-content .text-xs { font-size: 0.82rem !important; }
     </style>
 </head>
@@ -367,16 +367,16 @@
                 <div style="height:240px;"><canvas id="statusChart"></canvas></div>
             </div>
         </div>
-        <!-- 작업 모니터링 -->
+        <!-- 관리자 모니터링 -->
         <div id="admin-monitor-section" class="hidden">
             <div class="bg-white rounded-xl shadow-sm p-4">
-                <h3 class="text-base font-bold mb-3 text-gray-800">👁️ 작업 모니터링 — 단계별 병목 현황</h3>
+                <h3 class="text-base font-bold mb-3 text-gray-800">👁️ 관리자 모니터링 — 단계별 병목 현황</h3>
                 <div id="admin-monitor-content" class="space-y-3"></div>
             </div>
         </div>
     </div>
 
-    <!-- 과정 관리 (작업자) -->
+    <!-- 과정 관리 (관리자/담당자) -->
     <div id="page-admin" class="page-content hidden">
         <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
             <h2 class="text-xl font-bold text-gray-800">⚙️ 과정 관리</h2>
@@ -502,6 +502,9 @@
                     class="flex-1 px-3 py-2 border-2 border-gray-300 rounded-xl text-sm focus:border-blue-500 focus:outline-none"
                     oninput="applyStockSearch()"
                     style="min-height:46px; font-size:1rem;">
+                <button onclick="clearStockSearch()"
+                    class="px-4 bg-gray-200 text-gray-600 rounded-xl text-sm font-bold"
+                    style="min-height:46px;">✕ 초기화</button>
             </div>
             <p class="text-xs text-gray-400 mt-1">※ 검색어 포함 과정 전체를 그룹 단위로 표시 · 빈칸이면 전체 목록</p>
         </div>
@@ -801,7 +804,7 @@
         <div class="p-5">
             <input type="hidden" id="stock-out-edit-course-id">
             <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4 text-sm text-amber-800">
-                ⚠️ 출고 완료 후 수량 수정입니다. 작업자만 가능합니다.
+                ⚠️ 출고 완료 후 수량 수정입니다. 담당자/관리자만 가능합니다.
             </div>
             <div id="stock-out-edit-info" class="bg-gray-50 rounded-xl p-3 mb-4 text-sm grid grid-cols-2 gap-2"></div>
             <div class="mb-4">
@@ -841,7 +844,7 @@
         <div class="p-5">
             <input type="hidden" id="stock-edit-course-id">
             <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-3 mb-4 text-sm text-yellow-800">
-                ⚠️ 작업자만 입고 수량을 수정할 수 있습니다.
+                ⚠️ 담당자/관리자만 입고 수량을 수정할 수 있습니다.
             </div>
             <div class="mb-4">
                 <label class="block text-sm font-semibold text-gray-700 mb-2">수정할 입고 수량 (권)</label>
@@ -1030,7 +1033,7 @@
             <input type="hidden" id="force-release-group-key">
             <!-- 현황 요약 -->
             <div id="force-release-summary" style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px;"></div>
-            <p style="font-size:0.82rem; color:#6b7280; margin-bottom:10px;">※ 그룹 잔여재고가 있으면 해당 과정의 개별 상태가 입고대기여도 차수별 출고 처리할 수 있습니다.</p>
+            <p style="font-size:0.82rem; color:#6b7280; margin-bottom:10px;">※ 입고완료 상태인 과정에서 직접 출고 처리합니다. 워크플로우와 별개로 즉시 처리됩니다.</p>
             <!-- 출고 가능 과정 목록 -->
             <div id="force-release-list" class="space-y-3"></div>
         </div>
@@ -1086,7 +1089,7 @@
             <details id="section-stock-edit" style="margin-bottom:12px;">
                 <summary style="background:#fef3c7; border:1px solid #fcd34d; border-radius:12px; padding:12px 16px; font-size:0.95rem; font-weight:700; color:#92400e; cursor:pointer; list-style:none; display:flex; align-items:center; justify-content:space-between;">
                     <span>✏️ 입고량 수정 <span style="font-size:0.8rem; font-weight:400; color:#78350f;">(잘못 입력 시)</span></span>
-                    <span style="font-size:0.8rem; font-weight:500; color:#b45309;">작업자</span>
+                    <span style="font-size:0.8rem; font-weight:500; color:#b45309;">담당자/관리자</span>
                 </summary>
                 <div style="border:1px solid #fcd34d; border-top:none; border-radius:0 0 12px 12px; padding:16px; background:#fffbeb;">
                     <p class="text-xs text-amber-700 mb-3">⚠️ 총 입고량을 직접 수정합니다. 실제 입고 수량이 다를 때 사용하세요.</p>
@@ -1117,11 +1120,23 @@
             <details id="section-release-edit" style="margin-bottom:4px;">
                 <summary style="background:#fce7f3; border:1px solid #f9a8d4; border-radius:12px; padding:12px 16px; font-size:0.95rem; font-weight:700; color:#9d174d; cursor:pointer; list-style:none; display:flex; align-items:center; justify-content:space-between;">
                     <span>🔄 출고 수정 <span id="release-edit-badge" style="background:#db2777; color:white; border-radius:20px; font-size:0.78rem; padding:2px 8px; margin-left:6px;"></span> <span style="font-size:0.8rem; font-weight:400; color:#831843;">(출고 오류 시)</span></span>
-                    <span style="font-size:0.8rem; font-weight:500; color:#be185d;">작업자</span>
+                    <span style="font-size:0.8rem; font-weight:500; color:#be185d;">담당자/관리자</span>
                 </summary>
                 <div style="border:1px solid #f9a8d4; border-top:none; border-radius:0 0 12px 12px; padding:16px; background:#fdf2f8;">
                     <p class="text-xs text-pink-700 mb-3">🔄 출고 수량 직접 수정 또는 초기화 후 재출고. 출고량이 잘못됐을 때 사용하세요.</p>
                     <div id="release-edit-list" class="space-y-2"></div>
+                </div>
+            </details>
+
+            <!-- ── 섹션3: 과정명 수정 ── -->
+            <details id="section-name-edit" style="margin-bottom:4px;">
+                <summary style="background:#e0e7ff; border:1px solid #a5b4fc; border-radius:12px; padding:12px 16px; font-size:0.95rem; font-weight:700; color:#3730a3; cursor:pointer; list-style:none; display:flex; align-items:center; justify-content:space-between;">
+                    <span>✏️ 과정명 수정 <span style="font-size:0.8rem; font-weight:400; color:#4338ca;">(차수별 이름 변경)</span></span>
+                    <span style="font-size:0.8rem; font-weight:500; color:#4f46e5;" id="name-edit-count"></span>
+                </summary>
+                <div style="border:1px solid #a5b4fc; border-top:none; border-radius:0 0 12px 12px; padding:16px; background:#eef2ff;">
+                    <p class="text-xs text-indigo-700 mb-3">✏️ 각 차수의 과정명을 직접 수정할 수 있습니다. 오타 수정, 명칭 변경(예: "(L)" → "(집체)"), 차수 변경 등에 사용하세요. <b>저장 즉시 DB에 반영됩니다.</b></p>
+                    <div id="name-edit-list" class="space-y-2"></div>
                 </div>
             </details>
         </div>
@@ -4230,7 +4245,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     // ── 2. 사용자 확인 & 삽입 ──
     updateLoadingOverlay('👥 사용자 데이터 확인 중...');
     try {
-        const { data: existingUsers } = await sb.from('users').select('id,name').limit(20);
+        // 전체 사용자 가져오기 (limit 제거 - 중복 검사 정확도)
+        const { data: existingUsers } = await sb.from('users').select('id,name');
         if (!existingUsers || existingUsers.length === 0) {
             await sb.from('users').insert([
                 { name: '교육부 부장',     role: '관리자', active: true },
@@ -4249,7 +4265,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     await sb.from('users').update({ name: nameMap[u.name] }).eq('id', u.id);
                 }
             }
-            // 교육진행 없으면 추가
+            // 교육진행 없으면 추가 (전체 목록에서 정확히 확인)
             const hasEduProgress = existingUsers.some(u => u.name === '교육진행');
             if (!hasEduProgress) {
                 await sb.from('users').insert({ name: '교육진행', role: '매니저', active: true });
@@ -4569,6 +4585,14 @@ async function loadUsers() {
         users = [...FALLBACK_USERS];
     }
 
+    // ── 이름 기준 중복 제거 (DB에 중복 행이 있어도 화면엔 1개만) ──
+    const seenNames = new Set();
+    users = users.filter(u => {
+        if (seenNames.has(u.name)) return false;
+        seenNames.add(u.name);
+        return true;
+    });
+
     // 정렬
     const userOrder = ['교육부 부장','교육기획팀장','이선희','주나연','유미정','나영하','교육진행'];
     users.sort((a, b) => {
@@ -4669,7 +4693,7 @@ async function loadCourses() {
         const statusFilter = document.getElementById('filter-status')?.value || '';
         const dateFilter   = document.getElementById('filter-date')?.value || '';
         if (searchTerm)   items = items.filter(i => i.course_name.toLowerCase().includes(searchTerm.toLowerCase()));
-        if (statusFilter) items = items.filter(i => i.status === statusFilter || getWorkflowStatus(i) === statusFilter);
+        if (statusFilter) items = items.filter(i => i.status === statusFilter);
         if (dateFilter) {
             const fd = new Date(dateFilter);
             items = items.filter(i => new Date(i.start_date).toDateString() === fd.toDateString());
@@ -4690,21 +4714,18 @@ function updateCoursesTable(items) {
     tbody.innerHTML = items.map(item => {
         const startDate = formatDate(item.start_date, 'MM-DD');
         const releaseDate = item.scheduled_release_date ? formatDate(item.scheduled_release_date, 'MM-DD') : '-';
-        const groupKey = getGroupKey(item.course_name);
-        const groupAvail = getGroupAvailableStock(groupKey, item.id);
-        const stockOk = groupAvail >= item.student_count || item.stock_quantity >= item.student_count;
-        const workflowStatus = getWorkflowStatus(item);
+        const stockOk = item.stock_quantity >= item.student_count;
         return `
         <tr class="hover:bg-gray-50">
             <td class="px-3 py-2">
                 <div class="font-semibold text-gray-900 text-sm leading-tight">${item.course_name}</div>
-                <div class="text-xs text-gray-400 sm:hidden mt-0.5">${startDate} · <span class="status-badge status-${workflowStatus}" style="font-size:0.82rem;">${workflowStatus}</span></div>
+                <div class="text-xs text-gray-400 sm:hidden mt-0.5">${startDate} · <span class="status-badge status-${item.status}" style="font-size:0.82rem;">${item.status}</span></div>
             </td>
             <td class="px-3 py-2 text-xs text-gray-600 hidden sm:table-cell">${startDate}</td>
             <td class="px-3 py-2 text-xs font-bold">${item.student_count}명</td>
-            <td class="px-3 py-2 text-xs font-bold hidden sm:table-cell ${stockOk ? 'text-green-600' : 'text-red-600'}">${groupAvail}/${item.student_count}</td>
+            <td class="px-3 py-2 text-xs font-bold hidden sm:table-cell ${stockOk ? 'text-green-600' : 'text-red-600'}">${item.stock_quantity}/${item.student_count}</td>
             <td class="px-3 py-2 text-xs hidden md:table-cell">${releaseDate}</td>
-            <td class="px-3 py-2 hidden sm:table-cell"><span class="status-badge status-${workflowStatus}" style="font-size:0.82rem;">${workflowStatus}</span></td>
+            <td class="px-3 py-2 hidden sm:table-cell"><span class="status-badge status-${item.status}" style="font-size:0.82rem;">${item.status}</span></td>
             <td class="px-3 py-2 text-xs hidden md:table-cell">${item.classroom || '-'}</td>
             <td class="px-3 py-2 text-center">
                 <button onclick="editCourse('${item.id}')" class="text-blue-600 text-lg mr-1">✏️</button>
@@ -4727,8 +4748,8 @@ async function loadDashboardData() {
         });
 
         document.getElementById('stat-total-courses').textContent    = weekCourses.length;
-        document.getElementById('stat-stock-waiting').textContent    = weekCourses.filter(c => getWorkflowStatus(c) === '입고대기').length;
-        document.getElementById('stat-release-waiting').textContent  = weekCourses.filter(c => getWorkflowStatus(c) === '출고대기').length;
+        document.getElementById('stat-stock-waiting').textContent    = weekCourses.filter(c => c.status === '입고대기').length;
+        document.getElementById('stat-release-waiting').textContent  = weekCourses.filter(c => c.status === '입고완료').length;
         document.getElementById('stat-setup-complete').textContent   = weekCourses.filter(c => RELEASED_STATUSES.includes(c.status)).length;
 
         updateWeekSummary(weekCourses);
@@ -4736,7 +4757,7 @@ async function loadDashboardData() {
         updateUrgentTasks(weekCourses);
         updateStatusChart(courses); // 전체 과정 기준
 
-        // 작업 모니터링
+        // 관리자 모니터링
         if (currentUser != null) {
             document.getElementById('admin-monitor-section').classList.remove('hidden');
             updateAdminMonitor(courses);
@@ -4749,8 +4770,8 @@ async function loadDashboardData() {
 function updateWeekSummary(weekCourses) {
     const total    = weekCourses.length;
     const complete = weekCourses.filter(c => RELEASED_STATUSES.includes(c.status)).length;
-    const progress = weekCourses.filter(c => getWorkflowStatus(c) === '출고대기').length;
-    const waiting  = weekCourses.filter(c => getWorkflowStatus(c) === '입고대기').length;
+    const progress = weekCourses.filter(c => c.status === '입고완료').length;
+    const waiting  = weekCourses.filter(c => c.status === '입고대기').length;
     const rate = total > 0 ? Math.round((complete / total) * 100) : 0;
     document.getElementById('week-total-courses').textContent    = total;
     document.getElementById('week-progress-courses').textContent = progress;
@@ -4772,7 +4793,6 @@ function updateTimeline(courseList) {
         const releaseDate = course.scheduled_release_date
             ? formatDate(course.scheduled_release_date, 'MM.DD (ddd)') : '미정';
         const daysUntil = Math.ceil((new Date(course.start_date) - new Date()) / (1000 * 60 * 60 * 24));
-        const workflowStatus = getWorkflowStatus(course);
         const borderColor = daysUntil <= 3 ? 'border-red-500' : 'border-blue-400';
         const bgColor     = daysUntil <= 3 ? 'bg-red-50' : 'bg-white';
         return `
@@ -4781,7 +4801,7 @@ function updateTimeline(courseList) {
                 <div class="flex-1 min-w-0">
                     <div class="flex items-center flex-wrap gap-2 mb-2">
                         <h4 class="font-bold text-base text-gray-800 leading-tight">${course.course_name}</h4>
-                        <span class="status-badge status-${workflowStatus}">${workflowStatus}</span>
+                        <span class="status-badge status-${course.status}">${course.status}</span>
                         ${daysUntil <= 3 && daysUntil >= 0
                             ? `<span class="px-2 py-0.5 bg-red-600 text-white text-sm font-bold rounded-full">D-${daysUntil}</span>` : ''}
                     </div>
@@ -4817,9 +4837,9 @@ function updateAdminMonitor(allCourses) {
 
     // 단계별 병목 정의
     const stages = [
-        { label: '📦 입고대기',      status: ['입고대기'],       color: 'bg-red-100 border-red-300',    icon: '📦', desc: '작업자가 입고 처리 필요' },
-        { label: '✔️ 입고완료',      status: ['입고완료'],       color: 'bg-blue-100 border-blue-300',  icon: '✔️', desc: '작업자가 출고 처리 필요' },
-        { label: '🚚 출고완료',      status: ['출고완료'],       color: 'bg-yellow-100 border-yellow-300', icon: '🚚', desc: '작업자 출고 확인 필요 ← 병목 주의' },
+        { label: '📦 입고대기',      status: ['입고대기'],       color: 'bg-red-100 border-red-300',    icon: '📦', desc: '담당자/관리자가 입고 처리 필요' },
+        { label: '✔️ 입고완료',      status: ['입고완료'],       color: 'bg-blue-100 border-blue-300',  icon: '✔️', desc: '매니저가 출고 처리 필요' },
+        { label: '🚚 출고완료',      status: ['출고완료'],       color: 'bg-yellow-100 border-yellow-300', icon: '🚚', desc: '담당자 출고 확인 필요 ← 병목 주의' },
         
         
         
@@ -4959,25 +4979,6 @@ function getGroupTotalReleased(groupKey, excludeCourseId = null) {
                 ? (c.released_quantity || 0) : 0;
             return sum + released;
         }, 0);
-}
-
-function getGroupAvailableStock(groupKey, excludeCourseId = null) {
-    return getGroupTotalStock(groupKey) - getGroupTotalReleased(groupKey, excludeCourseId);
-}
-
-// 실제 DB 상태는 바꾸지 않고, 화면/업무 흐름상 표시할 상태를 계산합니다.
-// 입고가 그룹 공통재고로 잡힌 경우 해당 차수 자체가 아직 '입고대기'여도
-// 출고 가능한 재고가 있으면 '출고대기'로 보여주어 출고 메뉴 흐름이 끊기지 않게 합니다.
-function getWorkflowStatus(course) {
-    if (!course) return '';
-    if (RELEASED_STATUSES.includes(course.status)) return course.status;
-    const groupKey = getGroupKey(course.course_name);
-    const available = getGroupAvailableStock(groupKey, course.id);
-    return available > 0 ? '출고대기' : course.status;
-}
-
-function getWorkflowStatusClass(course) {
-    return getWorkflowStatus(course);
 }
 
 // 검색어 상태
@@ -5355,16 +5356,15 @@ function renderAdminCoursesList() {
     }
 
     container.innerHTML = list.map(c => {
-        const workflowStatus = getWorkflowStatus(c);
-        const statusColors = {'입고대기':'border-red-200 bg-red-50','입고완료':'border-blue-200 bg-blue-50','출고대기':'border-blue-200 bg-blue-50','출고완료':'border-green-200 bg-green-50'};
-        const bg = statusColors[workflowStatus] || 'border-gray-200 bg-gray-50';
+        const statusColors = {'입고대기':'border-red-200 bg-red-50','입고완료':'border-blue-200 bg-blue-50','출고완료':'border-green-200 bg-green-50'};
+        const bg = statusColors[c.status] || 'border-gray-200 bg-gray-50';
         return `
         <div class="course-card ${bg}">
             <div class="flex items-start justify-between gap-2 flex-wrap">
                 <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2 flex-wrap mb-1">
                         <h4 class="font-bold text-base leading-tight" style="word-break:keep-all;">${c.course_name}</h4>
-                        <span class="status-badge status-${workflowStatus}">${workflowStatus}</span>
+                        <span class="status-badge status-${c.status}">${c.status}</span>
                     </div>
                     <div class="flex gap-3 text-xs text-gray-500 flex-wrap">
                         <span>📅 ${formatDate(c.start_date,'MM-DD')} 시작</span>
@@ -5590,7 +5590,7 @@ function updateStockInventoryTable() {
 // 그룹 입고 모달 열기
 function openGroupStockInModal(groupKey) {
     if (!requireUser()) return;
-    if (!currentUser) {
+    if (!currentUser != null) {
         showNotification('작업자를 먼저 선택해주세요.', 'error'); return;
     }
     const displayName   = courses.find(c => getGroupKey(c.course_name) === groupKey)
@@ -5625,7 +5625,7 @@ function closeGroupStockInModal() {
 // ══════════════════════════════════════════════
 function openGroupManageModal(groupKey) {
     if (!requireUser()) return;
-    if (!currentUser) {
+    if (!currentUser != null) {
         showNotification('작업자를 먼저 선택해주세요.', 'error'); return;
     }
     const displayName   = courses.find(c => getGroupKey(c.course_name) === groupKey)
@@ -5664,6 +5664,9 @@ function openGroupManageModal(groupKey) {
     // 섹션2: 출고 수정 목록
     _renderReleaseEditList(groupKey);
 
+    // 섹션3: 과정명 수정 목록
+    _renderNameEditList(groupKey);
+
     document.getElementById('group-manage-modal').classList.remove('hidden');
     document.getElementById('group-manage-modal').classList.add('flex');
 }
@@ -5678,7 +5681,7 @@ function closeGroupManageModal() {
 // ══════════════════════════════════════════════
 function openGroupForceReleaseModal(groupKey) {
     if (!requireUser()) return;
-    if (!currentUser) {
+    if (!currentUser != null) {
         showNotification('작업자를 먼저 선택해주세요.', 'error'); return;
     }
     const displayName   = (() => { const c = courses.find(x => getGroupKey(x.course_name) === groupKey); return c ? getGroupName(c.course_name) : groupKey; })();
@@ -5717,27 +5720,19 @@ function closeGroupForceReleaseModal() {
 
 function _renderForceReleaseList(groupKey) {
     const container = document.getElementById('force-release-list');
-    // 그룹 잔여재고가 있으면 미출고 과정은 개별 상태와 관계없이 출고 가능
+    // 입고완료 상태 과정만 (출고 가능)
     const readyCourses = courses
-        .filter(c => getGroupKey(c.course_name) === groupKey && !RELEASED_STATUSES.includes(c.status))
+        .filter(c => getGroupKey(c.course_name) === groupKey && c.status === '입고완료')
         .sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
 
     const totalStock    = getGroupTotalStock(groupKey);
     const totalReleased = getGroupTotalReleased(groupKey);
     const groupAvail    = totalStock - totalReleased;
 
-    if (groupAvail <= 0) {
-        container.innerHTML = `<div style="text-align:center;padding:24px;color:#dc2626;font-size:0.9rem;">
-            ⚠️ 가용 재고가 없습니다.<br>
-            <span style="font-size:0.82rem;color:#9ca3af;">입고 메뉴에서 먼저 입고 처리하거나 출고 이력을 확인하세요.</span>
-        </div>`;
-        return;
-    }
-
     if (readyCourses.length === 0) {
         container.innerHTML = `<div style="text-align:center;padding:24px;color:#9ca3af;font-size:0.9rem;">
-            출고 가능한 미출고 과정이 없습니다.<br>
-            <span style="font-size:0.82rem;">그룹 잔여재고와 과정 상태를 확인하세요.</span>
+            출고 가능한 과정(입고완료 상태)이 없습니다.<br>
+            <span style="font-size:0.82rem;">입고 처리 후 출고하거나, 수정 메뉴를 이용하세요.</span>
         </div>`;
         return;
     }
@@ -5796,7 +5791,7 @@ async function submitForceRelease(courseId, courseName) {
         }).eq('id', courseId);
         if (error) throw error;
 
-        await createLog(courseId, '출고', course.status, '출고완료',
+        await createLog(courseId, '출고', '입고완료', '출고완료',
             `출고 ${outQty}권 / 그룹 잔여 ${avail - outQty}권`, outQty);
 
         showNotification(`출고 완료! ${courseName} — ${outQty}권`, 'success');
@@ -5834,7 +5829,7 @@ async function submitForceRelease(courseId, courseName) {
 // ══════════════════════════════════════════════
 async function submitReleaseQtyEdit(courseId, courseName, currentStatus) {
     if (!requireUser()) return;
-    if (!currentUser) {
+    if (!currentUser != null) {
         showNotification('작업자를 먼저 선택해주세요.', 'error'); return;
     }
     const safeId  = courseId.replace(/[^a-zA-Z0-9_-]/g, '_');
@@ -5927,10 +5922,91 @@ function _renderReleaseEditList(groupKey) {
     }).join('');
 }
 
+// ── 섹션3: 과정명 수정 목록 렌더링 ──
+function _renderNameEditList(groupKey) {
+    const groupCourses = courses
+        .filter(c => getGroupKey(c.course_name) === groupKey)
+        .sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
+
+    const countBadge = document.getElementById('name-edit-count');
+    if (countBadge) countBadge.textContent = `${groupCourses.length}개 차수`;
+
+    const container = document.getElementById('name-edit-list');
+    if (!container) return;
+    if (groupCourses.length === 0) {
+        container.innerHTML = `<div style="text-align:center; padding:20px; color:#9ca3af; font-size:0.9rem;">해당 과정이 없습니다.</div>`;
+        return;
+    }
+
+    container.innerHTML = groupCourses.map(c => {
+        const safeId = c.id;
+        return `
+        <div style="border:1px solid #c7d2fe; border-radius:12px; padding:10px; background:white;">
+            <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
+                <span class="status-badge status-${c.status}" style="font-size:0.72rem;">${c.status}</span>
+                <span style="font-size:0.78rem; color:#6b7280;">${c.start_date ? formatDate(c.start_date, 'MM-DD') + ' 시작' : ''}</span>
+            </div>
+            <div style="display:flex; gap:6px; align-items:center;">
+                <input type="text" id="name-edit-input-${safeId}" value="${c.course_name.replace(/"/g,'&quot;')}"
+                    style="flex:1; min-width:0; padding:10px; border:2px solid #a5b4fc; border-radius:8px; font-size:0.95rem; font-weight:600; word-break:keep-all;">
+                <button onclick="submitCourseNameEdit('${safeId}')"
+                    style="background:#4f46e5;color:white;border:none;border-radius:8px;padding:10px 14px;font-size:0.82rem;font-weight:700;cursor:pointer;min-height:42px;touch-action:manipulation;white-space:nowrap;flex-shrink:0;">
+                    💾 저장</button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+// 과정명 수정 저장 → DB 반영
+async function submitCourseNameEdit(courseId) {
+    if (!requireUser()) return;
+
+    const input = document.getElementById(`name-edit-input-${courseId}`);
+    const newName = input?.value.trim();
+    const course = courses.find(c => c.id === courseId);
+    if (!course) return;
+    if (!newName) { showNotification('❗ 과정명을 입력해주세요.', 'error'); return; }
+
+    const oldName = course.course_name;
+    if (newName === oldName) { showNotification('변경된 내용이 없습니다.', 'info'); return; }
+
+    const confirmed = await showConfirmModal(
+        '✏️ 과정명 변경',
+        `변경 전: ${oldName}\n변경 후: ${newName}\n\n이 작업은 DB에 즉시 저장되며,\n해당 과정의 입출고/출고 화면 표시명이 모두 바뀝니다.`,
+        '💾 저장', '#4f46e5'
+    );
+    if (!confirmed) return;
+
+    try {
+        const { error } = await sb.from('courses').update({
+            course_name: newName,
+            updated_by: currentUser.name,
+            updated_at: new Date().toISOString()
+        }).eq('id', courseId);
+        if (error) throw error;
+
+        try { await createLog(courseId, '수정', oldName, newName, `과정명 변경: "${oldName}" → "${newName}"`); } catch(e){}
+
+        showNotification(`✅ 과정명이 "${newName}"으로 변경되었습니다.`, 'success');
+
+        // 전체 데이터 새로고침
+        await loadCourses();
+        await loadDashboardData();
+        updateStockInventoryTable();
+        renderStockLists();
+
+        // 모달의 그룹키가 바뀌었을 수 있으므로 닫기
+        closeGroupManageModal();
+    } catch (err) {
+        console.error('과정명 수정 오류:', err);
+        showNotification(`❗ 수정 실패: ${err.message}`, 'error');
+    }
+}
+
 // 출고 초기화 확인 → 실행
 async function confirmReleaseReset(courseId, courseName, currentStatus, releasedQty) {
     if (!requireUser()) return;
-    if (!currentUser) {
+    if (!currentUser != null) {
         showNotification('작업자를 먼저 선택해주세요.', 'error'); return;
     }
 
@@ -6256,10 +6332,9 @@ function updateStockInList(list) {
     }
     const canProcess = currentUser != null;
     container.innerHTML = list.map(course => {
-        const workflowStatus = getWorkflowStatus(course);
         const isWaiting   = course.status === '입고대기';
-        const isCompleted = course.status === '입고완료' || workflowStatus === '출고대기';
-        const cardBg = isWaiting && workflowStatus !== '출고대기' ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50';
+        const isCompleted = course.status === '입고완료';
+        const cardBg = isWaiting ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50';
         // ── 그룹 통합재고 계산 ──
         const groupName    = getGroupKey(course.course_name);
         const groupStock   = getGroupTotalStock(groupName);
@@ -6274,7 +6349,7 @@ function updateStockInList(list) {
                 <div class="flex-1 min-w-0">
                     <div class="flex items-center flex-wrap gap-2 mb-1">
                         <h4 class="font-bold text-base leading-tight" style="word-break:keep-all;">${course.course_name}</h4>
-                        <span class="status-badge status-${workflowStatus}">${workflowStatus}</span>
+                        <span class="status-badge status-${course.status}">${course.status}</span>
                         ${isGrouped ? `<span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs rounded-full font-bold">📚 통합재고</span>` : ''}
                     </div>
                     <div class="grid grid-cols-3 gap-2 text-xs text-gray-600 mt-2">
@@ -6299,7 +6374,7 @@ function updateStockInList(list) {
                         ✏️ 수량 수정
                     </button>` : ''}
                 ${isCompleted && !canProcess ? `
-                    <p class="text-xs text-gray-400 italic py-2">작업자만 수정 가능</p>` : ''}
+                    <p class="text-xs text-gray-400 italic py-2">담당자만 수정 가능</p>` : ''}
                 ${currentUser != null && isCompleted ? `
                     <button onclick="adminRollback('${course.id}','${course.status}')"
                         class="btn-action btn-gray flex-shrink-0 px-3 text-xs">↩ 롤백</button>` : ''}
@@ -6318,7 +6393,6 @@ function updateStockOutList(list) {
 
     container.innerHTML = list.map(course => {
         const isDone     = RELEASED_STATUSES.includes(course.status);
-        const workflowStatus = getWorkflowStatus(course);
         const groupKey   = getGroupKey(course.course_name);
         const groupStock = getGroupTotalStock(groupKey);
         const otherRel   = getGroupTotalReleased(groupKey, course.id);
@@ -6333,10 +6407,8 @@ function updateStockOutList(list) {
                      : canRelease  ? 'border-blue-200 bg-blue-50'
                      : 'border-gray-200 bg-gray-50';
 
-        const legacyNote = (!isDone && workflowStatus !== course.status)
-            ? `<span class="text-xs text-blue-500">(공통재고 입고됨)</span>`
-            : (isDone && course.status !== '출고완료'
-                ? `<span class="text-xs text-gray-400">(${course.status})</span>` : '');
+        const legacyNote = isDone && course.status !== '출고완료'
+            ? `<span class="text-xs text-gray-400">(${course.status})</span>` : '';
 
         // 부교재
         const courseSubBooks = subBooks.filter(b => b.course_group_key === groupKey);
@@ -6374,7 +6446,7 @@ function updateStockOutList(list) {
                 <div class="flex-1 min-w-0">
                     <div class="flex items-center flex-wrap gap-2 mb-1">
                         <h4 class="font-bold text-base leading-tight" style="word-break:keep-all;">${course.course_name}</h4>
-                        <span class="status-badge status-${workflowStatus}">${workflowStatus}</span>
+                        <span class="status-badge status-${course.status}">${course.status}</span>
                         ${legacyNote}
                     </div>
                     <div class="flex gap-3 text-xs text-gray-500 flex-wrap">
@@ -6406,8 +6478,8 @@ function updateStockOutList(list) {
 // 출고 처리 모달 (모달 방식)
 function openStockOutModal(courseId) {
     if (!requireUser()) return;
-    if (!currentUser) {
-        showNotification('작업자를 먼저 선택해주세요.', 'error'); return;
+    if (!currentUser != null) {
+        showNotification('출고 처리는 매니저/담당자/관리자만 가능합니다.', 'error'); return;
     }
     const course = courses.find(c => c.id === courseId);
     if (!course) return;
@@ -6466,7 +6538,6 @@ async function submitStockOutModal() {
         const { error } = await sb.from('courses').update({
             status: '출고완료',
             released_quantity: outQty,
-            actual_release_date: new Date().toISOString(),
             updated_at: new Date().toISOString()
         }).eq('id', courseId);
         if (error) throw error;
@@ -6478,11 +6549,11 @@ async function submitStockOutModal() {
     } catch(e) { console.error(e); showNotification('출고 처리 중 오류가 발생했습니다.', 'error'); }
 }
 
-// 작업자 출고 확인 (출고완료 → 출고확인)
+// 담당자 출고 확인 (출고완료 → 출고확인)
 async function confirmStockOut(courseId) {
     if (!requireUser()) return;
-    if (!currentUser) {
-        showNotification('작업자만 확인할 수 있습니다.', 'error'); return;
+    if (!currentUser != null) {
+        showNotification('담당자/관리자만 확인할 수 있습니다.', 'error'); return;
     }
     const course = courses.find(c => c.id === courseId);
     if (!course) return;
@@ -6491,14 +6562,14 @@ async function confirmStockOut(courseId) {
     const groupStock = getGroupTotalStock(groupName);
     const otherRel   = getGroupTotalReleased(groupName, courseId);
     const remain     = groupStock - otherRel - relQty;
-    if (!confirm(`📋 작업자 출고 확인\n\n과정명: ${course.course_name}\n출고 수량: ${relQty}권\n그룹 잔여 수량: ${remain}권\n\n확인 후 세팅 관리로 넘어갑니다.`)) return;
+    if (!confirm(`📋 담당자 출고 확인\n\n과정명: ${course.course_name}\n출고 수량: ${relQty}권\n그룹 잔여 수량: ${remain}권\n\n확인 후 세팅 관리로 넘어갑니다.`)) return;
     try {
         const { error } = await sb.from('courses').update({
             status: '출고확인', confirmed_by: currentUser.name,
             confirmed_at: new Date().toISOString(), updated_at: new Date().toISOString()
         }).eq('id', courseId);
         if (error) throw error;
-        await createLog(courseId, '확인', '출고완료', '출고확인', `작업자 출고확인 — 출고 ${relQty}권 / 잔여 ${remain}권`);
+        await createLog(courseId, '확인', '출고완료', '출고확인', `담당자 출고확인 — 출고 ${relQty}권 / 잔여 ${remain}권`);
         showNotification('출고 확인 완료! 세팅 관리로 넘어갑니다.', 'success');
         await loadCourses(); await loadStockManagement(); await loadDashboardData();
     } catch(e) { console.error(e); showNotification('오류가 발생했습니다.', 'error'); }
@@ -6553,7 +6624,7 @@ function updateSetupList(containerId, list, statusType, logsMap = {}) {
         const emptyMsgs = {
             '출고확인':    '세팅 대기 과정이 없습니다.',
             '세팅중':      '세팅 진행 중인 과정이 없습니다.',
-            '세팅완료대기': '작업자 최종확인 대기 중인 과정이 없습니다.',
+            '세팅완료대기': '관리자 최종확인 대기 중인 과정이 없습니다.',
             '세팅완료':    '이번 주차 세팅 완료된 과정이 없습니다.'
         };
         container.innerHTML = `<div class="text-center py-6 text-gray-400"><p>${emptyMsgs[statusType] || '과정이 없습니다.'}</p></div>`;
@@ -6577,7 +6648,7 @@ function updateSetupList(containerId, list, statusType, logsMap = {}) {
             const setupLog = logs.find(l => l.action_type === '세팅' && l.new_status === '세팅중');
             // 세팅 완료한 사람 & 날짜 (매니저가 완료 버튼)
             const completeLog = logs.find(l => l.action_type === '완료' && l.previous_status === '세팅중');
-            // 작업자 최종확인
+            // 관리자 최종확인
             const confirmLog = logs.find(l => l.action_type === '완료' && l.previous_status === '세팅완료대기');
             // 추가출고 로그들
             const extraLogs = logs.filter(l => l.action_type === '추가출고');
@@ -6594,7 +6665,7 @@ function updateSetupList(containerId, list, statusType, logsMap = {}) {
                 setupInfo = `<div class="text-sm text-gray-500">🔧 세팅: ${setupLog.user_name} · ${formatDate(setupLog.action_date,'MM.DD')}</div>`;
             }
 
-            // 작업자 최종확인 정보
+            // 관리자 최종확인 정보
             if (confirmLog) {
                 confirmInfo = `<div class="flex items-center gap-2 text-sm">
                     <span class="text-gray-400">✅ 관리자 확인</span>
@@ -6648,12 +6719,12 @@ function updateSetupList(containerId, list, statusType, logsMap = {}) {
                         </div>
                         ${extraReleaseInfo}
                     </div>` : ''}
-                    ${statusType === '세팅완료대기' ? `<p class="text-sm text-yellow-700 font-semibold mt-2">⏳ 작업자 최종 확인 대기 중</p>` : ''}
+                    ${statusType === '세팅완료대기' ? `<p class="text-sm text-yellow-700 font-semibold mt-2">⏳ 관리자 최종 확인 대기 중</p>` : ''}
                 </div>
                 <div class="flex flex-col gap-2 w-full sm:w-auto">
                     ${statusType === '출고확인'    && canStartSetup    ? `<button onclick="startSetup('${course.id}')" class="btn-action btn-purple flex-1 sm:flex-none px-5" style="min-height:46px;">▶️ 세팅 시작</button>` : ''}
                     ${statusType === '세팅중'      && canCompleteSetup ? `<button onclick="completeSetup('${course.id}')" class="btn-action btn-success flex-1 sm:flex-none px-5" style="min-height:46px;">✔️ 세팅 완료</button>` : ''}
-                    ${statusType === '세팅완료대기' && canFinalConfirm  ? `<button onclick="finalConfirmSetup('${course.id}')" class="btn-action btn-primary flex-1 sm:flex-none px-5" style="min-height:46px;background:#1d4ed8;">✅ 작업자 최종 확인</button>` : ''}
+                    ${statusType === '세팅완료대기' && canFinalConfirm  ? `<button onclick="finalConfirmSetup('${course.id}')" class="btn-action btn-primary flex-1 sm:flex-none px-5" style="min-height:46px;background:#1d4ed8;">✅ 관리자 최종 확인</button>` : ''}
                     ${statusType === '세팅완료'    && canExtraRelease  ? `<button onclick="openExtraReleaseModal('${course.id}')" class="btn-action flex-1 sm:flex-none px-5" style="min-height:46px;background:#d97706;color:white;border:none;border-radius:12px;font-weight:700;">📤 추가 출고</button>` : ''}
                     ${currentUser != null ? `<button onclick="adminRollback('${course.id}','${course.status}')" class="btn-action flex-shrink-0 px-3" style="min-height:46px;background:#6b7280;font-size:0.85rem;" title="관리자 상태 롤백">↩ 롤백</button>` : ''}
                 </div>
@@ -6681,14 +6752,14 @@ async function loadAdminCourses() {
         });
         updateAdminStatistics(weekCourses);
         renderAdminCoursesList();
-    } catch (error) { console.error('과정관리 페이지 로드 오류:', error); }
+    } catch (error) { console.error('관리자 페이지 로드 오류:', error); }
 }
 
 function updateAdminStatistics(weekCourses) {
     document.getElementById('admin-total-courses').textContent    = weekCourses.length;
     document.getElementById('admin-complete-courses').textContent = weekCourses.filter(c => c.status === '출고완료').length;
-    document.getElementById('admin-progress-courses').textContent = weekCourses.filter(c => getWorkflowStatus(c) === '출고대기').length;
-    document.getElementById('admin-waiting-courses').textContent  = weekCourses.filter(c => getWorkflowStatus(c) === '입고대기').length;
+    document.getElementById('admin-progress-courses').textContent = weekCourses.filter(c => c.status === '입고완료').length;
+    document.getElementById('admin-waiting-courses').textContent  = weekCourses.filter(c => c.status === '입고대기').length;
 }
 
 function updateAdminCoursesTable(weekCourses) {
@@ -7001,8 +7072,8 @@ function goToUrgentTask(courseId, targetPage) {
 
 function viewCourseDetail(id)  { editCourse(id); }
 function openAdminCourseModal(id = null) {
-    if (!currentUser) {
-        showNotification('작업자를 먼저 선택해주세요.', 'error'); return;
+    if (!currentUser || (!currentUser)) {
+        showNotification('권한이 없습니다. 관리자 또는 담당자만 사용할 수 있습니다.', 'error'); return;
     }
     openCourseModal(id);
 }
@@ -7058,8 +7129,8 @@ async function deleteAdminCourse(courseId) {
 // 입고/출고 처리 모달
 function openStockInAction(courseId) {
     if (!requireUser()) return;
-    if (!currentUser) {
-        showNotification('입고 처리는 작업자만 가능합니다.', 'error'); return;
+    if (!currentUser != null) {
+        showNotification('입고 처리는 관리자/담당자만 가능합니다.', 'error'); return;
     }
     const course = courses.find(c => c.id === courseId);
     if (!course) return;
@@ -7129,24 +7200,24 @@ async function handleActionSubmit(e) {
 }
 
 async function approveStockIn(courseId) {
-    if (!currentUser) { showNotification('작업자를 먼저 선택해주세요.', 'error'); return; }
+    if (!currentUser || !currentUser != null) { showNotification('작업자를 먼저 선택해주세요.', 'error'); return; }
     const course = courses.find(c => c.id === courseId);
     if (!course || !confirm('입고를 승인하시겠습니까?')) return;
     try {
         const { error } = await sb.from('courses').update({ status: '출고대기', updated_at: new Date().toISOString() }).eq('id', courseId);
         if (error) throw error;
-        await createLog(courseId, '승인', '입고완료', '출고대기', '작업자 입고 승인');
+        await createLog(courseId, '승인', '입고완료', '출고대기', '관리자 입고 승인');
         showNotification('입고가 승인되었습니다.', 'success');
         await loadStockManagement(); await loadDashboardData();
     } catch (error) { console.error('승인 오류:', error); showNotification('승인 중 오류가 발생했습니다.', 'error'); }
 }
 
 async function approveStockOut(courseId) {
-    if (!currentUser) { showNotification('작업자를 먼저 선택해주세요.', 'error'); return; }
+    if (!currentUser || !currentUser != null) { showNotification('작업자를 먼저 선택해주세요.', 'error'); return; }
     const course = courses.find(c => c.id === courseId);
     if (!course || !confirm('출고를 승인하시겠습니까?')) return;
     try {
-        await createLog(courseId, '승인', course.status, course.status, '작업자 출고 승인');
+        await createLog(courseId, '승인', course.status, course.status, '관리자 출고 승인');
         showNotification('출고가 승인되었습니다.', 'success');
         await loadStockManagement();
  await loadDashboardData();
@@ -7155,8 +7226,8 @@ async function approveStockOut(courseId) {
 
 async function startSetup(courseId) {
     if (!requireUser()) return;
-    if (!currentUser) {
-        showNotification('세팅 시작은 작업자만 할 수 있습니다.', 'error'); return;
+    if (!currentUser != null) {
+        showNotification('세팅 시작은 매니저/관리자만 할 수 있습니다.', 'error'); return;
     }
     const course = courses.find(c => c.id === courseId);
     if (!course || !confirm(`${course.course_name} 세팅을 시작하시겠습니까?`)) return;
@@ -7171,19 +7242,19 @@ async function startSetup(courseId) {
 
 async function completeSetup(courseId) {
     if (!requireUser()) return;
-    if (!currentUser) {
-        showNotification('세팅 완료는 작업자만 할 수 있습니다.', 'error'); return;
+    if (!currentUser != null) {
+        showNotification('세팅 완료는 매니저/관리자만 할 수 있습니다.', 'error'); return;
     }
     const course = courses.find(c => c.id === courseId);
-    if (!course || !confirm(`${course.course_name} 강의실 세팅이 완료되었습니까?\n작업자 최종 확인 후 세팅 완료 처리됩니다.`)) return;
+    if (!course || !confirm(`${course.course_name} 강의실 세팅이 완료되었습니까?\n담당자 최종 확인 후 세팅 완료 처리됩니다.`)) return;
     try {
         const { error } = await sb.from('courses').update({
             status: '세팅완료대기', updated_at: new Date().toISOString()
         }).eq('id', courseId);
         if (error) throw error;
-        await createLog(courseId, '완료', '세팅중', '세팅완료대기', `매니저 세팅 완료 — 작업자 최종확인 대기`);
-        showNotification('세팅 완료! 작업자 최종 확인을 기다립니다.', 'success');
-        notifyAction('세팅 완료', course.course_name, '작업자'); // 작업자에게 알림
+        await createLog(courseId, '완료', '세팅중', '세팅완료대기', `매니저 세팅 완료 — 담당자 최종확인 대기`);
+        showNotification('세팅 완료! 관리자 최종 확인을 기다립니다.', 'success');
+        notifyAction('세팅 완료', course.course_name, '관리자'); // 관리자에게 알림
  await loadDashboardData();
     } catch (e) { console.error(e); showNotification('세팅 완료 처리 중 오류가 발생했습니다.', 'error'); }
 }
@@ -7191,17 +7262,17 @@ async function completeSetup(courseId) {
 async function finalConfirmSetup(courseId) {
     if (!requireUser()) return;
     if (!currentUser) {
-        showNotification('작업자만 최종 확인할 수 있습니다.', 'error'); return;
+        showNotification('관리자만 최종 확인할 수 있습니다.', 'error'); return;
     }
     const course = courses.find(c => c.id === courseId);
-    if (!course || !confirm(`✅ 작업자 최종 확인\n\n${course.course_name}\n강의실 세팅 최종 완료를 확인하시겠습니까?`)) return;
+    if (!course || !confirm(`✅ 관리자 최종 확인\n\n${course.course_name}\n강의실 세팅 최종 완료를 확인하시겠습니까?`)) return;
     try {
         const { error } = await sb.from('courses').update({
             status: '세팅완료', setup_complete_date: new Date().toISOString(), updated_at: new Date().toISOString()
         }).eq('id', courseId);
         if (error) throw error;
-        await createLog(courseId, '완료', '세팅완료대기', '세팅완료', `작업자 최종확인 완료`);
-        showNotification('✅ 작업자 최종 확인 완료!', 'success');
+        await createLog(courseId, '완료', '세팅완료대기', '세팅완료', `관리자 최종확인 완료`);
+        showNotification('✅ 관리자 최종 확인 완료!', 'success');
  await loadDashboardData();
     } catch (e) { console.error(e); showNotification('최종 확인 중 오류가 발생했습니다.', 'error'); }
 }
@@ -7326,17 +7397,16 @@ function showNotification(message, type = 'info') {
         type === 'error' ? 10000 : 4000);
 }
 
-// 출고 수량 수정 모달 (작업자만)
+// 출고 수량 수정 모달 (담당자/관리자만)
 function openStockOutEditModal(courseId) {
     if (!currentUser) { showNotification('작업자를 먼저 선택해주세요.', 'error'); return; }
-    if (!currentUser) {
-        showNotification('출고 수량 수정은 작업자만 가능합니다.', 'error'); return;
+    if (!currentUser != null) {
+        showNotification('출고 수량 수정은 담당자/관리자만 가능합니다.', 'error'); return;
     }
     const course = courses.find(c => c.id === courseId);
     if (!course) return;
 
-    const groupKey   = getGroupKey(course.course_name);
-    const stock      = getGroupTotalStock(groupKey) - getGroupTotalReleased(groupKey, course.id);
+    const stock      = course.stock_quantity || 0;
     const releasedQty = course.released_quantity ?? course.student_count;
 
     document.getElementById('stock-out-edit-course-id').value = courseId;
@@ -7389,8 +7459,8 @@ function calcOutEditRemain() {
 }
 
 async function submitStockOutEdit() {
-    if (!currentUser) {
-        showNotification('작업자만 수정 가능합니다.', 'error'); return;
+    if (!currentUser || (!currentUser != null)) {
+        showNotification('담당자/관리자만 수정 가능합니다.', 'error'); return;
     }
     const courseId = document.getElementById('stock-out-edit-course-id').value;
     const input    = document.getElementById('stock-out-edit-quantity');
@@ -7411,11 +7481,11 @@ async function submitStockOutEdit() {
     } catch(e) { console.error(e); showNotification('수정 중 오류가 발생했습니다.', 'error'); }
 }
 
-// 입고 수량 수정 모달 (작업자만)
+// 입고 수량 수정 모달 (담당자/관리자만)
 function openStockEditModal(courseId) {
     if (!requireUser()) return;
-    if (!currentUser) {
-        showNotification('입고 수량 수정은 작업자만 가능합니다.', 'error'); return;
+    if (!currentUser != null) {
+        showNotification('입고 수량 수정은 담당자만 가능합니다.', 'error'); return;
     }
     const course = courses.find(c => c.id === courseId);
     if (!course) return;
@@ -7434,8 +7504,8 @@ function closeStockEditModal() {
 }
 
 async function submitStockEdit() {
-    if (!currentUser) {
-        showNotification('작업자만 수정 가능합니다.', 'error'); return;
+    if (!currentUser || (!currentUser != null)) {
+        showNotification('담당자만 수정 가능합니다.', 'error'); return;
     }
     const courseId = document.getElementById('stock-edit-course-id').value;
     const newQty   = parseInt(document.getElementById('stock-edit-quantity').value);
@@ -7454,7 +7524,7 @@ async function submitStockEdit() {
 }
 
 // ============================================================
-//  작업자 롤백 (모든 단계)
+//  관리자 롤백 (모든 단계)
 // ============================================================
 const STATUS_FLOW = ['입고대기','입고완료','출고완료'];
 const STATUS_LABELS = {
@@ -7464,7 +7534,7 @@ const STATUS_LABELS = {
 };
 
 async function adminRollback(courseId, currentStatus) {
-    if (!currentUser) {
+    if (!currentUser || !currentUser != null) {
         showNotification('작업자를 먼저 선택해주세요.', 'error'); return;
     }
     const course = courses.find(c => c.id === courseId);
@@ -7484,7 +7554,7 @@ async function adminRollback(courseId, currentStatus) {
 
     const parts = input.split('/').map(s => s.trim());
     const num = parseInt(parts[0]);
-    const reason = parts[1] || '작업자 롤백';
+    const reason = parts[1] || '관리자 롤백';
 
     if (isNaN(num) || num < 1 || num > prevOptions.length) {
         showNotification('올바른 번호를 입력해주세요.', 'error'); return;
@@ -7503,7 +7573,7 @@ async function adminRollback(courseId, currentStatus) {
         if (error) throw error;
 
         await createLog(courseId, '롤백', currentStatus, targetStatus,
-            `🔙 작업자 롤백: ${currentStatus} → ${targetStatus} / 사유: ${reason}`);
+            `🔙 관리자 롤백: ${currentStatus} → ${targetStatus} / 사유: ${reason}`);
 
         showNotification(`✅ 롤백 완료: ${currentStatus} → ${targetStatus}`, 'success');
         await loadCourses();
@@ -7573,7 +7643,7 @@ function updateNavBadges() {
 //  단계 완료 시 알림 트리거
 // ============================================================
 function notifyAction(actionType, courseName, targetRole) {
-    const roleLabel = '작업자';
+    const roleLabel = targetRole === '담당자' ? '담당자' : '관리자';
     sendBrowserNotification(
         `📬 ${actionType} 완료 — 확인 필요`,
         `${courseName}\n${roleLabel} 확인이 필요합니다.`,
@@ -7586,20 +7656,19 @@ function notifyAction(actionType, courseName, targetRole) {
 // ============================================================
 function openExtraReleaseModal(courseId) {
     if (!requireUser()) return;
-    if (!currentUser) {
-        showNotification('작업자를 먼저 선택해주세요.', 'error'); return;
+    if (!currentUser != null) {
+        showNotification('매니저/담당자/관리자만 추가 출고할 수 있습니다.', 'error'); return;
     }
     const course = courses.find(c => c.id === courseId);
     if (!course) return;
 
-    const groupKey  = getGroupKey(course.course_name);
-    const stock     = getGroupTotalStock(groupKey) - getGroupTotalReleased(groupKey, course.id);
+    const stock     = course.stock_quantity || 0;
     const released  = course.released_quantity ?? course.student_count;
 
     document.getElementById('extra-release-course-id').value = courseId;
     document.getElementById('extra-release-title').textContent = `📤 추가 출고 — ${course.course_name}`;
     document.getElementById('extra-release-stock-info').textContent =
-        `그룹 가용재고: ${stock}권 | 기존 출고: ${released}권 | 추가출고 가능 잔여: ${stock - released}권`;
+        `현재 재고: ${stock}권 | 기존 출고: ${released}권 | 현재 잔여: ${stock - released}권`;
     document.getElementById('extra-release-quantity').value = '';
     document.getElementById('extra-release-quantity').dataset.stock    = stock;
     document.getElementById('extra-release-quantity').dataset.released = released;
@@ -7632,8 +7701,8 @@ function calcExtraReleaseRemain() {
 
 async function submitExtraRelease() {
     if (!requireUser()) return;
-    if (!currentUser) {
-        showNotification('작업자를 먼저 선택해주세요.', 'error'); return;
+    if (!currentUser != null) {
+        showNotification('매니저/담당자/관리자만 추가 출고할 수 있습니다.', 'error'); return;
     }
     const courseId = document.getElementById('extra-release-course-id').value;
     const input    = document.getElementById('extra-release-quantity');
@@ -7686,7 +7755,7 @@ function debounce(func, wait) {
 </script>
 <!-- 최하단 초기화 버튼 -->
 <div style="text-align:center; padding:32px 16px 48px; margin-top:32px; border-top:1px solid #e5e7eb;">
-    <p style="font-size:0.8rem; color:#9ca3af; margin-bottom:12px;">⚠️ 아래 버튼은 작업자 전용입니다</p>
+    <p style="font-size:0.8rem; color:#9ca3af; margin-bottom:12px;">⚠️ 아래 버튼은 관리자 전용입니다</p>
     <button onclick="openResetModal()"
         style="background:#dc2626; color:white; border:none; border-radius:10px; padding:10px 24px; font-size:0.9rem; font-weight:700; cursor:pointer; touch-action:manipulation; opacity:0.7;"
         onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">
