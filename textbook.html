@@ -742,7 +742,10 @@
             style="min-height:56px;">
             ✅ 확인 — 시작하기
         </button>
-        <p class="text-xs text-gray-400 mt-3">선택하지 않으면 대시보드만 조회 가능합니다.</p>
+        <button onclick="skipStartupUser()"
+            class="w-full py-2 mt-2 text-gray-400 text-sm underline">
+            나중에 선택 (건너뛰기)
+        </button>
     </div>
 </div>
 
@@ -4013,6 +4016,11 @@ function closeStartupPopup() {
 }
 
 // 팝업 확인 버튼 클릭
+function skipStartupUser() {
+    document.getElementById('startup-popup').style.display = 'none';
+    // currentUser는 null로 두되, requireUser()가 작업 시점에 자동 지정 처리
+}
+
 function confirmStartupUser() {
     const sel  = document.getElementById('startup-user-select');
     const name = sel?.value?.trim();
@@ -4137,15 +4145,16 @@ function requireUser() {
         }
     }
 
-    // ── 4. 복원 실패 → 선택 요청
-    const wrap = document.getElementById('user-selector-wrap');
-    if (wrap) {
-        wrap.classList.add('no-user');
-        wrap.style.transform = 'scale(1.05)';
-        setTimeout(() => { wrap.style.transform = ''; }, 400);
-    }
-    showNotification('⚠️ 상단에서 작업자를 먼저 선택 후 ✅ 확인을 눌러주세요.', 'error');
-    return false;
+    // ── 4. 복원 실패 → 기본 작업자 자동 지정 (작업이 절대 막히지 않도록) ──
+    const defaultUser = (users && users.length > 0) ? users[0] : FALLBACK_USERS[2]; // 이선희
+    currentUser = defaultUser;
+    localStorage.setItem('textbook_last_user', defaultUser.name);
+    if (sel) sel.value = defaultUser.name;
+    document.getElementById('user-selector-wrap')?.classList.remove('no-user');
+    updateNavTabsForRole();
+    showNotification(`👤 ${defaultUser.name}(${defaultUser.role})로 자동 설정되었습니다. 다른 작업자면 상단에서 변경하세요.`, 'warning');
+    console.log('⚠️ requireUser 자동지정:', defaultUser.name);
+    return true;
 }
 function closeNoUserPopup() {
     document.getElementById('no-user-popup').classList.remove('show');
