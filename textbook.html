@@ -4539,13 +4539,15 @@ function goToTodaySetup() {
 }
 
 function showPage(pageName) {
-    // 대시보드 외: 작업자 없으면 팝업 다시 띄우기 (드롭다운 재시도 포함)
+    // ── 작업자 미선택 시: 드롭다운 현재값으로 자동 복원 시도 (탭 진입은 항상 허용) ──
     if (pageName !== 'dashboard' && !currentUser) {
-        // 드롭다운 현재값으로 재시도
         const sel = document.getElementById('current-user');
-        const name = sel?.value;
+        const name = sel?.value?.trim();
         if (name && users.length > 0) {
-            const found = users.find(u => u.name === name);
+            const found = users.find(u => u.name === name)
+                       || users.find(u => u.name.trim() === name)
+                       || FALLBACK_USERS.find(u => u.name === name)
+                       || null;
             if (found) {
                 currentUser = found;
                 localStorage.setItem('textbook_last_user', found.name);
@@ -4553,12 +4555,20 @@ function showPage(pageName) {
                 updateNavTabsForRole();
             }
         }
-        // 그래도 없으면 팝업 표시
+        // localStorage 복원도 시도
         if (!currentUser) {
-            const popup = document.getElementById('startup-popup');
-            if (popup) popup.style.display = 'flex';
-            return;
+            const saved = localStorage.getItem('textbook_last_user');
+            if (saved) {
+                const found = users.find(u => u.name === saved) || FALLBACK_USERS.find(u => u.name === saved);
+                if (found) {
+                    currentUser = found;
+                    if (sel) sel.value = found.name;
+                    document.getElementById('user-selector-wrap')?.classList.remove('no-user');
+                    updateNavTabsForRole();
+                }
+            }
         }
+        // 작업자 미선택이어도 탭 진입은 허용 (조회는 누구나, 실제 작업 시점에 requireUser()가 처리)
     }
 
     document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
