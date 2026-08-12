@@ -1,0 +1,47 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // Existing operator directory: app reads this, but normal operation should not edit it.
+    match /users/{docId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    // Core textbook inventory data.
+    // The app-side migration guard blocks unconverted legacy writes;
+    // converted operational actions use the atomic Firestore write service.
+    match /courses/{docId} {
+      allow read, write: if signedIn();
+    }
+
+    match /work_logs/{docId} {
+      allow read, write: if signedIn();
+    }
+
+    match /sub_books/{docId} {
+      allow read, write: if signedIn();
+    }
+
+    match /sub_book_logs/{docId} {
+      allow read, write: if signedIn();
+    }
+
+    // Generic migration sandbox retained for controlled diagnostics only.
+    match /migration_tests/{docId} {
+      allow read, write: if signedIn() && request.auth.uid == docId;
+    }
+
+    match /migration_test_logs/{docId} {
+      allow read, write: if signedIn() && request.auth.uid == docId;
+    }
+
+    // Everything else remains closed.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
