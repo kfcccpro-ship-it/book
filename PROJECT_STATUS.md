@@ -7,9 +7,8 @@
 
 - Repository: `kfcccpro-ship-it/book`
 - Branch: `firebase-migration`
-- Expected HEAD at handoff creation: `656cf4cf66bdd663e8f9d66a06a5c2c447ca3119`
-- `main` base at handoff creation: `386aa14113ae5773d75e7f428932e57abbbeb8b4` or newer documentation-only commit
-- Important: HEAD hashes are checkpoints, not assumptions. Re-fetch current refs in every new chat.
+- Latest verified work: isolated operational atomic transaction harness added
+- `main` remains protected until Firebase write parity and regression verification complete.
 
 ## PROJECT PURPOSE
 
@@ -43,16 +42,14 @@ Supabase snapshot → Firestore migration and read-back verification completed.
 ## FIREBASE CONFIGURATION
 
 - Firebase project: `new-book-e6ec7`
-- Hosting test URL: `https://new-book-e6ec7.web.app`
+- Firebase Hosting test URL: `https://new-book-e6ec7.web.app`
 - Firestore database: `(default)`
 - Auth: Anonymous Authentication enabled
 - Public repo: NEVER commit UID allowlists, passwords, tokens, service-account JSON, or secrets.
 
 ## SECURITY / RULES STATE
 
-At the last confirmed user step, Firestore Rules were restored from test-write mode to **read-only for the current test UID and write=false for operational data**.
-
-Do not assume this is still true in a new chat. Ask the user for a screenshot or have them verify Rules immediately before any real write test.
+The last confirmed safe state was read-only for operational data. Do not assume current console Rules without re-checking immediately before a real write test.
 
 Never enable unrestricted writes.
 
@@ -60,24 +57,16 @@ Never enable unrestricted writes.
 
 ### Read path
 
-Firebase test app successfully opened and displayed operational data using migrated Firestore data.
+Firebase test app previously opened and displayed migrated operational data successfully.
 
-Observed working UI included:
+### Generic isolated transaction sandbox
 
-- operator selection
-- dashboard
-- stock-in tab
-- course inventory rows
-- current stock/release counts
-
-### Isolated atomic write sandbox
-
-`migration/write-test.html` tested only:
+`migration/write-test.html` has already verified a transaction using only:
 
 - `migration_tests/{uid}`
 - `migration_test_logs/{uid}`
 
-Result:
+Result previously confirmed:
 
 - Auth PASS
 - two-document transaction PASS
@@ -85,38 +74,13 @@ Result:
 - cleanup delete PASS
 - operational 681 records unchanged
 
-## MIGRATION FILES
-
-Key migration files currently in branch:
-
-- `FIREBASE_MIGRATION_BASELINE.md`
-- `.firebaserc`
-- `firebase.json`
-- `migration/access.html`
-- `migration/index.html`
-- `migration/firebase-compat.js`
-- `migration/firebase-test.html`
-- `migration/write-test.html`
-- `migration/firebase-write-service.js`
-- `migration/firebase-atomic-patch.js`
-
-## LEGACY WRITE RISK DISCOVERED
+## LEGACY WRITE RISK
 
 The legacy app frequently performs writes in this pattern:
 
 `courses update → createLog(work_logs insert)`
 
 This can leave inventory/status updated without a matching audit log if the second write fails.
-
-Examples found include:
-
-- group stock-in
-- stock-out
-- stock-out confirmation
-- stock quantity edit
-- release reset
-- setup start/completion/final confirmation
-- course edits and status transitions
 
 Target Firebase design:
 
@@ -126,25 +90,68 @@ Target Firebase design:
 
 ### Completed in code
 
-`migration/firebase-write-service.js` provides atomic operations for:
+`migration/firebase-write-service.js` provides:
 
 - updateCourseWithLog
 - deleteCourseWithLog
 - insertCourseWithLog
 - logOnly
 
-It also supports expected-status conflict checking for update/delete paths.
+It supports expected-status conflict checking for update/delete paths.
 
-`migration/firebase-atomic-patch.js` was added to begin routing the highest-risk operational functions through the atomic service.
-
-### Current intended first conversion scope
-
-First priority:
+`migration/firebase-atomic-patch.js` currently overrides the first two high-risk flows:
 
 1. group stock-in
 2. stock-out
 
-Then extend to:
+`migration/index.html` injects the Firebase compatibility adapter, atomic write service, and atomic patch in that order and displays the atomic patch state in the migration banner.
+
+### Newly added isolated operational harness
+
+`migration/atomic-course-test.html` was added to test the real `courses` + `work_logs` transaction path without selecting or altering a historical business course.
+
+Safety design:
+
+- fixed test course ID: `migration_tx_test_<current anonymous UID>`
+- creates only that dedicated course document
+- calls the real `firebase-write-service.js` `updateCourseWithLog()` path
+- writes one matching `work_logs` document whose `course_id` is the fixed test ID
+- immediately reads course + log back and validates status/quantity/log values
+- deletes the test course and all logs tied to that fixed test ID
+- compares `courses` and `work_logs` counts before and after and requires exact restoration
+- provides a cleanup-only button for interrupted tests
+- dynamically displays a temporary Firestore Rules block limited to the current UID and fixed test course ID
+
+The harness is committed on `firebase-migration`, but Firebase Hosting deployment and real execution are NOT yet confirmed.
+
+## BRANCH RELATIONSHIP AT LAST CHECK
+
+At the last check before the new harness commit:
+
+- `main...firebase-migration`: diverged
+- migration branch ahead by 13 commits and behind by 1 documentation-side commit
+
+Re-check this on every new chat because the values can change.
+
+## FIRST INCOMPLETE STEP
+
+1. Confirm current `firebase-migration` HEAD and compare with `main` again.
+2. Deploy the current `firebase-migration/migration` directory to Firebase Hosting if the new harness is not yet deployed.
+3. Open `https://new-book-e6ec7.web.app/atomic-course-test.html`.
+4. Confirm the page shows:
+   - Anonymous Auth UID
+   - `PASS · Firebase Auth + 실제 원자적 쓰기 서비스 준비`
+   - fixed test ID `migration_tx_test_<UID>`
+5. Before pressing the transaction button, inspect current Firestore Rules in Firebase Console.
+6. Add only the page-generated temporary Rules blocks inside the existing `/databases/{database}/documents` scope. Do not broadly enable `courses` or `work_logs` writes.
+7. Run the isolated transaction once.
+8. Require all seven checks on the page to PASS, especially final count restoration.
+9. Immediately remove the temporary Rules blocks and return operational data to read-only.
+10. Re-open the normal migration app and confirm read functions remain normal.
+
+## AFTER THE ISOLATED TEST PASSES
+
+Only after the operational collection transaction harness passes should conversion continue to the next write paths:
 
 3. stock-out confirmation
 4. stock quantity edits
@@ -156,46 +163,7 @@ Then extend to:
 10. rollback/status correction
 11. course create/edit/delete
 
-## IMPORTANT DEPLOYMENT STATE
-
-At handoff creation, the atomic write service and patch code were committed to GitHub, but **the user had not yet confirmed a Firebase Hosting deployment of the newest atomic-write patch nor a real operational write test**.
-
-Therefore do NOT assume the deployed `new-book-e6ec7.web.app` contains the latest atomic patch.
-
-## FIRST INCOMPLETE STEP
-
-1. Re-fetch `firebase-migration` HEAD.
-2. Compare `main...firebase-migration`.
-3. Inspect `migration/firebase-atomic-patch.js`, `migration/firebase-write-service.js`, and `migration/index.html` to confirm current integration.
-4. If latest files are not deployed, instruct user to run:
-
-```bash
-cd ~/book
-git pull origin firebase-migration
-firebase deploy --only hosting
-```
-
-5. Confirm the Firebase test page loads the atomic patch indicator.
-6. **Do not permit operational writes yet.**
-7. Select or create a deliberately isolated test course/document strategy so the next real transaction test cannot alter production historical records.
-8. Temporarily allow writes only to the exact test document(s) and matching work-log path, then perform one reversible stock-in or stock-out transaction.
-9. Read back course and work_log and verify both values.
-10. Restore Rules to read-only immediately.
-
-## TESTING PRINCIPLE FOR NEXT STEP
-
-Avoid testing a real historical course if possible.
-
-Preferred sequence:
-
-- create a dedicated Firebase-only test course/document with an obvious ID such as `migration_tx_test_*`
-- keep it outside normal production filtering if practical
-- atomically mutate that test course + create matching work_log
-- verify both
-- delete test artifacts atomically or by controlled cleanup
-- confirm original collection counts/business records remain unchanged
-
-If the compatibility layer or UI cannot isolate such a test course safely, build a dedicated transaction test page instead of using operational buttons.
+Each converted path must use atomic course mutation + work log creation where both are logically one action.
 
 ## DO NOT DO YET
 
