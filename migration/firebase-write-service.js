@@ -8,6 +8,43 @@
     const client = await window.firebaseDbReady;
     const db = client.firebase.db;
 
+    // Migration safety: legacy sb.from(...).insert/update/delete paths are blocked.
+    // Only converted services that write Firestore directly should mutate data.
+    if (!client.__mgLegacyWriteGuardInstalled && typeof client.from === 'function') {
+      const originalFrom = client.from.bind(client);
+      client.from = function guardedFrom(table) {
+        const builder = originalFrom(table);
+        if (!builder || typeof builder.execute !== 'function') return builder;
+        const originalExecute = builder.execute.bind(builder);
+        for (const method of ['insert', 'update', 'delete']) {
+          if (typeof builder[method] !== 'function') continue;
+          const originalMethod = builder[method].bind(builder);
+          builder[method] = function (...args) {
+            const result = originalMethod(...args);
+            builder.__mgLegacyWriteOperation = method;
+            return result;
+          };
+        }
+        builder.execute = async function () {
+          if (builder.__mgLegacyWriteOperation && window.MG_FIREBASE_ALLOW_LEGACY_WRITES !== true) {
+            const op = builder.__mgLegacyWriteOperation;
+            const error = {
+              message: `Firebase 전환 안전장치: 아직 원자화되지 않은 레거시 ${op} 쓰기는 차단되었습니다.`,
+              code: 'mg/legacy-write-blocked',
+              details: `table=${table}, operation=${op}`
+            };
+            console.warn('[Firebase Migration] blocked legacy write', error);
+            return { data: null, error, count: null };
+          }
+          return originalExecute();
+        };
+        return builder;
+      };
+      client.__mgLegacyWriteGuardInstalled = true;
+      window.__mgLegacyWriteGuardReady = true;
+      console.info('[Firebase Migration] legacy insert/update/delete guard enabled');
+    }
+
     const TIMESTAMP_FIELDS = new Set([
       'start_date', 'end_date', 'scheduled_release_date', 'actual_release_date',
       'confirmed_at', 'setup_complete_date', 'created_at', 'updated_at', 'action_date'
