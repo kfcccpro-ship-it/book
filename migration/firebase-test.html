@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>MG 교재관리 Firebase Migration Test</title>
+  <style>
+    body{font-family:Arial,"Noto Sans KR",sans-serif;background:#f8fafc;color:#0f172a;margin:0;padding:32px}
+    .box{max-width:780px;margin:0 auto;background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:28px;box-shadow:0 8px 28px rgba(15,23,42,.08)}
+    h1{font-size:24px;margin:0 0 10px}.muted{color:#64748b;line-height:1.7}
+    pre{background:#0f172a;color:#e2e8f0;padding:16px;border-radius:12px;white-space:pre-wrap;word-break:break-word}
+    .ok{color:#047857;font-weight:700}.bad{color:#b91c1c;font-weight:700}
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>Firebase Migration Test Loader</h1>
+    <p class="muted">운영 main을 변경하지 않고, firebase-migration 브랜치의 기존 index.html을 Firebase DB 어댑터로 실행합니다.</p>
+    <p id="status">테스트 페이지를 준비하고 있습니다...</p>
+    <pre id="detail">대기 중</pre>
+  </div>
+<script>
+(async function () {
+  const status = document.getElementById('status');
+  const detail = document.getElementById('detail');
+  const sourceUrl = 'https://raw.githubusercontent.com/kfcccpro-ship-it/book/firebase-migration/index.html';
+  const adapterUrl = 'https://raw.githubusercontent.com/kfcccpro-ship-it/book/firebase-migration/migration/firebase-compat.js';
+
+  try {
+    const response = await fetch(sourceUrl, { cache: 'no-store' });
+    if (!response.ok) throw new Error(`index.html 다운로드 실패: HTTP ${response.status}`);
+    let html = await response.text();
+
+    const supabaseCdn = '<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></' + 'script>';
+    if (!html.includes(supabaseCdn)) throw new Error('Supabase SDK 태그를 찾지 못했습니다. 원본 구조가 변경되었을 수 있습니다.');
+    html = html.replace(supabaseCdn, `<script src="${adapterUrl}"></` + 'script>');
+
+    const initPattern = /const SUPABASE_URL = '[^']+';[\s\S]*?let sb;[\s\S]*?console\.error\('Supabase 초기화 실패:', e\);\s*\}/;
+    if (!initPattern.test(html)) throw new Error('Supabase 초기화 블록을 찾지 못했습니다.');
+    html = html.replace(initPattern, `let sb;\nwindow.__mgFirebaseReady = window.firebaseDbReady.then(client => {\n    sb = client;\n    window.__mgFirebaseClient = client;\n    return client;\n});`);
+
+    const loadMarker = "showLoadingOverlay('🔌 Supabase 연결 중...');";
+    if (!html.includes(loadMarker)) throw new Error('DOMContentLoaded 연결 시작 지점을 찾지 못했습니다.');
+    html = html.replace(loadMarker, `showLoadingOverlay('🔌 Firebase 연결 중...');\n    await window.__mgFirebaseReady;`);
+
+    html = html.replaceAll('Supabase 연결 오류:', 'Firebase 연결 오류:');
+    html = html.replace('Supabase → Settings → API Keys', 'Firebase Console → Firestore Database → 규칙 확인');
+    html = html.replace('<li><strong>"Legacy anon, service_role API keys"</strong> 탭 클릭</li>', '<li>Anonymous Authentication 사용 설정 확인</li>');
+    html = html.replace('<li><strong>anon public</strong> 키 복사 (eyJ...로 시작)</li>', '<li>현재 테스트 UID에 Firestore 임시 접근 권한 부여</li>');
+    html = html.replace('<li>Claude에게 해당 키 알려주기</li>', '<li>테스트 완료 후 Rules를 다시 deny-all로 잠그기</li>');
+
+    const banner = `<div id="firebase-migration-banner" style="position:fixed;left:8px;bottom:8px;z-index:100000;background:#111827;color:white;border-radius:10px;padding:8px 12px;font:12px/1.4 Arial,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.3)">Firebase migration branch · <span id="firebase-migration-uid">UID 확인 중...</span></div>\n<script>window.__mgFirebaseReady.then(function(c){var e=document.getElementById('firebase-migration-uid'); if(e) e.textContent='UID '+c.firebase.auth.currentUser.uid; localStorage.setItem('MG_FIREBASE_TEST_UID', c.firebase.auth.currentUser.uid);});</` + `script>`;
+    html = html.replace(/<body([^>]*)>/i, `<body$1>${banner}`);
+
+    status.innerHTML = '<span class="ok">변환 완료. Firebase 테스트 앱을 시작합니다...</span>';
+    detail.textContent = 'Source: firebase-migration/index.html\nAdapter: migration/firebase-compat.js\nProduction main: 변경 없음';
+
+    document.open();
+    document.write(html);
+    document.close();
+  } catch (error) {
+    console.error(error);
+    status.innerHTML = '<span class="bad">테스트 로더 실패</span>';
+    detail.textContent = error.stack || error.message || String(error);
+  }
+})();
+</script>
+</body>
+</html>
