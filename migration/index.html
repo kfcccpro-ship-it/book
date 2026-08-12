@@ -24,9 +24,10 @@
   const status = document.getElementById('status');
   const detail = document.getElementById('detail');
   const sourceUrl = 'https://raw.githubusercontent.com/kfcccpro-ship-it/book/firebase-migration/index.html';
-  const adapterUrl = new URL('./firebase-compat.js?v=4', window.location.href).href;
-  const writeServiceUrl = new URL('./firebase-write-service.js?v=2', window.location.href).href;
-  const atomicPatchUrl = new URL('./firebase-atomic-patch.js?v=2', window.location.href).href;
+  const adapterUrl = new URL('./firebase-compat.js?v=5', window.location.href).href;
+  const writeServiceUrl = new URL('./firebase-write-service.js?v=3', window.location.href).href;
+  const atomicPatchUrl = new URL('./firebase-atomic-patch.js?v=3', window.location.href).href;
+  const atomicPatchWave3Url = new URL('./firebase-atomic-patch-wave3.js?v=1', window.location.href).href;
 
   try {
     const response = await fetch(sourceUrl, { cache: 'no-store' });
@@ -38,7 +39,8 @@
     html = html.replace(supabaseCdn,
       `<script src="${adapterUrl}"></` + `script>\n` +
       `<script src="${writeServiceUrl}"></` + `script>\n` +
-      `<script src="${atomicPatchUrl}"></` + `script>`
+      `<script src="${atomicPatchUrl}"></` + `script>\n` +
+      `<script src="${atomicPatchWave3Url}"></` + `script>`
     );
 
     const initPattern = /const SUPABASE_URL = '[^']+';[\s\S]*?let sb;[\s\S]*?console\.error\('Supabase 초기화 실패:', e\);\s*\}/;
@@ -49,9 +51,6 @@
     if (!html.includes(loadMarker)) throw new Error('DOMContentLoaded 연결 시작 지점을 찾지 못했습니다.');
     html = html.replace(loadMarker, `showLoadingOverlay('🔌 Firebase 연결 중...');\n    await window.__mgFirebaseReady;`);
 
-    // Firebase 운영 전환 중에는 기존 681건을 기준 데이터로 사용한다.
-    // 레거시 앱의 시작 시 사용자 이름 보정/추가 및 INITIAL_COURSES 자동 삽입은
-    // Rules가 단순해진 뒤 예기치 않은 쓰기를 만들 수 있으므로 Firebase preview에서 제거한다.
     const bootstrapPattern = /    \/\/ ── 2\. 사용자 확인 & 삽입 ──[\s\S]*?    \/\/ ── 4\. 초기 설정 ──/;
     if (!bootstrapPattern.test(html)) throw new Error('레거시 자동 초기화 쓰기 블록을 찾지 못했습니다.');
     html = html.replace(bootstrapPattern,
@@ -67,11 +66,11 @@
     html = html.replace('<li><strong>anon public</strong> 키 복사 (eyJ...로 시작)</li>', '<li>Firestore Rules에서 인증 사용자 읽기 권한 확인</li>');
     html = html.replace('<li>Claude에게 해당 키 알려주기</li>', '<li>브라우저를 새로고침해 다시 확인</li>');
 
-    const banner = `<div id="firebase-migration-banner" style="position:fixed;left:8px;bottom:8px;z-index:100000;background:#111827;color:white;border-radius:10px;padding:8px 12px;font:12px/1.4 Arial,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.3)">Firebase preview · <span id="firebase-migration-uid">UID 확인 중...</span> · <span id="firebase-atomic-state">원자적 쓰기 확인 중...</span> · 자동초기화 쓰기 차단</div>\n<script>window.__mgFirebaseReady.then(function(c){var e=document.getElementById('firebase-migration-uid'); if(e) e.textContent='UID '+c.firebase.auth.currentUser.uid; localStorage.setItem('MG_FIREBASE_TEST_UID', c.firebase.auth.currentUser.uid); setTimeout(function(){var a=document.getElementById('firebase-atomic-state'); if(a) a.textContent=window.__mgAtomicPatchReady?'입고/출고 원자적 패치 준비':'원자적 패치 미확인';},300);}).catch(function(err){var e=document.getElementById('firebase-migration-uid'); if(e){e.textContent='초기화 오류 '+(err.code||err.name||'')+' '+(err.message||err);e.style.color='#fecaca';} console.error(err);});</` + `script>`;
+    const banner = `<div id="firebase-migration-banner" style="position:fixed;left:8px;bottom:8px;z-index:100000;background:#111827;color:white;border-radius:10px;padding:8px 12px;font:12px/1.4 Arial,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.3)">Firebase preview · <span id="firebase-migration-uid">UID 확인 중...</span> · <span id="firebase-atomic-state">원자적 쓰기 확인 중...</span> · 자동초기화 쓰기 차단</div>\n<script>window.__mgFirebaseReady.then(function(c){var e=document.getElementById('firebase-migration-uid'); if(e) e.textContent='UID '+c.firebase.auth.currentUser.uid; localStorage.setItem('MG_FIREBASE_TEST_UID', c.firebase.auth.currentUser.uid); setTimeout(function(){var a=document.getElementById('firebase-atomic-state'); if(a) a.textContent=window.__mgAtomicPatchWave3Ready?'원자적 패치 wave3 준비':(window.__mgAtomicPatchReady?'원자적 패치 wave2 준비':'원자적 패치 미확인');},500);}).catch(function(err){var e=document.getElementById('firebase-migration-uid'); if(e){e.textContent='초기화 오류 '+(err.code||err.name||'')+' '+(err.message||err);e.style.color='#fecaca';} console.error(err);});</` + `script>`;
     html = html.replace(/<body([^>]*)>/i, `<body$1>${banner}`);
 
     status.innerHTML = '<span class="ok">변환 완료. Firebase 테스트 앱을 시작합니다...</span>';
-    detail.textContent = 'Source: firebase-migration/index.html\nAdapter: Firebase compat\nStartup seed writes: DISABLED\nAtomic write layer: group stock-in + stock-out\nProduction root index.html: 변경 없음';
+    detail.textContent = 'Source: firebase-migration/index.html\nAdapter: Firebase compat\nStartup seed writes: DISABLED\nAtomic write layer: wave3\nProduction root index.html: 변경 없음';
 
     document.open();
     document.write(html);
