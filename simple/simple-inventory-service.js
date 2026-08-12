@@ -191,7 +191,7 @@
         const displayName = cleanName(target.data.inventory_display_name) || cleanName(target.data.course_name);
         const log = logData({
           courseId: targetCourseId, courseName: displayName, type: '출고', quantity: qty, actor,
-          previousStatus: target.data.status, newStatus: '출고완료',
+          previous_status: target.data.status, newStatus: '출고완료',
           notes: memo || `출고 ${qty}권 · 출고 후 잔고 ${availableAfter}권`
         });
         logId = log.id;
@@ -227,26 +227,23 @@
     return {createInventoryItem, renameInventoryGroup, stockInGroup, stockOutGroup, setGroupHidden};
   })();
 
-  // UI extension: turn the inbound screen into the simple inventory management hub.
   window.addEventListener('load', function () {
     if (typeof state === 'undefined' || typeof renderIn !== 'function') return;
-
     const baseGroupName = window.groupName || function(v){return String(v||'').trim();};
     window.inventoryDisplayName = function(course) {
       const explicit = String(course?.inventory_display_name || '').trim();
       return explicit || baseGroupName(course?.course_name || '');
     };
-    window.inventoryKey = function(name) {
-      return String(name || '').trim().replace(/\s+/g,'').toLowerCase();
-    };
 
+    // Keep grouping identity tied to the original course name. Display names may change freely.
     window.rebuildGroups = function () {
       const m = new Map();
       for (const c of state.courses) {
         const displayName = window.inventoryDisplayName(c);
-        const k = window.inventoryKey(displayName);
+        const k = groupKey(c.course_name);
         if (!m.has(k)) m.set(k,{key:k,name:displayName,courses:[],stock:0,released:0,hiddenCount:0,itemTypes:new Set()});
         const g=m.get(k);
+        g.name=displayName;
         g.courses.push(c);
         g.stock += Math.max(0,num(c.stock_quantity));
         g.released += Math.max(0,num(c.released_quantity));
@@ -271,23 +268,23 @@
       }).sort((a,b)=>(date(a.start_date)||0)-(date(b.start_date)||0));
     };
 
-    const viewIn = document.getElementById('view-in');
+    const viewIn=document.getElementById('view-in');
     if(viewIn){
       const pageHead=viewIn.querySelector('.page-head');
-      if(pageHead && !document.getElementById('newItemBtn')){
+      if(pageHead&&!document.getElementById('newItemBtn')){
         const controls=document.createElement('div');
         controls.style.cssText='display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end';
         controls.innerHTML='<button id="newItemBtn" class="btn blue small" style="display:none">＋ 새 교재/과정</button>';
         const hidden=document.getElementById('hiddenBtn');
-        if(hidden) controls.appendChild(hidden);
+        if(hidden)controls.appendChild(hidden);
         pageHead.appendChild(controls);
       }
       const info=viewIn.querySelector('.info-box');
-      if(info) info.innerHTML='<b>입고 화면에서 모두 관리합니다.</b><br><span style="font-size:13px">새 교재/과정 등록 · 이름 변경 · 입고 · 운영 종료 숨김까지 한 곳에서 처리합니다. 모든 변경은 기록됩니다.</span>';
+      if(info)info.innerHTML='<b>입고 화면에서 모두 관리합니다.</b><br><span style="font-size:13px">새 교재/과정 등록 · 이름 변경 · 입고 · 운영 종료 숨김까지 한 곳에서 처리합니다. 모든 변경은 기록됩니다.</span>';
     }
 
     const extraStyle=document.createElement('style');
-    extraStyle.textContent='.manage-row{display:flex;gap:7px;margin-top:10px;flex-wrap:wrap}.manage-row .btn{flex:1;min-width:92px}.type-note{font-size:11px;color:#64748b;background:#f1f5f9;border-radius:999px;padding:4px 8px;font-weight:850}.chip.active{background:#2563eb;color:#fff;border-color:#2563eb}.new-action{display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:12px}.new-action .btn{min-height:54px;font-size:16px}';
+    extraStyle.textContent='.manage-row{display:flex;gap:7px;margin-top:10px;flex-wrap:wrap}.manage-row .btn{flex:1;min-width:92px}.type-note{font-size:11px;color:#64748b;background:#f1f5f9;border-radius:999px;padding:4px 8px;font-weight:850}.chip.active{background:#2563eb;color:#fff;border-color:#2563eb}';
     document.head.appendChild(extraStyle);
 
     window.renderIn = function () {
@@ -295,7 +292,7 @@
       const list=activeGroups().filter(g=>!q||g.name.toLowerCase().includes(q));
       const canAdmin=state.actor?.name==='주나연';
       const newBtn=document.getElementById('newItemBtn');
-      if(newBtn) newBtn.style.display=canAdmin?'inline-flex':'none';
+      if(newBtn)newBtn.style.display=canAdmin?'inline-flex':'none';
       $('#inList').innerHTML=list.map(g=>{
         const l=stockLevel(g);
         const type=g.itemType&&g.itemType!=='교재'?`<span class="type-note">${esc(g.itemType)}</span>`:'';
@@ -310,59 +307,38 @@
       window.__newItemType='교재';
       openSheet(`<div class="sheet-title">새 교재/과정 등록</div><div class="sheet-sub">교재, 부교재, 추가교재 등 이름을 자유롭게 등록합니다. 일정이 없는 재고 전용 항목은 ‘이번 주’ 화면에 나타나지 않습니다.</div><div class="field"><label>이름</label><input id="newItemName" type="text" placeholder="예: 여신실무 사례집"></div><div class="field"><label>구분</label><div class="chips" id="newTypeChips"><button class="chip active" data-type="교재">교재</button><button class="chip" data-type="부교재">부교재</button><button class="chip" data-type="추가교재">추가교재</button><button class="chip" data-type="기타">기타</button></div></div><div class="field"><label>첫 입고 수량 <span style="font-weight:500;color:#94a3b8">(없으면 0)</span></label><input id="newItemQty" class="big-number" type="number" inputmode="numeric" min="0" value="0"></div><div class="field"><label>메모 (선택)</label><textarea id="newItemMemo" placeholder="예: 신규 제작"></textarea></div><div class="sheet-actions"><button class="btn light" onclick="closeSheet()">취소</button><button id="newItemSubmit" class="btn blue" onclick="submitCreateItem()">등록</button></div>`);
       document.querySelectorAll('#newTypeChips .chip').forEach(b=>b.onclick=()=>{document.querySelectorAll('#newTypeChips .chip').forEach(x=>x.classList.remove('active'));b.classList.add('active');window.__newItemType=b.dataset.type;});
-      setTimeout(()=>document.getElementById('newItemName')?.focus(),100);
     };
 
     window.submitCreateItem = async function () {
-      const actor=actorRequired();
-      if(!actor||actor.name!=='주나연') return;
+      const actor=actorRequired(); if(!actor||actor.name!=='주나연')return;
       const name=document.getElementById('newItemName')?.value.trim();
       const qty=parseInt(document.getElementById('newItemQty')?.value||'0',10);
       const memo=document.getElementById('newItemMemo')?.value.trim()||'';
       if(!name){notice('이름을 입력해주세요.');return;}
-      const duplicate=state.groups.some(g=>g.name.trim().toLowerCase()===name.toLowerCase());
-      if(duplicate){notice('같은 이름이 이미 있습니다. 기존 항목에서 입고해주세요.');return;}
-      const btn=document.getElementById('newItemSubmit'); if(btn)btn.disabled=true;
-      try{
-        await state.inventory.createInventoryItem({name,itemType:window.__newItemType||'교재',initialStock:Number.isInteger(qty)?qty:0,actor,memo});
-        closeSheet();notice(`${name} 등록 완료${qty>0?` · 첫 입고 ${qty}권`:''}`);await loadAll();
-      }catch(e){console.error(e);notice('등록 실패 · '+(e.message||e));}
-      finally{if(btn)btn.disabled=false;}
+      if(state.groups.some(g=>g.name.trim().toLowerCase()===name.toLowerCase())){notice('같은 이름이 이미 있습니다. 기존 항목에서 입고해주세요.');return;}
+      const btn=document.getElementById('newItemSubmit');if(btn)btn.disabled=true;
+      try{await state.inventory.createInventoryItem({name,itemType:window.__newItemType||'교재',initialStock:Number.isInteger(qty)?qty:0,actor,memo});closeSheet();notice(`${name} 등록 완료${qty>0?` · 첫 입고 ${qty}권`:''}`);await loadAll();}
+      catch(e){console.error(e);notice('등록 실패 · '+(e.message||e));}finally{if(btn)btn.disabled=false;}
     };
 
     window.openRenameItem = function (key) {
       const actor=actorRequired(),g=state.groups.find(x=>x.key===key);
-      if(!actor||actor.name!=='주나연'){notice('이름 변경은 주나연 담당자만 가능합니다.');return;}
-      if(!g)return;
+      if(!actor||actor.name!=='주나연'){notice('이름 변경은 주나연 담당자만 가능합니다.');return;} if(!g)return;
       openSheet(`<div class="sheet-title">이름 변경</div><div class="sheet-sub">입고·재고 화면에서 보이는 이름을 바꿉니다. 기존 교육과정 일정명과 과거 기록은 보존됩니다.</div><div class="field"><label>현재 이름</label><div class="card" style="box-shadow:none;margin:0">${esc(g.name)}</div></div><div class="field"><label>새 이름</label><input id="renameItemName" type="text" value="${esc(g.name)}"></div><div class="sheet-actions"><button class="btn light" onclick="closeSheet()">취소</button><button id="renameItemSubmit" class="btn blue" onclick="submitRenameItem('${esc(key)}')">이름 변경</button></div>`);
-      setTimeout(()=>{const el=document.getElementById('renameItemName');if(el){el.focus();el.select();}},100);
     };
 
     window.submitRenameItem = async function (key) {
-      const actor=actorRequired(),g=state.groups.find(x=>x.key===key);
-      if(!actor||actor.name!=='주나연'||!g)return;
-      const name=document.getElementById('renameItemName')?.value.trim();
-      if(!name){notice('새 이름을 입력해주세요.');return;}
-      const duplicate=state.groups.some(x=>x.key!==g.key&&x.name.trim().toLowerCase()===name.toLowerCase());
-      if(duplicate){notice('같은 이름이 이미 있습니다. 다른 이름을 사용해주세요.');return;}
+      const actor=actorRequired(),g=state.groups.find(x=>x.key===key); if(!actor||actor.name!=='주나연'||!g)return;
+      const name=document.getElementById('renameItemName')?.value.trim(); if(!name){notice('새 이름을 입력해주세요.');return;}
+      if(state.groups.some(x=>x.key!==g.key&&x.name.trim().toLowerCase()===name.toLowerCase())){notice('같은 이름이 이미 있습니다. 다른 이름을 사용해주세요.');return;}
       const btn=document.getElementById('renameItemSubmit');if(btn)btn.disabled=true;
-      try{
-        await state.inventory.renameInventoryGroup({groupCourseIds:g.courses.map(c=>c.id),oldName:g.name,newName:name,actor});
-        closeSheet();notice(`이름 변경 완료 · ${name}`);await loadAll();
-      }catch(e){console.error(e);notice('이름 변경 실패 · '+(e.message||e));}
-      finally{if(btn)btn.disabled=false;}
+      try{await state.inventory.renameInventoryGroup({groupCourseIds:g.courses.map(c=>c.id),oldName:g.name,newName:name,actor});closeSheet();notice(`이름 변경 완료 · ${name}`);await loadAll();}
+      catch(e){console.error(e);notice('이름 변경 실패 · '+(e.message||e));}finally{if(btn)btn.disabled=false;}
     };
 
-    const newBtn=document.getElementById('newItemBtn');
-    if(newBtn)newBtn.onclick=window.openCreateItem;
-
-    // Add management permission hint to operator objects used by the existing page.
-    if(Array.isArray(OPERATORS)){
-      OPERATORS.forEach(op=>{op.canManage=op.name==='주나연';});
-    }
-    if(state.actor){state.actor.canManage=state.actor.name==='주나연';}
-
-    rebuildGroups();
-    renderAll();
+    const newBtn=document.getElementById('newItemBtn');if(newBtn)newBtn.onclick=window.openCreateItem;
+    if(Array.isArray(OPERATORS))OPERATORS.forEach(op=>{op.canManage=op.name==='주나연';});
+    if(state.actor)state.actor.canManage=state.actor.name==='주나연';
+    rebuildGroups();renderAll();
   });
 })();
