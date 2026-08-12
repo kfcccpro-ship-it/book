@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MG Firebase 원자적 상태흐름 격리 테스트</title>
+<style>
+body{font-family:Arial,"Noto Sans KR",sans-serif;background:#f8fafc;color:#0f172a;margin:0;padding:28px}.box{max-width:940px;margin:auto;background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:26px;box-shadow:0 8px 28px rgba(15,23,42,.08)}h1{font-size:24px;margin:0 0 10px}.muted{color:#64748b;line-height:1.7}.uid,pre{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:#0f172a;color:#e5e7eb;padding:14px;border-radius:10px;white-space:pre-wrap;word-break:break-word}.ok{color:#047857;font-weight:700}.bad{color:#b91c1c;font-weight:700}.safe{background:#ecfdf5;border:1px solid #6ee7b7;padding:14px;border-radius:10px;margin:16px 0;line-height:1.65}button{border:0;border-radius:10px;padding:12px 16px;font-size:15px;font-weight:700;cursor:pointer;margin:4px 6px 4px 0}.primary{background:#2563eb;color:#fff}.secondary{background:#e2e8f0;color:#0f172a}button:disabled{background:#94a3b8;color:#fff;cursor:not-allowed}table{width:100%;border-collapse:collapse;margin-top:16px}th,td{border-bottom:1px solid #e5e7eb;padding:9px;text-align:left;vertical-align:top}code{background:#f1f5f9;padding:2px 5px;border-radius:5px}
+</style>
+</head>
+<body><div class="box">
+<h1>원자적 상태흐름 격리 테스트</h1>
+<p class="muted">실제 업무 과정은 사용하지 않습니다. 현재 브라우저 UID 전용 테스트 과정 하나를 만들고, 입고완료 → 출고대기 → 출고완료 → 출고확인 → 세팅중 → 세팅완료대기 → 세팅완료 흐름과 로그를 검증한 뒤 전부 삭제합니다.</p>
+<div class="safe"><b>안전 범위</b><br>과정: <code id="courseIdInline">UID 확인 후 생성</code><br>로그: 위 과정 ID에 연결된 테스트 로그만 생성·검증·삭제<br>기준선은 실행 전후 <code>courses</code>, <code>work_logs</code> 총 건수가 동일해야 PASS입니다.</div>
+<p>현재 Anonymous Auth UID</p><div id="uid" class="uid">확인 중...</div>
+<p id="status">Firebase 준비 중...</p>
+<button id="runBtn" class="primary" disabled>전체 상태흐름 테스트 실행</button>
+<button id="cleanupBtn" class="secondary" disabled>테스트 잔여물만 정리</button>
+<table><tbody>
+<tr><th>1. 인증/서비스</th><td id="r1">대기</td></tr>
+<tr><th>2. 기준선</th><td id="r2">대기</td></tr>
+<tr><th>3. 입고승인</th><td id="r3">대기</td></tr>
+<tr><th>4. 출고 + 승인로그</th><td id="r4">대기</td></tr>
+<tr><th>5. 출고확인</th><td id="r5">대기</td></tr>
+<tr><th>6. 세팅 시작</th><td id="r6">대기</td></tr>
+<tr><th>7. 세팅 완료대기</th><td id="r7">대기</td></tr>
+<tr><th>8. 최종확인</th><td id="r8">대기</td></tr>
+<tr><th>9. 로그 연속성</th><td id="r9">대기</td></tr>
+<tr><th>10. 정리/기준선 복원</th><td id="r10">대기</td></tr>
+</tbody></table>
+<pre id="log">대기 중</pre>
+</div>
+<script src="./firebase-compat.js?v=5"></script>
+<script src="./firebase-write-service.js?v=3"></script>
+<script type="module">
+import { collection,doc,getDoc,setDoc,getDocs,query,where,writeBatch,getCountFromServer,Timestamp } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js';
+const uidEl=document.getElementById('uid'),statusEl=document.getElementById('status'),runBtn=document.getElementById('runBtn'),cleanupBtn=document.getElementById('cleanupBtn'),logEl=document.getElementById('log'),courseIdInline=document.getElementById('courseIdInline');
+let client,db,service,uid,courseId;
+const actor={name:'MIGRATION_WORKFLOW_TEST',role:'system-test'};
+function mark(id,text,ok=true){const e=document.getElementById(id);e.textContent=text;e.className=ok?'ok':'bad'}
+function log(s){logEl.textContent=(logEl.textContent==='대기 중'||!logEl.textContent)?s:logEl.textContent+'\n'+s}
+function reset(){for(let i=2;i<=10;i++){const e=document.getElementById('r'+i);e.textContent='대기';e.className=''}}
+async function counts(){const [c,w]=await Promise.all([getCountFromServer(collection(db,'courses')),getCountFromServer(collection(db,'work_logs'))]);return{courses:c.data().count,work_logs:w.data().count}}
+async function cleanup(){const batch=writeBatch(db);const cr=doc(db,'courses',courseId);const cs=await getDoc(cr);if(cs.exists())batch.delete(cr);const qs=await getDocs(query(collection(db,'work_logs'),where('course_id','==',courseId)));qs.forEach(d=>batch.delete(d.ref));if(cs.exists()||!qs.empty)await batch.commit();const [c2,l2]=await Promise.all([getDoc(cr),getDocs(query(collection(db,'work_logs'),where('course_id','==',courseId)))]);if(c2.exists()||!l2.empty)throw new Error('테스트 잔여물 정리 실패');return{course:cs.exists(),logs:qs.size}}
+async function expectStatus(expected){const s=await getDoc(doc(db,'courses',courseId));if(!s.exists())throw new Error('테스트 과정 없음');const actual=s.data().status;if(actual!==expected)throw new Error(`상태 불일치: expected=${expected}, actual=${actual}`);return s.data()}
+try{[client,service]=await Promise.all([window.firebaseDbReady,window.firebaseWriteServiceReady]);db=client.firebase.db;uid=client.firebase.auth.currentUser?.uid;if(!uid)throw new Error('UID 없음');courseId='migration_flow_test_'+uid;uidEl.textContent=uid;courseIdInline.textContent=courseId;mark('r1','PASS · Auth + atomic service 준비');statusEl.innerHTML='<span class="ok">준비 완료.</span> 실제 업무 데이터와 분리된 상태흐름 테스트를 실행할 수 있습니다.';runBtn.disabled=false;cleanupBtn.disabled=false}catch(e){mark('r1','FAIL · '+e.message,false);statusEl.innerHTML='<span class="bad">초기화 실패: '+e.message+'</span>'}
+cleanupBtn.onclick=async()=>{runBtn.disabled=true;cleanupBtn.disabled=true;try{const r=await cleanup();statusEl.innerHTML=`<span class="ok">잔여물 정리 완료 · course ${r.course?'1':'0'} / logs ${r.logs}</span>`}catch(e){statusEl.innerHTML='<span class="bad">정리 실패: '+e.message+'</span>'}finally{runBtn.disabled=false;cleanupBtn.disabled=false}};
+runBtn.onclick=async()=>{runBtn.disabled=true;cleanupBtn.disabled=true;reset();logEl.textContent='';let base=null;try{
+ const oldC=await getDoc(doc(db,'courses',courseId)),oldL=await getDocs(query(collection(db,'work_logs'),where('course_id','==',courseId)));if(oldC.exists()||!oldL.empty)throw new Error('이전 테스트 잔여물이 있습니다. 먼저 정리 버튼을 누르세요.');
+ base=await counts();mark('r2',`PASS · courses ${base.courses} / work_logs ${base.work_logs}`);log(`기준선 courses=${base.courses}, work_logs=${base.work_logs}`);
+ const now=new Date();await setDoc(doc(db,'courses',courseId),{id:courseId,course_name:'[MIGRATION TEST] Workflow',status:'입고완료',stock_quantity:20,released_quantity:0,start_date:Timestamp.fromDate(new Date('2099-02-01T00:00:00Z')),end_date:Timestamp.fromDate(new Date('2099-02-02T00:00:00Z')),created_at:Timestamp.fromDate(now),updated_at:Timestamp.fromDate(now),migration_test_only:true});
+ let t=new Date().toISOString();
+ await service.updateCourseWithLog({courseId,expectedStatus:'입고완료',actor,updates:{status:'출고대기',updated_at:t},log:{course_name:'[MIGRATION TEST] Workflow',action_type:'승인',action_date:t,previous_status:'입고완료',new_status:'출고대기',notes:'관리자 입고 승인'}});await expectStatus('출고대기');mark('r3','PASS · 입고완료 → 출고대기 + 로그');
+ t=new Date().toISOString();await service.updateCourseWithLog({courseId,expectedStatus:'출고대기',actor,updates:{status:'출고완료',released_quantity:7,updated_at:t},log:{course_name:'[MIGRATION TEST] Workflow',action_type:'출고',action_date:t,quantity:7,previous_status:'출고대기',new_status:'출고완료',notes:'테스트 출고'}});await expectStatus('출고완료');await service.logOnly({courseId,actor,log:{course_name:'[MIGRATION TEST] Workflow',action_type:'승인',action_date:new Date().toISOString(),previous_status:'출고완료',new_status:'출고완료',notes:'관리자 출고 승인'}});mark('r4','PASS · 출고대기 → 출고완료 + 승인로그');
+ t=new Date().toISOString();await service.updateCourseWithLog({courseId,expectedStatus:'출고완료',actor,updates:{status:'출고확인',confirmed_by:actor.name,confirmed_at:t,updated_at:t},log:{course_name:'[MIGRATION TEST] Workflow',action_type:'확인',action_date:t,previous_status:'출고완료',new_status:'출고확인',notes:'담당자 출고확인'}});let c=await expectStatus('출고확인');if(c.confirmed_by!==actor.name)throw new Error('confirmed_by 누락');mark('r5','PASS · 출고완료 → 출고확인 + 확인자 기록');
+ t=new Date().toISOString();await service.updateCourseWithLog({courseId,expectedStatus:'출고확인',actor,updates:{status:'세팅중',updated_at:t},log:{course_name:'[MIGRATION TEST] Workflow',action_type:'세팅',action_date:t,previous_status:'출고확인',new_status:'세팅중',notes:'세팅 시작'}});await expectStatus('세팅중');mark('r6','PASS · 출고확인 → 세팅중 + 로그');
+ t=new Date().toISOString();await service.updateCourseWithLog({courseId,expectedStatus:'세팅중',actor,updates:{status:'세팅완료대기',updated_at:t},log:{course_name:'[MIGRATION TEST] Workflow',action_type:'완료',action_date:t,previous_status:'세팅중',new_status:'세팅완료대기',notes:'세팅 완료 대기'}});await expectStatus('세팅완료대기');mark('r7','PASS · 세팅중 → 세팅완료대기 + 로그');
+ t=new Date().toISOString();await service.updateCourseWithLog({courseId,expectedStatus:'세팅완료대기',actor,updates:{status:'세팅완료',setup_complete_date:t,updated_at:t},log:{course_name:'[MIGRATION TEST] Workflow',action_type:'완료',action_date:t,previous_status:'세팅완료대기',new_status:'세팅완료',notes:'관리자 최종확인 완료'}});c=await expectStatus('세팅완료');if(!c.setup_complete_date)throw new Error('setup_complete_date 누락');mark('r8','PASS · 세팅완료대기 → 세팅완료 + 완료일');
+ const logs=await getDocs(query(collection(db,'work_logs'),where('course_id','==',courseId)));const rows=logs.docs.map(d=>d.data());const expectedTypes=['승인','출고','승인','확인','세팅','완료','완료'];if(rows.length!==expectedTypes.length)throw new Error(`로그 수 불일치 ${rows.length}/${expectedTypes.length}`);for(const ty of expectedTypes){const idx=rows.findIndex(r=>r.action_type===ty);if(idx<0)throw new Error('필수 로그 누락: '+ty);rows.splice(idx,1)}mark('r9','PASS · 상태변경/승인 로그 7건 모두 존재');
+ const cleaned=await cleanup();const after=await counts();if(after.courses!==base.courses||after.work_logs!==base.work_logs)throw new Error(`기준선 불일치 courses ${after.courses}/${base.courses}, work_logs ${after.work_logs}/${base.work_logs}`);mark('r10',`PASS · course ${cleaned.course?'삭제':'없음'} / logs ${cleaned.logs} 삭제 · ${after.courses}/${after.work_logs} 복원`);statusEl.innerHTML='<span class="ok">ATOMIC WORKFLOW TEST PASS · 전체 상태흐름/로그/복원 검증 완료</span>';log('전체 상태흐름 PASS');
+}catch(e){console.error(e);statusEl.innerHTML='<span class="bad">TEST FAIL · '+(e.code||e.name||'error')+' · '+e.message+'</span>';log('ERROR: '+(e.stack||e.message||String(e)));try{const r=await cleanup();log(`실패 후 정리 시도 · course=${r.course?'1':'0'} / logs=${r.logs}`)}catch(ce){log('주의: 자동 정리 실패 · '+ce.message)}}finally{runBtn.disabled=false;cleanupBtn.disabled=false}}
+</script></body></html>
