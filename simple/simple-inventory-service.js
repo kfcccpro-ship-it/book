@@ -1,6 +1,6 @@
 // Simple mobile inventory service.
 // Guarantees: block negative stock on new outbound transactions, atomic stock mutation + log,
-// and reversible inventory-list hiding for completed course groups.
+// reversible inventory-list hiding, and safe inventory display-name management.
 (function () {
   'use strict';
 
@@ -9,7 +9,11 @@
     const client = await window.firebaseDbReady;
     const db = client.firebase.db;
 
-    const timestampFields = new Set(['actual_release_date','updated_at','action_date','created_at']);
+    const timestampFields = new Set([
+      'actual_release_date','updated_at','action_date','created_at',
+      'inventory_hidden_at'
+    ]);
+
     function cv(field, value) {
       if (value === null || value === undefined) return value;
       if (timestampFields.has(field) && typeof value === 'string') {
@@ -18,16 +22,25 @@
       }
       return value;
     }
+
     function object(input) {
       const out = {};
-      for (const [k,v] of Object.entries(input || {})) if (v !== undefined) out[k] = cv(k,v);
+      for (const [k,v] of Object.entries(input || {})) {
+        if (v !== undefined) out[k] = cv(k,v);
+      }
       return out;
     }
+
     function uid(prefix) {
       return (globalThis.crypto && crypto.randomUUID)
-        ? crypto.randomUUID()
+        ? `${prefix}_${crypto.randomUUID()}`
         : `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
     }
+
+    function cleanName(value) {
+      return String(value || '').trim().replace(/\s+/g, ' ');
+    }
+
     function logData({courseId, courseName, type, quantity, actor, notes, previousStatus, newStatus}) {
       const now = new Date().toISOString();
       return {
@@ -45,9 +58,112 @@
         created_at: now
       };
     }
+
     function finiteNonNegative(value) {
       const n = Number(value || 0);
       return Number.isFinite(n) && n >= 0 ? n : 0;
+    }
+
+    async function createInventoryItem({name, itemType, initialStock, actor, memo}) {
+      const displayName = cleanName(name);
+      const qty = Number(initialStock || 0);
+      if (!actor) throw new Error('작업자가 선택되지 않았습니다.');
+      if (!actor.canManage) throw new Error('새 교재 등록은 주나연 담당자만 할 수 있습니다.');
+      if (!displayName) throw new Error('교재명 또는 과정명을 입력해주세요.');
+      if (!Number.isInteger(qty) || qty < 0) throw new Error('첫 입고 수량은 0권 이상 정수로 입력해주세요.');
+
+      const courseId = uid('inventory');
+      const now = new Date().toISOString();
+      const status = qty > 0 ? '입고완료' : '입고대기';
+      const course = {
+        id: courseId,
+        course_name: displayName,
+        inventory_display_name: displayName,
+        inventory_item_type: cleanName(itemType) || '교재',
+        inventory_only: true,
+        inventory_hidden: false,
+        status,
+        stock_quantity: qty,
+        released_quantity: 0,
+        student_count: 0,
+        start_date: null,
+        end_date: null,
+        scheduled_release_date: null,
+        actual_release_date: null,
+        notes: cleanName(memo),
+        created_by: actor.name,
+        updated_by: actor.name,
+        created_at: now,
+        updated_at: now
+      };
+
+      const batch = fs.writeBatch(db);
+      batch.set(fs.doc(db, 'courses', courseId), object(course));
+
+      const createLog = logData({
+        courseId,
+        courseName: displayName,
+        type: '신규등록',
+        quantity: null,
+        actor,
+        previousStatus: null,
+        newStatus: status,
+        notes: `${course.inventory_item_type} 신규 등록${memo ? ` · ${cleanName(memo)}` : ''}`
+      });
+      batch.set(fs.doc(db, 'work_logs', createLog.id), object(createLog));
+
+      let stockLogId = null;
+      if (qty > 0) {
+        const stockLog = logData({
+          courseId,
+          courseName: displayName,
+          type: '입고',
+          quantity: qty,
+          actor,
+          previousStatus: '입고대기',
+          newStatus: '입고완료',
+          notes: `신규 등록과 함께 첫 입고 ${qty}권${memo ? ` · ${cleanName(memo)}` : ''}`
+        });
+        stockLogId = stockLog.id;
+        batch.set(fs.doc(db, 'work_logs', stockLog.id), object(stockLog));
+      }
+
+      await batch.commit();
+      return {courseId, createLogId: createLog.id, stockLogId};
+    }
+
+    async function renameInventoryGroup({groupCourseIds, oldName, newName, actor}) {
+      const ids = [...new Set((groupCourseIds || []).map(String).filter(Boolean))];
+      const before = cleanName(oldName);
+      const after = cleanName(newName);
+      if (!actor) throw new Error('작업자가 선택되지 않았습니다.');
+      if (!actor.canManage) throw new Error('이름 변경은 주나연 담당자만 할 수 있습니다.');
+      if (!ids.length) throw new Error('이름을 변경할 대상이 없습니다.');
+      if (ids.length > 450) throw new Error('연결된 과정이 너무 많아 한 번에 변경할 수 없습니다.');
+      if (!after) throw new Error('새 이름을 입력해주세요.');
+      if (before === after) throw new Error('현재 이름과 같습니다.');
+
+      const batch = fs.writeBatch(db);
+      const now = new Date().toISOString();
+      for (const id of ids) {
+        batch.update(fs.doc(db, 'courses', id), object({
+          inventory_display_name: after,
+          updated_by: actor.name,
+          updated_at: now
+        }));
+      }
+
+      const log = logData({
+        courseId: `group:${ids[0]}`,
+        courseName: after,
+        type: '이름변경',
+        quantity: null,
+        actor,
+        notes: `교재/과정 표시명 변경: "${before}" → "${after}"`
+      });
+      batch.set(fs.doc(db, 'work_logs', log.id), object(log));
+      await batch.commit();
+      return {newName: after, logId: log.id};
     }
 
     async function stockInGroup({targetCourseId, quantity, actor, memo}) {
@@ -60,6 +176,7 @@
       let committedStock = 0;
       let committedStatus = null;
       let logId = null;
+
       await fs.runTransaction(db, async tx => {
         const snap = await tx.get(ref);
         if (!snap.exists()) throw new Error('입고 대상 과정이 존재하지 않습니다.');
@@ -68,9 +185,10 @@
         committedStock = oldStock + qty;
         committedStatus = current.status === '입고대기' ? '입고완료' : current.status;
         const now = new Date().toISOString();
+        const displayName = cleanName(current.inventory_display_name) || cleanName(current.course_name);
         const log = logData({
           courseId: targetCourseId,
-          courseName: current.course_name,
+          courseName: displayName,
           type: '입고',
           quantity: qty,
           actor,
@@ -79,7 +197,12 @@
           notes: memo || `블록 입고 ${qty}권`
         });
         logId = log.id;
-        tx.update(ref, object({stock_quantity: committedStock, status: committedStatus, updated_at: now}));
+        tx.update(ref, object({
+          stock_quantity: committedStock,
+          status: committedStatus,
+          updated_by: actor.name,
+          updated_at: now
+        }));
         tx.set(fs.doc(db,'work_logs',log.id), object(log));
       });
       return {stockQuantity: committedStock, status: committedStatus, logId};
@@ -132,9 +255,10 @@
 
         const now = new Date().toISOString();
         const newStatus = '출고완료';
+        const displayName = cleanName(target.data.inventory_display_name) || cleanName(target.data.course_name);
         const log = logData({
           courseId: targetCourseId,
-          courseName: target.data.course_name,
+          courseName: displayName,
           type: '출고',
           quantity: qty,
           actor,
@@ -147,6 +271,7 @@
           released_quantity: releasedAfter,
           status: newStatus,
           actual_release_date: now,
+          updated_by: actor.name,
           updated_at: now
         }));
         tx.set(fs.doc(db,'work_logs',log.id), object(log));
@@ -157,26 +282,41 @@
     async function setGroupHidden({groupCourseIds, groupName, hidden, actor}) {
       const ids = [...new Set((groupCourseIds || []).map(String).filter(Boolean))];
       if (!actor) throw new Error('작업자가 선택되지 않았습니다.');
+      if (!actor.canManage) throw new Error('과정 숨김/복원은 주나연 담당자만 할 수 있습니다.');
       if (!ids.length) throw new Error('숨김 처리할 과정이 없습니다.');
       if (ids.length > 450) throw new Error('숨김 처리 대상이 너무 많습니다.');
+
       const batch = fs.writeBatch(db);
       const now = new Date().toISOString();
       for (const id of ids) {
-        batch.update(fs.doc(db,'courses',id), object({inventory_hidden: !!hidden, inventory_hidden_at: hidden ? now : null, inventory_hidden_by: hidden ? actor.name : null, updated_at: now}));
+        batch.update(fs.doc(db,'courses',id), object({
+          inventory_hidden: !!hidden,
+          inventory_hidden_at: hidden ? now : null,
+          inventory_hidden_by: hidden ? actor.name : null,
+          updated_by: actor.name,
+          updated_at: now
+        }));
       }
+
       const log = logData({
         courseId: `group:${ids[0]}`,
         courseName: groupName,
         type: hidden ? '숨김' : '복원',
         quantity: null,
         actor,
-        notes: hidden ? '운영 종료 과정 · 재고 화면에서 숨김' : '숨긴 과정 · 재고 화면에 다시 표시'
+        notes: hidden ? '운영 종료 · 재고 화면에서 숨김' : '숨긴 항목 · 재고 화면에 다시 표시'
       });
       batch.set(fs.doc(db,'work_logs',log.id), object(log));
       await batch.commit();
       return {hidden: !!hidden, logId: log.id};
     }
 
-    return {stockInGroup, stockOutGroup, setGroupHidden};
+    return {
+      createInventoryItem,
+      renameInventoryGroup,
+      stockInGroup,
+      stockOutGroup,
+      setGroupHidden
+    };
   })();
 })();
