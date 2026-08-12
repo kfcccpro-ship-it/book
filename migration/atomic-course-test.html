@@ -11,20 +11,20 @@ body{font-family:Arial,"Noto Sans KR",sans-serif;background:#f8fafc;color:#0f172
 <body>
 <div class="box">
 <h1>운영 컬렉션 원자적 거래 격리 테스트</h1>
-<p class="muted">실제 업무 과정은 선택하지 않습니다. <code>courses</code>와 <code>work_logs</code> 안에 현재 UID 전용 테스트 문서를 잠깐 만들고, 실제 <code>firebase-write-service.js</code>의 <code>updateCourseWithLog()</code>를 실행한 뒤 즉시 재조회·삭제합니다.</p>
-<div class="warn"><b>중요:</b> 아래 실행 버튼은 Firestore Rules가 현재 UID의 테스트 문서에만 쓰기를 허용하도록 임시 설정된 경우에만 사용합니다. 운영 과정 ID나 기존 로그는 수정하지 않습니다.</div>
-<div class="safe"><b>고정 테스트 범위</b><br>과정 문서: <code id="courseIdInline">UID 확인 후 생성</code><br>로그: 위 테스트 과정 ID를 <code>course_id</code>로 갖는 신규 테스트 로그만 허용</div>
+<p class="muted">실제 업무 과정은 선택하지 않습니다. <code>courses</code>와 <code>work_logs</code> 안에 현재 브라우저 전용 테스트 문서를 잠깐 만들고, 실제 <code>firebase-write-service.js</code>의 <code>updateCourseWithLog()</code>를 실행한 뒤 즉시 재조회·삭제합니다.</p>
+<div class="warn"><b>현재 상태:</b> 소수 사용자용 단순 Firestore Rules가 게시된 상태를 전제로 합니다. 별도의 임시 UID 규칙 추가나 Firebase CLI 작업은 필요하지 않습니다. 테스트는 <code>migration_tx_test_...</code> 문서만 만들었다가 즉시 삭제합니다.</div>
+<div class="safe"><b>고정 테스트 범위</b><br>과정 문서: <code id="courseIdInline">UID 확인 후 생성</code><br>로그: 위 테스트 과정 ID를 <code>course_id</code>로 갖는 신규 테스트 로그만 생성·검증·삭제</div>
 <p>현재 Anonymous Auth UID</p><div id="uid" class="uid">확인 중...</div>
 <p id="status">Firebase 인증 및 원자적 쓰기 서비스를 확인하고 있습니다...</p>
 
-<details>
-<summary><b>임시 Firestore Rules 추가 블록 보기</b></summary>
-<p class="muted">현재 Rules 전체를 교체하지 말고, 기존 <code>match /databases/{database}/documents</code> 안에 아래 두 블록만 임시로 추가합니다. 테스트 직후 반드시 제거합니다.</p>
+<details style="display:none">
+<summary><b>과거 임시 Firestore Rules 참고</b></summary>
+<p class="muted">현재는 사용하지 않습니다.</p>
 <pre id="rules">UID 확인 후 생성됩니다.</pre>
 <button id="copyRules" class="secondary" disabled>Rules 블록 복사</button>
 </details>
 
-<button id="runBtn" class="primary" disabled>격리 원자적 거래 테스트 실행</button>
+<button id="runBtn" class="primary" disabled>원자적 거래 테스트 실행</button>
 <button id="cleanupBtn" class="secondary" disabled>테스트 잔여물만 정리</button>
 <table><tbody>
 <tr><th>1. 인증/서비스</th><td id="r1">대기</td></tr>
@@ -38,8 +38,8 @@ body{font-family:Arial,"Noto Sans KR",sans-serif;background:#f8fafc;color:#0f172
 <pre id="log">대기 중</pre>
 </div>
 
-<script src="./firebase-compat.js?v=4"></script>
-<script src="./firebase-write-service.js?v=2"></script>
+<script src="./firebase-compat.js?v=5"></script>
+<script src="./firebase-write-service.js?v=3"></script>
 <script type="module">
 import { collection, doc, getDoc, setDoc, getDocs, query, where, writeBatch, getCountFromServer, Timestamp } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js';
 
@@ -56,7 +56,7 @@ let client,db,service,uid,courseId,lastLogId=null;
 function mark(id,text,ok=true){const e=document.getElementById(id);e.textContent=text;e.className=ok?'ok':'bad'}
 function log(s){logEl.textContent=(logEl.textContent==='대기 중'||logEl.textContent==='')?s:(logEl.textContent+'\n'+s);logEl.scrollTop=logEl.scrollHeight}
 function resetMarks(){for(let i=2;i<=7;i++){const e=document.getElementById('r'+i);e.textContent='대기';e.className=''}}
-function rulesFor(currentUid){const cid='migration_tx_test_'+currentUid;return `// TEMPORARY TEST-ONLY ALLOW BLOCKS — remove immediately after test\nmatch /courses/{courseId} {\n  allow create, update, delete: if request.auth != null\n    && request.auth.uid == '${currentUid}'\n    && courseId == '${cid}';\n}\n\nmatch /work_logs/{logId} {\n  allow create: if request.auth != null\n    && request.auth.uid == '${currentUid}'\n    && request.resource.data.course_id == '${cid}';\n  allow delete: if request.auth != null\n    && request.auth.uid == '${currentUid}'\n    && resource.data.course_id == '${cid}';\n}`}
+function rulesFor(currentUid){const cid='migration_tx_test_'+currentUid;return `// LEGACY REFERENCE ONLY — current simple rules make this unnecessary\nmatch /courses/{courseId} {\n  allow create, update, delete: if request.auth != null\n    && request.auth.uid == '${currentUid}'\n    && courseId == '${cid}';\n}\n\nmatch /work_logs/{logId} {\n  allow create: if request.auth != null\n    && request.auth.uid == '${currentUid}'\n    && request.resource.data.course_id == '${cid}';\n  allow delete: if request.auth != null\n    && request.auth.uid == '${currentUid}'\n    && resource.data.course_id == '${cid}';\n}`}
 
 async function counts(){const [c,w]=await Promise.all([getCountFromServer(collection(db,'courses')),getCountFromServer(collection(db,'work_logs'))]);return{courses:c.data().count,work_logs:w.data().count}}
 
@@ -83,7 +83,7 @@ try{
   courseId='migration_tx_test_'+uid;
   uidEl.textContent=uid;courseIdInline.textContent=courseId;rulesEl.textContent=rulesFor(uid);
   mark('r1','PASS · Firebase Auth + 실제 원자적 쓰기 서비스 준비');
-  statusEl.innerHTML='<span class="ok">준비 완료.</span> Rules를 테스트 전용으로 제한한 뒤 실행하십시오.';
+  statusEl.innerHTML='<span class="ok">준비 완료.</span> 현재 게시된 단순 운영 Rules로 바로 테스트할 수 있습니다.';
   runBtn.disabled=false;cleanupBtn.disabled=false;copyRules.disabled=false;
 }catch(e){console.error(e);uidEl.textContent='초기화 실패';mark('r1','FAIL · '+(e.code||e.name||'error'),false);statusEl.innerHTML='<span class="bad">초기화 실패: '+e.message+'</span>'}
 
