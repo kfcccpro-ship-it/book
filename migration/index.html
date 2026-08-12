@@ -24,7 +24,9 @@
   const status = document.getElementById('status');
   const detail = document.getElementById('detail');
   const sourceUrl = 'https://raw.githubusercontent.com/kfcccpro-ship-it/book/firebase-migration/index.html';
-  const adapterUrl = new URL('./firebase-compat.js?v=2', window.location.href).href;
+  const adapterUrl = new URL('./firebase-compat.js?v=3', window.location.href).href;
+  const writeServiceUrl = new URL('./firebase-write-service.js?v=1', window.location.href).href;
+  const atomicPatchUrl = new URL('./firebase-atomic-patch.js?v=1', window.location.href).href;
 
   try {
     const response = await fetch(sourceUrl, { cache: 'no-store' });
@@ -33,7 +35,11 @@
 
     const supabaseCdn = '<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></' + 'script>';
     if (!html.includes(supabaseCdn)) throw new Error('Supabase SDK 태그를 찾지 못했습니다. 원본 구조가 변경되었을 수 있습니다.');
-    html = html.replace(supabaseCdn, `<script src="${adapterUrl}"></` + 'script>');
+    html = html.replace(supabaseCdn,
+      `<script src="${adapterUrl}"></` + `script>\n` +
+      `<script src="${writeServiceUrl}"></` + `script>\n` +
+      `<script src="${atomicPatchUrl}"></` + `script>`
+    );
 
     const initPattern = /const SUPABASE_URL = '[^']+';[\s\S]*?let sb;[\s\S]*?console\.error\('Supabase 초기화 실패:', e\);\s*\}/;
     if (!initPattern.test(html)) throw new Error('Supabase 초기화 블록을 찾지 못했습니다.');
@@ -49,11 +55,11 @@
     html = html.replace('<li><strong>anon public</strong> 키 복사 (eyJ...로 시작)</li>', '<li>현재 테스트 UID에 Firestore 임시 접근 권한 부여</li>');
     html = html.replace('<li>Claude에게 해당 키 알려주기</li>', '<li>테스트 완료 후 Rules를 다시 deny-all로 잠그기</li>');
 
-    const banner = `<div id="firebase-migration-banner" style="position:fixed;left:8px;bottom:8px;z-index:100000;background:#111827;color:white;border-radius:10px;padding:8px 12px;font:12px/1.4 Arial,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.3)">Firebase migration branch · <span id="firebase-migration-uid">UID 확인 중...</span></div>\n<script>window.__mgFirebaseReady.then(function(c){var e=document.getElementById('firebase-migration-uid'); if(e) e.textContent='UID '+c.firebase.auth.currentUser.uid; localStorage.setItem('MG_FIREBASE_TEST_UID', c.firebase.auth.currentUser.uid);}).catch(function(err){var e=document.getElementById('firebase-migration-uid'); if(e){e.textContent='초기화 오류 '+(err.code||err.name||'')+' '+(err.message||err);e.style.color='#fecaca';} console.error(err);});</` + `script>`;
+    const banner = `<div id="firebase-migration-banner" style="position:fixed;left:8px;bottom:8px;z-index:100000;background:#111827;color:white;border-radius:10px;padding:8px 12px;font:12px/1.4 Arial,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.3)">Firebase migration branch · <span id="firebase-migration-uid">UID 확인 중...</span> · <span id="firebase-atomic-state">쓰기 보호 확인 중...</span></div>\n<script>window.__mgFirebaseReady.then(function(c){var e=document.getElementById('firebase-migration-uid'); if(e) e.textContent='UID '+c.firebase.auth.currentUser.uid; localStorage.setItem('MG_FIREBASE_TEST_UID', c.firebase.auth.currentUser.uid); setTimeout(function(){var a=document.getElementById('firebase-atomic-state'); if(a) a.textContent=window.__mgAtomicPatchReady?'원자적 입고/출고 패치 준비':'현재 읽기 전용';},300);}).catch(function(err){var e=document.getElementById('firebase-migration-uid'); if(e){e.textContent='초기화 오류 '+(err.code||err.name||'')+' '+(err.message||err);e.style.color='#fecaca';} console.error(err);});</` + `script>`;
     html = html.replace(/<body([^>]*)>/i, `<body$1>${banner}`);
 
     status.innerHTML = '<span class="ok">변환 완료. Firebase 테스트 앱을 시작합니다...</span>';
-    detail.textContent = 'Source: firebase-migration/index.html\nAdapter: same-origin /firebase-compat.js\nProduction main: 변경 없음';
+    detail.textContent = 'Source: firebase-migration/index.html\nAdapter: Firebase compat\nAtomic write layer: group stock-in + stock-out\nProduction main: 변경 없음';
 
     document.open();
     document.write(html);
