@@ -1,157 +1,135 @@
 # MG 교재관리 시스템 — PROJECT STATUS
 
-> 작업 브랜치 `firebase-migration`의 **실시간 인계 문서**.
-> 새 채팅에서는 반드시 GitHub 최신 HEAD와 compare 결과를 다시 확인한 뒤 이 문서를 사용한다.
-
-## CURRENT BRANCH
+## CURRENT ARCHITECTURE
 
 - Repository: `kfcccpro-ship-it/book`
-- Branch: `firebase-migration`
-- Latest verified work: isolated operational atomic transaction harness added
-- `main` remains protected until Firebase write parity and regression verification complete.
+- Production/deployment branch: `main`
+- Migration development branch: `firebase-migration`
+- Web deployment: GitHub Pages (`main` root)
+- GitHub Pages URL: `https://kfcccpro-ship-it.github.io/book/`
+- Firebase project: `new-book-e6ec7`
+- Firebase role: Anonymous Authentication + Firestore data store
+- PowerShell/Firebase CLI deployment is no longer the normal workflow.
 
-## PROJECT PURPOSE
+Normal workflow:
 
-기존 Supabase 기반 MG 인재개발원 교재관리 웹앱을 Firebase 기반으로 전환하고, 현재까지 관리된 데이터를 손실 없이 유지하면서 향후 기능 수정·보완·업데이트를 GitHub 중심으로 단순화한다.
+`user request -> ChatGPT edits GitHub -> commit/push -> GitHub Pages automatic deployment -> browser verification`
 
-최우선 조건:
+## DATA BASELINE
 
-1. 기존 데이터 손실 0
-2. Supabase 원본 유지
-3. Firebase 기능 동등성 검증 후 운영 전환
-4. 재고 변경과 로그 기록의 원자성 보장
-5. UI/기능 리디자인은 DB 전환 안정화 후 진행
+Supabase snapshot -> Firestore read-back verification already completed:
 
-## VERIFIED DATA MIGRATION BASELINE
-
-Supabase snapshot → Firestore migration and read-back verification completed.
-
-| Collection | Source | Firestore | Result |
-|---|---:|---:|---|
-| courses | 180 | 180 | PASS |
-| work_logs | 405 | 405 | PASS |
-| sub_books | 6 | 6 | PASS |
-| sub_book_logs | 13 | 13 | PASS |
-| users | 77 | 77 | PASS |
-| TOTAL | 681 | 681 | PASS |
+| Collection | Count |
+|---|---:|
+| courses | 180 |
+| work_logs | 405 |
+| sub_books | 6 |
+| sub_book_logs | 13 |
+| users | 77 |
+| TOTAL | 681 |
 
 - Field mismatch: 0
-- Existing source anomalies are preserved, not auto-corrected.
-- Supabase remains available as source/rollback reference.
+- Supabase source remains preserved as rollback/reference.
 
-## FIREBASE CONFIGURATION
+## CURRENT SAFETY MODEL
 
-- Firebase project: `new-book-e6ec7`
-- Firebase Hosting test URL: `https://new-book-e6ec7.web.app`
-- Firestore database: `(default)`
-- Auth: Anonymous Authentication enabled
-- Public repo: NEVER commit UID allowlists, passwords, tokens, service-account JSON, or secrets.
+The project is intentionally being simplified for a very small internal user group, but data integrity remains the priority.
 
-## SECURITY / RULES STATE
+### 1. Startup legacy writes disabled
 
-The last confirmed safe state was read-only for operational data. Do not assume current console Rules without re-checking immediately before a real write test.
+`migration/index.html` removes the legacy startup block that previously attempted to:
 
-Never enable unrestricted writes.
+- rename/add users
+- seed INITIAL_COURSES when courses appeared empty
 
-## VERIFIED FIREBASE FUNCTIONALITY
+The Firebase preview now uses the already migrated Firestore data only.
 
-### Read path
+### 2. Unconverted legacy writes blocked in the app
 
-Firebase test app previously opened and displayed migrated operational data successfully.
+`migration/firebase-write-service.js` installs a compatibility guard that blocks legacy:
 
-### Generic isolated transaction sandbox
+- `sb.from(...).insert(...)`
+- `sb.from(...).update(...)`
+- `sb.from(...).delete(...)`
 
-`migration/write-test.html` has already verified a transaction using only:
+unless `window.MG_FIREBASE_ALLOW_LEGACY_WRITES === true` is explicitly set.
 
-- `migration_tests/{uid}`
-- `migration_test_logs/{uid}`
+This means read paths and realtime subscriptions can continue while old non-atomic write flows remain disabled.
 
-Result previously confirmed:
+Converted Firestore atomic services write directly and are not blocked.
 
-- Auth PASS
-- two-document transaction PASS
-- immediate read-back PASS
-- cleanup delete PASS
-- operational 681 records unchanged
+### 3. Atomic write service
 
-## LEGACY WRITE RISK
+Available operations:
 
-The legacy app frequently performs writes in this pattern:
+- `updateCourseWithLog`
+- `deleteCourseWithLog`
+- `insertCourseWithLog`
+- `logOnly`
 
-`courses update → createLog(work_logs insert)`
-
-This can leave inventory/status updated without a matching audit log if the second write fails.
-
-Target Firebase design:
-
-`course mutation + work_log creation` in a single Firestore transaction/batch.
-
-## ATOMIC WRITE IMPLEMENTATION STATUS
-
-### Completed in code
-
-`migration/firebase-write-service.js` provides:
-
-- updateCourseWithLog
-- deleteCourseWithLog
-- insertCourseWithLog
-- logOnly
-
-It supports expected-status conflict checking for update/delete paths.
-
-`migration/firebase-atomic-patch.js` currently overrides the first two high-risk flows:
+Current first-wave operational patch:
 
 1. group stock-in
 2. stock-out
 
-`migration/index.html` injects the Firebase compatibility adapter, atomic write service, and atomic patch in that order and displays the atomic patch state in the migration banner.
+Both use one Firestore transaction for course mutation + work log creation.
 
-### Newly added isolated operational harness
+## SIMPLE FIRESTORE RULES CANDIDATE
 
-`migration/atomic-course-test.html` was added to test the real `courses` + `work_logs` transaction path without selecting or altering a historical business course.
+File: `FIRESTORE_RULES_SIMPLE.rules`
 
-Safety design:
+Target design for the small internal team:
 
-- fixed test course ID: `migration_tx_test_<current anonymous UID>`
-- creates only that dedicated course document
-- calls the real `firebase-write-service.js` `updateCourseWithLog()` path
-- writes one matching `work_logs` document whose `course_id` is the fixed test ID
-- immediately reads course + log back and validates status/quantity/log values
-- deletes the test course and all logs tied to that fixed test ID
-- compares `courses` and `work_logs` counts before and after and requires exact restoration
-- provides a cleanup-only button for interrupted tests
-- dynamically displays a temporary Firestore Rules block limited to the current UID and fixed test course ID
+- authenticated anonymous users can read/write `courses`
+- authenticated anonymous users can read/write `work_logs`
+- authenticated anonymous users can read/write `sub_books`
+- authenticated anonymous users can read/write `sub_book_logs`
+- authenticated users can read `users`, but normal app operation cannot write `users`
+- all other collections closed
+- migration sandbox remains UID-isolated
 
-The harness is committed on `firebase-migration`, but Firebase Hosting deployment and real execution are NOT yet confirmed.
+This is intentionally a low-complexity model. It is not strong identity security; the application is treated as a small internal inventory tool. App-side write guards and atomic transactions provide the primary protection against accidental data corruption.
 
-## BRANCH RELATIONSHIP AT LAST CHECK
+## GITHUB PAGES MIGRATION PREVIEW
 
-At the last check before the new harness commit:
+Published under `main/migration/` without replacing the existing root production `index.html`.
 
-- `main...firebase-migration`: diverged
-- migration branch ahead by 13 commits and behind by 1 documentation-side commit
+Important files:
 
-Re-check this on every new chat because the values can change.
+- `migration/index.html`
+- `migration/firebase-compat.js`
+- `migration/firebase-write-service.js`
+- `migration/firebase-atomic-patch.js`
+- `migration/atomic-course-test.html`
+- `migration/write-test.html`
+
+GitHub Pages builds have been confirmed working after adding `.nojekyll`.
+
+## ISOLATED ATOMIC TEST HARNESS
+
+`migration/atomic-course-test.html`:
+
+- uses test course ID `migration_tx_test_<anonymous UID>`
+- creates only that test course
+- calls the real `updateCourseWithLog()` service
+- validates course + work_log read-back
+- deletes all test artifacts
+- requires course/work_log counts to return to their baseline
+
+No historical course should be used for this test.
 
 ## FIRST INCOMPLETE STEP
 
-1. Confirm current `firebase-migration` HEAD and compare with `main` again.
-2. Deploy the current `firebase-migration/migration` directory to Firebase Hosting if the new harness is not yet deployed.
-3. Open `https://new-book-e6ec7.web.app/atomic-course-test.html`.
-4. Confirm the page shows:
-   - Anonymous Auth UID
-   - `PASS · Firebase Auth + 실제 원자적 쓰기 서비스 준비`
-   - fixed test ID `migration_tx_test_<UID>`
-5. Before pressing the transaction button, inspect current Firestore Rules in Firebase Console.
-6. Add only the page-generated temporary Rules blocks inside the existing `/databases/{database}/documents` scope. Do not broadly enable `courses` or `work_logs` writes.
-7. Run the isolated transaction once.
-8. Require all seven checks on the page to PASS, especially final count restoration.
-9. Immediately remove the temporary Rules blocks and return operational data to read-only.
-10. Re-open the normal migration app and confirm read functions remain normal.
+1. Confirm the latest GitHub Pages build for the new safety-guard commits is `built`.
+2. Apply the contents of `FIRESTORE_RULES_SIMPLE.rules` once in Firebase Console -> Firestore Database -> Rules -> Publish.
+3. Open the GitHub Pages Firebase preview and verify existing Firestore data loads normally.
+4. Open `/book/migration/atomic-course-test.html` and run one isolated test.
+5. Require all seven checks to PASS, including final count restoration.
+6. After the isolated test passes, continue converting the remaining legacy write flows to the atomic service.
 
-## AFTER THE ISOLATED TEST PASSES
+## NEXT WRITE FLOWS TO CONVERT
 
-Only after the operational collection transaction harness passes should conversion continue to the next write paths:
+After the isolated test passes:
 
 3. stock-out confirmation
 4. stock quantity edits
@@ -162,40 +140,20 @@ Only after the operational collection transaction harness passes should conversi
 9. release reset
 10. rollback/status correction
 11. course create/edit/delete
-
-Each converted path must use atomic course mutation + work log creation where both are logically one action.
+12. sub-book write flows
 
 ## DO NOT DO YET
 
-- Do not merge `firebase-migration` into `main`.
-- Do not disable/delete Supabase.
-- Do not globally enable Firestore write.
-- Do not redesign the whole UI yet.
-- Do not normalize duplicate users or historical anomalies yet.
-- Do not change existing IDs or log history.
-
-## LATER PHASES AFTER WRITE PARITY
-
-After all core write paths pass:
-
-1. remove Supabase runtime dependency
-2. make Firebase version self-contained
-3. regression-test all operational flows
-4. add GitHub Actions validation
-5. automate GitHub → Firebase Hosting deployment
-6. only then consider UI hierarchy/redesign and code modularization
-7. merge to `main` after explicit final verification
+- Do not delete/disable Supabase yet.
+- Do not replace the root production app with the Firebase preview yet.
+- Do not change existing document IDs or historical logs.
+- Do not enable legacy writes globally.
+- Do not perform a major UI redesign until Firebase write parity is complete.
 
 ## NEW CHAT START PHRASE
 
-User will say:
+When the user says:
 
 **`교재관리 다음 작업 진행`**
 
-The Assistant should read:
-
-1. `main/PROJECT_HANDOFF_LATEST.md`
-2. this `firebase-migration/PROJECT_STATUS.md`
-3. current GitHub refs/compare
-
-Then continue from **FIRST INCOMPLETE STEP** without asking the user to re-explain the project.
+read the latest GitHub state and continue from FIRST INCOMPLETE STEP without asking the user to restate the project.
