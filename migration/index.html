@@ -15,7 +15,7 @@
 <body>
   <div class="box">
     <h1>Firebase Migration Test Loader</h1>
-    <p class="muted">운영 main을 변경하지 않고, firebase-migration 브랜치의 기존 index.html을 Firebase DB 어댑터로 실행합니다.</p>
+    <p class="muted">기존 운영 앱 코드를 Firebase DB 어댑터로 실행하되, 앱 시작 시 사용자/과정 데이터를 자동 수정·삽입하는 레거시 초기화 쓰기는 차단합니다.</p>
     <p id="status">테스트 페이지를 준비하고 있습니다...</p>
     <pre id="detail">대기 중</pre>
   </div>
@@ -24,9 +24,9 @@
   const status = document.getElementById('status');
   const detail = document.getElementById('detail');
   const sourceUrl = 'https://raw.githubusercontent.com/kfcccpro-ship-it/book/firebase-migration/index.html';
-  const adapterUrl = new URL('./firebase-compat.js?v=3', window.location.href).href;
-  const writeServiceUrl = new URL('./firebase-write-service.js?v=1', window.location.href).href;
-  const atomicPatchUrl = new URL('./firebase-atomic-patch.js?v=1', window.location.href).href;
+  const adapterUrl = new URL('./firebase-compat.js?v=4', window.location.href).href;
+  const writeServiceUrl = new URL('./firebase-write-service.js?v=2', window.location.href).href;
+  const atomicPatchUrl = new URL('./firebase-atomic-patch.js?v=2', window.location.href).href;
 
   try {
     const response = await fetch(sourceUrl, { cache: 'no-store' });
@@ -49,17 +49,29 @@
     if (!html.includes(loadMarker)) throw new Error('DOMContentLoaded 연결 시작 지점을 찾지 못했습니다.');
     html = html.replace(loadMarker, `showLoadingOverlay('🔌 Firebase 연결 중...');\n    await window.__mgFirebaseReady;`);
 
+    // Firebase 운영 전환 중에는 기존 681건을 기준 데이터로 사용한다.
+    // 레거시 앱의 시작 시 사용자 이름 보정/추가 및 INITIAL_COURSES 자동 삽입은
+    // Rules가 단순해진 뒤 예기치 않은 쓰기를 만들 수 있으므로 Firebase preview에서 제거한다.
+    const bootstrapPattern = /    \/\/ ── 2\. 사용자 확인 & 삽입 ──[\s\S]*?    \/\/ ── 4\. 초기 설정 ──/;
+    if (!bootstrapPattern.test(html)) throw new Error('레거시 자동 초기화 쓰기 블록을 찾지 못했습니다.');
+    html = html.replace(bootstrapPattern,
+`    // ── 2~3. Firebase migration: 기존 이관 데이터만 사용 ──
+    updateLoadingOverlay('👥 Firebase 기존 데이터 확인 중...');
+    console.info('[Firebase Migration] startup seed/migration writes disabled; existing migrated data only.');
+
+    // ── 4. 초기 설정 ──`);
+
     html = html.replaceAll('Supabase 연결 오류:', 'Firebase 연결 오류:');
     html = html.replace('Supabase → Settings → API Keys', 'Firebase Console → Firestore Database → 규칙 확인');
     html = html.replace('<li><strong>"Legacy anon, service_role API keys"</strong> 탭 클릭</li>', '<li>Anonymous Authentication 사용 설정 확인</li>');
-    html = html.replace('<li><strong>anon public</strong> 키 복사 (eyJ...로 시작)</li>', '<li>현재 테스트 UID에 Firestore 임시 접근 권한 부여</li>');
-    html = html.replace('<li>Claude에게 해당 키 알려주기</li>', '<li>테스트 완료 후 Rules를 다시 deny-all로 잠그기</li>');
+    html = html.replace('<li><strong>anon public</strong> 키 복사 (eyJ...로 시작)</li>', '<li>Firestore Rules에서 인증 사용자 읽기 권한 확인</li>');
+    html = html.replace('<li>Claude에게 해당 키 알려주기</li>', '<li>브라우저를 새로고침해 다시 확인</li>');
 
-    const banner = `<div id="firebase-migration-banner" style="position:fixed;left:8px;bottom:8px;z-index:100000;background:#111827;color:white;border-radius:10px;padding:8px 12px;font:12px/1.4 Arial,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.3)">Firebase migration branch · <span id="firebase-migration-uid">UID 확인 중...</span> · <span id="firebase-atomic-state">쓰기 보호 확인 중...</span></div>\n<script>window.__mgFirebaseReady.then(function(c){var e=document.getElementById('firebase-migration-uid'); if(e) e.textContent='UID '+c.firebase.auth.currentUser.uid; localStorage.setItem('MG_FIREBASE_TEST_UID', c.firebase.auth.currentUser.uid); setTimeout(function(){var a=document.getElementById('firebase-atomic-state'); if(a) a.textContent=window.__mgAtomicPatchReady?'원자적 입고/출고 패치 준비':'현재 읽기 전용';},300);}).catch(function(err){var e=document.getElementById('firebase-migration-uid'); if(e){e.textContent='초기화 오류 '+(err.code||err.name||'')+' '+(err.message||err);e.style.color='#fecaca';} console.error(err);});</` + `script>`;
+    const banner = `<div id="firebase-migration-banner" style="position:fixed;left:8px;bottom:8px;z-index:100000;background:#111827;color:white;border-radius:10px;padding:8px 12px;font:12px/1.4 Arial,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.3)">Firebase preview · <span id="firebase-migration-uid">UID 확인 중...</span> · <span id="firebase-atomic-state">원자적 쓰기 확인 중...</span> · 자동초기화 쓰기 차단</div>\n<script>window.__mgFirebaseReady.then(function(c){var e=document.getElementById('firebase-migration-uid'); if(e) e.textContent='UID '+c.firebase.auth.currentUser.uid; localStorage.setItem('MG_FIREBASE_TEST_UID', c.firebase.auth.currentUser.uid); setTimeout(function(){var a=document.getElementById('firebase-atomic-state'); if(a) a.textContent=window.__mgAtomicPatchReady?'입고/출고 원자적 패치 준비':'원자적 패치 미확인';},300);}).catch(function(err){var e=document.getElementById('firebase-migration-uid'); if(e){e.textContent='초기화 오류 '+(err.code||err.name||'')+' '+(err.message||err);e.style.color='#fecaca';} console.error(err);});</` + `script>`;
     html = html.replace(/<body([^>]*)>/i, `<body$1>${banner}`);
 
     status.innerHTML = '<span class="ok">변환 완료. Firebase 테스트 앱을 시작합니다...</span>';
-    detail.textContent = 'Source: firebase-migration/index.html\nAdapter: Firebase compat\nAtomic write layer: group stock-in + stock-out\nProduction main: 변경 없음';
+    detail.textContent = 'Source: firebase-migration/index.html\nAdapter: Firebase compat\nStartup seed writes: DISABLED\nAtomic write layer: group stock-in + stock-out\nProduction root index.html: 변경 없음';
 
     document.open();
     document.write(html);
