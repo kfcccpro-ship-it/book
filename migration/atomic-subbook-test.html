@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MG Firebase 부교재 원자적 테스트</title>
+<style>body{font-family:Arial,"Noto Sans KR",sans-serif;background:#f8fafc;color:#0f172a;margin:0;padding:28px}.box{max-width:900px;margin:auto;background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:26px}h1{font-size:24px}.ok{color:#047857;font-weight:700}.bad{color:#b91c1c;font-weight:700}button{border:0;border-radius:10px;padding:13px 18px;background:#2563eb;color:white;font-weight:700;font-size:16px;cursor:pointer}table{width:100%;border-collapse:collapse;margin-top:18px}th,td{padding:11px;border-bottom:1px solid #e5e7eb;text-align:left}pre{background:#0f172a;color:#e5e7eb;padding:14px;border-radius:10px;white-space:pre-wrap}</style></head>
+<body><div class="box"><h1>부교재 원자적 거래 격리 테스트</h1><p>기존 부교재는 수정하지 않습니다. 테스트 부교재 1건만 생성하여 입고→출고→로그 검증→삭제 후 기준선으로 복원합니다.</p>
+<p id="status">준비 중...</p><button id="run" disabled>부교재 전체 테스트 실행</button>
+<table><tbody>
+<tr><th>1. 인증/서비스</th><td id="r1">대기</td></tr><tr><th>2. 기준선</th><td id="r2">대기</td></tr><tr><th>3. 테스트 부교재 생성</th><td id="r3">대기</td></tr><tr><th>4. 입고+로그</th><td id="r4">대기</td></tr><tr><th>5. 출고+로그</th><td id="r5">대기</td></tr><tr><th>6. 값/로그 검증</th><td id="r6">대기</td></tr><tr><th>7. 삭제+로그 정리</th><td id="r7">대기</td></tr><tr><th>8. 기준선 복원</th><td id="r8">대기</td></tr>
+</tbody></table><pre id="log">대기 중</pre></div>
+<script src="./firebase-compat.js?v=5"></script><script src="./firebase-subbook-service.js?v=1"></script>
+<script type="module">
+import{collection,doc,getDoc,getDocs,query,where,getCountFromServer}from'https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js';
+const $=id=>document.getElementById(id), run=$('run'), status=$('status'), log=$('log'); let client,db,svc,uid,testId;
+function mark(n,t,ok=true){const e=$('r'+n);e.textContent=t;e.className=ok?'ok':'bad'} function out(t){log.textContent=(log.textContent==='대기 중'?'':log.textContent+'\n')+t}
+async function counts(){const[b,l]=await Promise.all([getCountFromServer(collection(db,'sub_books')),getCountFromServer(collection(db,'sub_book_logs'))]);return{books:b.data().count,logs:l.data().count}}
+async function artifacts(){const b=await getDoc(doc(db,'sub_books',testId));const ls=await getDocs(query(collection(db,'sub_book_logs'),where('sub_book_id','==',testId)));return{b,ls}}
+try{[client,svc]=await Promise.all([window.firebaseDbReady,window.firebaseSubBookServiceReady]);db=client.firebase.db;uid=client.firebase.auth.currentUser?.uid;if(!uid)throw new Error('Anonymous Auth UID 없음');testId='migration_subbook_test_'+uid;mark(1,'PASS · Auth + sub-book atomic service 준비');status.innerHTML='<span class="ok">준비 완료</span>';run.disabled=false}catch(e){mark(1,'FAIL · '+e.message,false);status.innerHTML='<span class="bad">초기화 실패</span>'}
+run.onclick=async()=>{run.disabled=true;log.textContent='';let base;try{const old=await artifacts();if(old.b.exists()||!old.ls.empty){await svc.deleteSubBookWithLogs({subBookId:testId})}base=await counts();mark(2,`PASS · sub_books ${base.books} / sub_book_logs ${base.logs}`);out(`기준선 ${base.books}/${base.logs}`);
+await svc.insertSubBook({subBook:{id:testId,course_group_key:'MIGRATION_TEST',course_group_name:'[MIGRATION TEST]',book_name:'[MIGRATION TEST] Sub Book',stock_quantity:0,released_quantity:0},actor:{name:'MIGRATION_TEST',role:'system-test'}});let a=await artifacts();if(!a.b.exists())throw new Error('생성 실패');mark(3,'PASS · 테스트 부교재 1건 생성');
+await svc.updateSubBookWithLog({subBookId:testId,expectedStock:0,expectedReleased:0,updates:{stock_quantity:20,released_quantity:0},log:{action_type:'입고',quantity:20,notes:'isolated subbook stock-in test'},actor:{name:'MIGRATION_TEST',role:'system-test'}});mark(4,'PASS · 입고 20권 + 로그 원자적 저장');
+await svc.updateSubBookWithLog({subBookId:testId,expectedStock:20,expectedReleased:0,updates:{stock_quantity:20,released_quantity:7},log:{action_type:'출고',quantity:7,notes:'isolated subbook stock-out test'},actor:{name:'MIGRATION_TEST',role:'system-test'}});mark(5,'PASS · 출고 7권 + 로그 원자적 저장');
+a=await artifacts();const d=a.b.data();if(Number(d.stock_quantity)!==20||Number(d.released_quantity)!==7||a.ls.size!==2)throw new Error(`값 불일치 stock=${d.stock_quantity} released=${d.released_quantity} logs=${a.ls.size}`);mark(6,'PASS · 입고 20 / 출고 7 / 로그 2건 일치');
+const del=await svc.deleteSubBookWithLogs({subBookId:testId});a=await artifacts();if(a.b.exists()||!a.ls.empty)throw new Error('정리 실패');mark(7,`PASS · 부교재 삭제 / 로그 ${del.deletedLogs}건 삭제`);
+const after=await counts();if(after.books!==base.books||after.logs!==base.logs)throw new Error(`기준선 불일치 ${after.books}/${after.logs}`);mark(8,`PASS · ${after.books}/${after.logs} 기준선 복원`);status.innerHTML='<span class="ok">ATOMIC SUB-BOOK TEST PASS · 전체 검증 완료</span>';out('최종 기준선 복원 PASS')}catch(e){console.error(e);status.innerHTML='<span class="bad">TEST FAIL · '+e.message+'</span>';out('ERROR '+e.message);try{await svc.deleteSubBookWithLogs({subBookId:testId})}catch(_){} }finally{run.disabled=false}};
+</script></body></html>
