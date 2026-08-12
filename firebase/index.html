@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>MG 교재관리 Firebase 운영 후보</title>
+  <style>
+    body{font-family:Arial,"Noto Sans KR",sans-serif;background:#f8fafc;color:#0f172a;margin:0;padding:32px}
+    .box{max-width:780px;margin:0 auto;background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:28px;box-shadow:0 8px 28px rgba(15,23,42,.08)}
+    h1{font-size:24px;margin:0 0 10px}.muted{color:#64748b;line-height:1.7}.ok{color:#047857;font-weight:700}.bad{color:#b91c1c;font-weight:700}
+    pre{background:#0f172a;color:#e2e8f0;padding:16px;border-radius:12px;white-space:pre-wrap;word-break:break-word}
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>Firebase 운영 후보 로더</h1>
+    <p class="muted">기존 운영 UI는 그대로 사용하고, 데이터 계층과 쓰기 경로만 Firebase/Firestore로 전환합니다. 기존 Supabase 화면은 <code>../legacy/</code>에 보존되어 있습니다.</p>
+    <p id="status">운영 후보를 준비하고 있습니다...</p>
+    <pre id="detail">대기 중</pre>
+  </div>
+<script>
+(async function () {
+  const status = document.getElementById('status');
+  const detail = document.getElementById('detail');
+  const sourceUrl = new URL('../legacy/index.html?v=1', window.location.href).href;
+  const adapterUrl = new URL('../migration/firebase-compat.js?v=5', window.location.href).href;
+  const writeServiceUrl = new URL('../migration/firebase-write-service.js?v=3', window.location.href).href;
+  const atomicPatchUrl = new URL('../migration/firebase-atomic-patch.js?v=3', window.location.href).href;
+  const wave3Url = new URL('../migration/firebase-atomic-patch-wave3.js?v=1', window.location.href).href;
+  const subBookServiceUrl = new URL('../migration/firebase-subbook-service.js?v=1', window.location.href).href;
+  const wave4Url = new URL('../migration/firebase-atomic-patch-wave4.js?v=1', window.location.href).href;
+
+  try {
+    const response = await fetch(sourceUrl, { cache: 'no-store' });
+    if (!response.ok) throw new Error(`legacy/index.html 로드 실패: HTTP ${response.status}`);
+    let html = await response.text();
+
+    const supabaseCdn = '<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></' + 'script>';
+    if (!html.includes(supabaseCdn)) throw new Error('기존 Supabase SDK 태그를 찾지 못했습니다.');
+    html = html.replace(supabaseCdn,
+      `<script src="${adapterUrl}"></` + `script>\n` +
+      `<script src="${writeServiceUrl}"></` + `script>\n` +
+      `<script src="${atomicPatchUrl}"></` + `script>\n` +
+      `<script src="${wave3Url}"></` + `script>\n` +
+      `<script src="${subBookServiceUrl}"></` + `script>\n` +
+      `<script src="${wave4Url}"></` + `script>`
+    );
+
+    const initPattern = /const SUPABASE_URL = '[^']+';[\s\S]*?let sb;[\s\S]*?console\.error\('Supabase 초기화 실패:', e\);\s*\}/;
+    if (!initPattern.test(html)) throw new Error('기존 Supabase 초기화 블록을 찾지 못했습니다.');
+    html = html.replace(initPattern, `let sb;\nwindow.__mgFirebaseReady = window.firebaseDbReady.then(client => {\n    sb = client;\n    window.__mgFirebaseClient = client;\n    return client;\n});`);
+
+    const loadMarker = "showLoadingOverlay('🔌 Supabase 연결 중...');";
+    if (!html.includes(loadMarker)) throw new Error('기존 연결 시작 지점을 찾지 못했습니다.');
+    html = html.replace(loadMarker, `showLoadingOverlay('🔌 Firebase 연결 중...');\n    await window.__mgFirebaseReady;`);
+
+    const bootstrapPattern = /    \/\/ ── 2\. 사용자 확인 & 삽입 ──[\s\S]*?    \/\/ ── 4\. 초기 설정 ──/;
+    if (!bootstrapPattern.test(html)) throw new Error('레거시 자동 초기화 쓰기 블록을 찾지 못했습니다.');
+    html = html.replace(bootstrapPattern,
+`    // ── 2~3. Firebase production candidate: migrated data only ──
+    updateLoadingOverlay('👥 Firebase 기존 데이터 확인 중...');
+    console.info('[Firebase Candidate] startup seed/migration writes disabled; migrated data only.');
+
+    // ── 4. 초기 설정 ──`);
+
+    html = html.replaceAll('Supabase 연결 오류:', 'Firebase 연결 오류:');
+
+    const candidateBanner = `<div id="firebase-candidate-banner" style="position:fixed;left:8px;bottom:8px;z-index:100000;background:#0f766e;color:white;border-radius:10px;padding:8px 12px;font:12px/1.4 Arial,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.25)">Firebase 운영 후보 · <span id="firebase-candidate-state">초기화 중...</span></div>\n<script>Promise.all([window.__mgFirebaseReady,window.firebaseWriteServiceReady,window.firebaseSubBookServiceReady]).then(function(){setTimeout(function(){var e=document.getElementById('firebase-candidate-state');if(e)e.textContent=(window.__mgAtomicPatchWave4Ready?'wave4 준비':'쓰기 패치 확인 필요');},600);}).catch(function(err){var e=document.getElementById('firebase-candidate-state');if(e){e.textContent='오류 '+(err.message||err);e.style.color='#fecaca';}});</` + `script>`;
+    html = html.replace(/<body([^>]*)>/i, `<body$1>${candidateBanner}`);
+
+    status.innerHTML = '<span class="ok">Firebase 운영 후보를 시작합니다...</span>';
+    detail.textContent = 'UI source: legacy/index.html\nDB: Firestore\nAuth: Anonymous Auth\nAtomic write layer: wave4\nLegacy startup writes: disabled\nFull reset: disabled';
+
+    document.open();
+    document.write(html);
+    document.close();
+  } catch (error) {
+    console.error(error);
+    status.innerHTML = '<span class="bad">운영 후보 시작 실패</span>';
+    detail.textContent = error.stack || error.message || String(error);
+  }
+})();
+</script>
+</body>
+</html>
