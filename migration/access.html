@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MG 교재관리 Firebase 테스트 접근</title>
+<style>
+body{font-family:Arial,"Noto Sans KR",sans-serif;background:#f8fafc;color:#0f172a;margin:0;padding:32px}
+.box{max-width:720px;margin:0 auto;background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:28px;box-shadow:0 8px 28px rgba(15,23,42,.08)}
+h1{font-size:24px;margin:0 0 10px}.muted{color:#64748b;line-height:1.7}.uid{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:#0f172a;color:#fff;padding:16px;border-radius:12px;word-break:break-all}.ok{color:#047857;font-weight:700}.bad{color:#b91c1c;font-weight:700}a.btn{display:inline-block;margin-top:18px;background:#2563eb;color:white;text-decoration:none;padding:12px 16px;border-radius:10px;font-weight:700}
+</style>
+</head>
+<body>
+<div class="box">
+<h1>Firebase 테스트 접근 준비</h1>
+<p class="muted">이 페이지는 Firebase Anonymous Auth로 이 브라우저의 테스트 UID만 생성합니다. Firestore 데이터는 읽거나 수정하지 않습니다.</p>
+<p id="status">UID 생성 중...</p>
+<div id="uid" class="uid">대기 중</div>
+<a class="btn" href="./">Firebase 테스트 앱 열기</a>
+</div>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js';
+import { getAuth, signInAnonymously, setPersistence, browserLocalPersistence } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js';
+const config={apiKey:'AIzaSyBN-tcOvDxFoJ7qNdcwWmXW18hpzQKsTJM',authDomain:'new-book-e6ec7.firebaseapp.com',projectId:'new-book-e6ec7',storageBucket:'new-book-e6ec7.firebasestorage.app',messagingSenderId:'640496706167',appId:'1:640496706167:web:96bb5072d05d3b81029c72'};
+const app=initializeApp(config);const auth=getAuth(app);
+try{await setPersistence(auth,browserLocalPersistence);const cred=auth.currentUser?{user:auth.currentUser}:await signInAnonymously(auth);document.getElementById('status').innerHTML='<span class="ok">UID 생성 완료</span>';document.getElementById('uid').textContent=cred.user.uid;}catch(e){document.getElementById('status').innerHTML='<span class="bad">UID 생성 실패</span>';document.getElementById('uid').textContent=(e.code||e.name)+': '+e.message;}
+</script>
+</body>
+</html>

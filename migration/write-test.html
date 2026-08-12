@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MG Firebase 원자적 쓰기 테스트</title>
+<style>
+body{font-family:Arial,"Noto Sans KR",sans-serif;background:#f8fafc;color:#0f172a;margin:0;padding:28px}.box{max-width:820px;margin:auto;background:white;border:1px solid #e2e8f0;border-radius:18px;padding:26px;box-shadow:0 8px 28px rgba(15,23,42,.08)}h1{font-size:24px;margin:0 0 10px}.muted{color:#64748b;line-height:1.7}.uid{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:#0f172a;color:white;padding:14px;border-radius:10px;word-break:break-all}.ok{color:#047857;font-weight:700}.bad{color:#b91c1c;font-weight:700}.warn{background:#fff7ed;border:1px solid #fdba74;padding:12px;border-radius:10px;margin:16px 0}button{background:#2563eb;color:white;border:0;border-radius:10px;padding:12px 16px;font-size:16px;font-weight:700;cursor:pointer}button:disabled{background:#94a3b8;cursor:not-allowed}pre{background:#111827;color:#e5e7eb;padding:14px;border-radius:10px;white-space:pre-wrap;word-break:break-word;max-height:320px;overflow:auto}table{width:100%;border-collapse:collapse;margin-top:16px}th,td{border-bottom:1px solid #e5e7eb;padding:9px;text-align:left}
+</style>
+</head>
+<body>
+<div class="box">
+<h1>Firebase 원자적 쓰기 테스트</h1>
+<p class="muted">기존 681건의 courses/work_logs 등 운영 데이터는 건드리지 않고, 전용 테스트 컬렉션 두 곳에서만 트랜잭션을 검증합니다.</p>
+<div class="warn"><b>안전장치:</b> 이 페이지는 <code>migration_tests</code>와 <code>migration_test_logs</code>만 사용합니다.</div>
+<p>현재 UID</p><div id="uid" class="uid">확인 중...</div>
+<p id="status">Firebase 인증 확인 중...</p>
+<button id="runBtn" disabled>원자적 쓰기 테스트 실행</button>
+<table><tbody>
+<tr><th>1. 인증</th><td id="r1">대기</td></tr>
+<tr><th>2. 트랜잭션 2문서 동시쓰기</th><td id="r2">대기</td></tr>
+<tr><th>3. 즉시 재조회 검증</th><td id="r3">대기</td></tr>
+<tr><th>4. 테스트 데이터 정리</th><td id="r4">대기</td></tr>
+</tbody></table>
+<pre id="log">대기 중</pre>
+</div>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js';
+import { getAuth, signInAnonymously, setPersistence, browserLocalPersistence } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js';
+import { getFirestore, doc, runTransaction, getDoc, writeBatch, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js';
+const config={apiKey:'AIzaSyBN-tcOvDxFoJ7qNdcwWmXW18hpzQKsTJM',authDomain:'new-book-e6ec7.firebaseapp.com',projectId:'new-book-e6ec7',storageBucket:'new-book-e6ec7.firebasestorage.app',messagingSenderId:'640496706167',appId:'1:640496706167:web:96bb5072d05d3b81029c72'};
+const app=initializeApp(config);const auth=getAuth(app);const db=getFirestore(app);
+const uidEl=document.getElementById('uid'),status=document.getElementById('status'),runBtn=document.getElementById('runBtn'),logEl=document.getElementById('log');
+function mark(id,text,ok=true){const e=document.getElementById(id);e.textContent=text;e.className=ok?'ok':'bad'}
+function log(s){logEl.textContent += (logEl.textContent==='대기 중'?'':'\n')+s;logEl.scrollTop=logEl.scrollHeight}
+try{await setPersistence(auth,browserLocalPersistence);if(!auth.currentUser) await signInAnonymously(auth);uidEl.textContent=auth.currentUser.uid;mark('r1','PASS · 기존 브라우저 UID 사용');status.innerHTML='<span class="ok">인증 완료. Firestore Rules가 테스트 컬렉션 쓰기를 허용하면 실행할 수 있습니다.</span>';runBtn.disabled=false;}catch(e){uidEl.textContent='인증 실패';status.innerHTML='<span class="bad">'+(e.code||e.name)+': '+e.message+'</span>';mark('r1','FAIL',false)}
+runBtn.addEventListener('click',async()=>{runBtn.disabled=true;logEl.textContent='';['r2','r3','r4'].forEach(id=>{document.getElementById(id).textContent='진행 중';document.getElementById(id).className=''});const uid=auth.currentUser.uid;const testRef=doc(db,'migration_tests',uid);const logRef=doc(db,'migration_test_logs',uid);try{await runTransaction(db,async tx=>{const snap=await tx.get(testRef);const previous=snap.exists()?Number(snap.data().counter||0):0;const next=previous+1;tx.set(testRef,{owner_uid:uid,counter:next,last_test_at:serverTimestamp()},{merge:true});tx.set(logRef,{owner_uid:uid,counter:next,message:'atomic write sandbox',created_at:serverTimestamp()},{merge:true});});mark('r2','PASS · 두 문서가 하나의 트랜잭션으로 커밋됨');log('트랜잭션 커밋 PASS');const [a,b]=await Promise.all([getDoc(testRef),getDoc(logRef)]);if(!a.exists()||!b.exists()) throw new Error('재조회 시 테스트 문서가 누락되었습니다.');if(a.data().owner_uid!==uid||b.data().owner_uid!==uid||a.data().counter!==b.data().counter) throw new Error('재조회 값 불일치');mark('r3','PASS · 두 문서 값 일치');log('재조회 검증 PASS · counter='+a.data().counter);const batch=writeBatch(db);batch.delete(testRef);batch.delete(logRef);await batch.commit();const [aa,bb]=await Promise.all([getDoc(testRef),getDoc(logRef)]);if(aa.exists()||bb.exists()) throw new Error('정리 후 테스트 문서가 남아 있습니다.');mark('r4','PASS · 테스트 문서 삭제 완료');log('정리 PASS');status.innerHTML='<span class="ok">ATOMIC WRITE TEST PASS · 운영 데이터 변경 없음</span>';}catch(e){console.error(e);status.innerHTML='<span class="bad">TEST FAIL · '+(e.code||e.name)+' · '+e.message+'</span>';log('ERROR: '+(e.stack||e.message||String(e)));if(document.getElementById('r2').textContent==='진행 중')mark('r2','FAIL',false);}finally{runBtn.disabled=false;}});
+</script>
+</body>
+</html>
