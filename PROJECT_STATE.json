@@ -11,13 +11,14 @@
     "database": "(default)",
     "auth": "Anonymous Auth"
   },
-  "last_updated": "2026-08-13T15:26:00+09:00",
-  "current_commit": "RESOLVE_LATEST_MAIN_AT_RUNTIME",
+  "last_updated": "2026-08-13T16:35:00+09:00",
+  "current_commit": "89025ebf8bdea211c50e1f5d1fe6fab2e26edc82",
   "trigger_phrase": "교재관리 다음 작업 진행",
   "start_here": "START_HERE_CHATGPT.md",
   "core_files": [
     "simple/index.html",
     "simple/simple-inventory-service.js",
+    "simple/simple-inventory-service-core.js",
     "simple/inventory-audit.html",
     "simple/inventory-audit-summary.html",
     "simple/sub-book-workflow-test.html"
@@ -59,9 +60,12 @@
     "dashboard cards linked to relevant screens",
     "주나연 / 교육매니저 operator model simplified",
     "discretionary release terminology simplified to 즉시출고",
+    "Simple UI terminology policy enforced so deprecated emergency/reconciliation wording is not exposed in current operation",
+    "legacy service implementation preserved as simple-inventory-service-core.js behind compatibility loader",
+    "repository root routes to current Simple app",
     "GitHub-based permanent ChatGPT handoff system established"
   ],
-  "next_step": "Verify the simplified 즉시출고 UI on mobile and run isolated sub-book workflow test if not yet confirmed; then remove or archive obsolete emergency/reconciliation wording and test-only pages after verification.",
+  "next_step": "Verify on mobile that 주나연 sees only 입고/즉시출고/이름변경/숨김 controls and 교육매니저 does not see 즉시출고; then run isolated sub-book workflow test if not yet confirmed and decide whether audit/test pages should remain or be archived.",
   "rules": [
     "Resolve latest main HEAD at the start of every new chat",
     "Read START_HERE_CHATGPT.md and PROJECT_STATE.json before modifying code",
