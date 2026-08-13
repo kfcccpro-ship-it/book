@@ -1,6 +1,6 @@
 // Simple mobile inventory service.
-// Core: safe stock-in/out, emergency issue, physical-stock reconciliation,
-// reversible hiding, display-name management, and simple item creation.
+// Core: safe stock-in/out, 주나연 전용 즉시출고, reversible hiding,
+// display-name management, and simple item creation.
 (function () {
   'use strict';
 
@@ -95,7 +95,7 @@
         end_date: null,
         scheduled_release_date: null,
         actual_release_date: null,
-        notes: '비상출고 및 실물재고 조정용 내부 원장',
+        notes: '주나연 즉시출고 전용 내부 원장',
         created_by: actor.name,
         updated_by: actor.name,
         created_at: now,
@@ -124,8 +124,7 @@
     async function createInventoryItem({ name, itemType, initialStock, actor, memo }) {
       const displayName = cleanName(name);
       const qty = Number(initialStock || 0);
-      if (!actor) throw new Error('작업자가 선택되지 않았습니다.');
-      if (!actor.canManage) throw new Error('새 교재/과정 등록은 주나연 담당자만 할 수 있습니다.');
+      if (!actor?.canManage) throw new Error('새 교재/과정 등록은 주나연 담당자만 할 수 있습니다.');
       if (!displayName) throw new Error('교재명 또는 과정명을 입력해주세요.');
       if (!Number.isInteger(qty) || qty < 0) throw new Error('첫 입고 수량은 0권 이상 정수로 입력해주세요.');
 
@@ -200,7 +199,11 @@
       const batch = fs.writeBatch(db);
       const now = new Date().toISOString();
       for (const id of ids) {
-        batch.update(fs.doc(db, 'courses', id), convertObject({ inventory_display_name: after, updated_by: actor.name, updated_at: now }));
+        batch.update(fs.doc(db, 'courses', id), convertObject({
+          inventory_display_name: after,
+          updated_by: actor.name,
+          updated_at: now
+        }));
       }
       const log = makeLog({
         courseId: `group:${ids[0]}`,
@@ -243,7 +246,12 @@
           notes: memo || `블록 입고 ${qty}권`
         });
         logId = log.id;
-        tx.update(ref, convertObject({ stock_quantity: committedStock, status: committedStatus, updated_by: actor.name, updated_at: now }));
+        tx.update(ref, convertObject({
+          stock_quantity: committedStock,
+          status: committedStatus,
+          updated_by: actor.name,
+          updated_at: now
+        }));
         tx.set(fs.doc(db, 'work_logs', log.id), convertObject(log));
       });
       return { stockQuantity: committedStock, status: committedStatus, logId };
@@ -290,17 +298,23 @@
           notes: memo || `출고 ${qty}권 · 출고 후 잔고 ${availableAfter}권`
         });
         logId = log.id;
-        tx.update(target.ref, convertObject({ released_quantity: releasedAfter, status: '출고완료', actual_release_date: now, updated_by: actor.name, updated_at: now }));
+        tx.update(target.ref, convertObject({
+          released_quantity: releasedAfter,
+          status: '출고완료',
+          actual_release_date: now,
+          updated_by: actor.name,
+          updated_at: now
+        }));
         tx.set(fs.doc(db, 'work_logs', log.id), convertObject(log));
       });
       return { availableBefore, availableAfter, releasedAfter, logId };
     }
 
-    async function emergencyOutGroup({ groupCourseIds, groupKey, groupName, quantity, actor, memo }) {
+    async function immediateOutGroup({ groupCourseIds, groupKey, groupName, quantity, actor, memo }) {
       const qty = Number(quantity);
-      if (!actor?.canManage) throw new Error('비상출고는 주나연 담당자만 할 수 있습니다.');
+      if (!actor?.canManage) throw new Error('즉시출고는 주나연 담당자만 사용할 수 있습니다.');
       if (!groupKey || !groupName) throw new Error('교재 정보를 찾을 수 없습니다.');
-      if (!Number.isInteger(qty) || qty <= 0) throw new Error('비상출고 수량은 1권 이상 정수로 입력해주세요.');
+      if (!Number.isInteger(qty) || qty <= 0) throw new Error('즉시출고 수량은 1권 이상 정수로 입력해주세요.');
 
       let before = 0;
       let after = 0;
@@ -308,25 +322,36 @@
       await fs.runTransaction(db, async tx => {
         const group = await readGroupInTransaction(tx, groupCourseIds, groupKey);
         before = group.balance;
-        if (before < 0) throw new Error('기존 재고 기록이 맞지 않아 비상출고할 수 없습니다. 먼저 실물재고 맞춤을 해주세요.');
-        if (qty > before) throw new Error(`현재 잔고 ${before}권보다 많이 비상출고할 수 없습니다.`);
+        if (before < 0) throw new Error('현재 잔고가 음수인 품목은 즉시출고할 수 없습니다. 실물 수량을 먼저 확인해주세요.');
+        if (qty > before) throw new Error(`현재 잔고 ${before}권보다 많이 즉시출고할 수 없습니다.`);
         after = before - qty;
+
         const now = new Date().toISOString();
-        const currentLedger = group.ledgerSnap.exists() ? group.ledgerSnap.data() : ledgerBase({ id: group.ledgerId, groupKey, groupName, actor, now });
-        const newReleased = safeNonNegative(currentLedger.released_quantity) + qty;
-        const ledgerData = { ...currentLedger, inventory_display_name: groupName, inventory_group_key: groupKey, released_quantity: newReleased, status: '재고관리', updated_by: actor.name, updated_at: now };
+        const currentLedger = group.ledgerSnap.exists()
+          ? group.ledgerSnap.data()
+          : ledgerBase({ id: group.ledgerId, groupKey, groupName, actor, now });
+        const ledgerData = {
+          ...currentLedger,
+          inventory_display_name: groupName,
+          inventory_group_key: groupKey,
+          released_quantity: safeNonNegative(currentLedger.released_quantity) + qty,
+          status: '재고관리',
+          updated_by: actor.name,
+          updated_at: now
+        };
         if (group.ledgerSnap.exists()) tx.update(group.ledgerRef, convertObject(ledgerData));
         else tx.set(group.ledgerRef, convertObject(ledgerData));
+
         const userMemo = cleanName(memo);
         const log = makeLog({
           courseId: group.ledgerId,
           courseName: groupName,
-          type: '비상출고',
+          type: '즉시출고',
           quantity: qty,
           actor,
           previousStatus: '재고관리',
           newStatus: '재고관리',
-          notes: `[비상출고] ${userMemo || '입고담당자 재량 출고'} · ${before}권 → ${after}권`
+          notes: `[즉시출고] ${userMemo || '입고담당자 재량 출고'} · ${before}권 → ${after}권`
         });
         logId = log.id;
         tx.set(fs.doc(db, 'work_logs', log.id), convertObject(log));
@@ -334,43 +359,53 @@
       return { availableBefore: before, availableAfter: after, logId };
     }
 
-    async function reconcilePhysicalStock({ groupCourseIds, groupKey, groupName, actualStock, actor, memo }) {
-      const actual = Number(actualStock);
-      if (!actor?.canManage) throw new Error('실물재고 맞춤은 주나연 담당자만 할 수 있습니다.');
-      if (!groupKey || !groupName) throw new Error('교재 정보를 찾을 수 없습니다.');
-      if (!Number.isInteger(actual) || actual < 0) throw new Error('실제 보유 수량은 0권 이상 정수로 입력해주세요.');
+    async function immediateOutSubBook({ subBookId, quantity, actor, memo }) {
+      const qty = Number(quantity);
+      if (!actor?.canManage) throw new Error('즉시출고는 주나연 담당자만 사용할 수 있습니다.');
+      if (!subBookId) throw new Error('부교재 정보를 찾을 수 없습니다.');
+      if (!Number.isInteger(qty) || qty <= 0) throw new Error('즉시출고 수량은 1권 이상 정수로 입력해주세요.');
 
+      const ref = fs.doc(db, 'sub_books', String(subBookId));
       let before = 0;
-      let adjustment = 0;
+      let after = 0;
+      let name = '';
       let logId = null;
       await fs.runTransaction(db, async tx => {
-        const group = await readGroupInTransaction(tx, groupCourseIds, groupKey);
-        before = group.balance;
-        adjustment = actual - before;
-        if (adjustment === 0) throw new Error('앱 잔고와 실물 수량이 같습니다. 조정할 내용이 없습니다.');
-        const now = new Date().toISOString();
-        const currentLedger = group.ledgerSnap.exists() ? group.ledgerSnap.data() : ledgerBase({ id: group.ledgerId, groupKey, groupName, actor, now });
-        const ledgerData = { ...currentLedger, inventory_display_name: groupName, inventory_group_key: groupKey, status: '재고관리', updated_by: actor.name, updated_at: now };
-        if (adjustment > 0) ledgerData.stock_quantity = safeNonNegative(currentLedger.stock_quantity) + adjustment;
-        else ledgerData.released_quantity = safeNonNegative(currentLedger.released_quantity) + Math.abs(adjustment);
-        if (group.ledgerSnap.exists()) tx.update(group.ledgerRef, convertObject(ledgerData));
-        else tx.set(group.ledgerRef, convertObject(ledgerData));
-        const signed = adjustment > 0 ? `+${adjustment}` : String(adjustment);
-        const userMemo = cleanName(memo);
-        const log = makeLog({
-          courseId: group.ledgerId,
-          courseName: groupName,
-          type: '재고조정',
-          quantity: Math.abs(adjustment),
-          actor,
-          previousStatus: '재고관리',
-          newStatus: '재고관리',
-          notes: `실물재고 맞춤 ${before}권 → ${actual}권 · 조정 ${signed}권${userMemo ? ` · ${userMemo}` : ''}`
+        const snap = await tx.get(ref);
+        if (!snap.exists()) throw new Error('부교재를 찾을 수 없습니다.');
+        const book = snap.data();
+        name = cleanName(book.inventory_display_name) || cleanName(book.book_name) || '부교재';
+        before = safeNonNegative(book.stock_quantity) - safeNonNegative(book.released_quantity) + Number(book.inventory_adjustment || 0);
+        if (before < 0) throw new Error('현재 잔고가 음수인 부교재는 즉시출고할 수 없습니다.');
+        if (qty > before) throw new Error(`현재 잔고 ${before}권보다 많이 즉시출고할 수 없습니다.`);
+        after = before - qty;
+
+        const now = fs.Timestamp.now();
+        tx.update(ref, {
+          released_quantity: safeNonNegative(book.released_quantity) + qty,
+          updated_at: now,
+          updated_by: actor.name
         });
-        logId = log.id;
-        tx.set(fs.doc(db, 'work_logs', log.id), convertObject(log));
+
+        logId = makeId('sublog');
+        tx.set(fs.doc(db, 'sub_book_logs', logId), {
+          id: logId,
+          sub_book_id: String(subBookId),
+          book_name: name,
+          course_group_key: book.course_group_key || null,
+          course_group_name: book.course_group_name || null,
+          action_type: '즉시출고',
+          quantity: qty,
+          action_date: now,
+          created_at: now,
+          user_name: actor.name,
+          user_role: actor.role || '',
+          before_balance: before,
+          after_balance: after,
+          notes: `[즉시출고] ${cleanName(memo) || '입고담당자 재량 출고'} · ${before}권 → ${after}권`
+        });
       });
-      return { balanceBefore: before, balanceAfter: actual, adjustment, logId };
+      return { name, availableBefore: before, availableAfter: after, logId };
     }
 
     async function setGroupHidden({ groupCourseIds, groupName, hidden, actor }) {
@@ -378,10 +413,17 @@
       if (!actor?.canManage) throw new Error('과정 숨김/복원은 주나연 담당자만 할 수 있습니다.');
       if (!ids.length) throw new Error('숨김 처리할 과정이 없습니다.');
       if (ids.length > 450) throw new Error('숨김 처리 대상이 너무 많습니다.');
+
       const batch = fs.writeBatch(db);
       const now = new Date().toISOString();
       for (const id of ids) {
-        batch.update(fs.doc(db, 'courses', id), convertObject({ inventory_hidden: !!hidden, inventory_hidden_at: hidden ? now : null, inventory_hidden_by: hidden ? actor.name : null, updated_by: actor.name, updated_at: now }));
+        batch.update(fs.doc(db, 'courses', id), convertObject({
+          inventory_hidden: !!hidden,
+          inventory_hidden_at: hidden ? now : null,
+          inventory_hidden_by: hidden ? actor.name : null,
+          updated_by: actor.name,
+          updated_at: now
+        }));
       }
       const log = makeLog({
         courseId: `group:${ids[0]}`,
@@ -400,213 +442,192 @@
       renameInventoryGroup,
       stockInGroup,
       stockOutGroup,
-      emergencyOutGroup,
-      reconcilePhysicalStock,
+      immediateOutGroup,
+      immediateOutSubBook,
       setGroupHidden
     };
     window.simpleInventoryService = service;
     return service;
   })();
 
-  // UI enhancements layered on the simple app without changing the core screen structure.
-  (function installSimpleInventoryUI() {
+  // 주나연 전용 즉시출고 UI. 기존 화면 구조를 건드리지 않고 입고 카드에 한 버튼만 추가한다.
+  (function installImmediateOutUI() {
     const style = document.createElement('style');
     style.textContent = `
-      .balance-hero{display:grid;grid-template-columns:1fr 34px 1fr;align-items:stretch;gap:8px;margin:14px 0 6px}
-      .balance-panel{border:2px solid #dbe3ef;border-radius:18px;padding:13px 9px;text-align:center;background:#fff}
-      .balance-panel.current{border-color:#93c5fd;background:#eff6ff}.balance-panel.after{border-color:#bfdbfe;background:#f8fbff}
-      .balance-kicker{font-size:12px;font-weight:900;color:#64748b;margin-bottom:4px}.balance-number{font-size:36px;font-weight:950;letter-spacing:-1.2px;line-height:1.05;color:#1d4ed8;white-space:nowrap}
-      .balance-number.bad{color:#dc2626}.balance-number.mid{color:#7c3aed}.balance-number.good{color:#2563eb}.balance-number.error{color:#991b1b}
-      .balance-arrow{display:flex;align-items:center;justify-content:center;font-size:25px;font-weight:950;color:#64748b}.balance-helper{text-align:center;font-size:12px;font-weight:850;color:#64748b;min-height:18px;margin:5px 0 2px}.balance-helper.danger{color:#b91c1c}
-      #inList .inventory-card .meta.current-stock-emphasis{font-size:18px;font-weight:950;color:#0f172a;margin-top:6px}.course-balance-emphasis{margin-top:9px;padding:9px 10px;border-radius:12px;background:#f8fafc;border:1px solid #dbe3ef;font-size:16px;font-weight:950;color:#0f172a}.course-balance-emphasis strong{font-size:22px;color:#2563eb;margin-left:5px}
-      .emergency-stock-btn{flex:1 0 100%;min-height:48px!important;background:#fff7ed!important;color:#c2410c!important;border:2px solid #fdba74!important}.emergency-choice{width:100%;min-height:72px;border-radius:16px;border:0;text-align:left;padding:13px 15px;font-weight:900;margin-top:10px}.emergency-choice strong{display:block;font-size:17px;margin-bottom:4px}.emergency-choice span{font-size:12px;font-weight:750;opacity:.82}.emergency-choice.out{background:#fff7ed;color:#9a3412;border:2px solid #fdba74}.emergency-choice.adjust{background:#f5f3ff;color:#6d28d9;border:2px solid #c4b5fd}.btn.purple{background:#7c3aed;color:#fff}.log-type.emergency{color:#c2410c}.log-type.adjust{color:#7c3aed}
-      @media(max-width:390px){.balance-number{font-size:31px}.balance-hero{grid-template-columns:1fr 28px 1fr;gap:5px}}
+      .immediate-stock-btn{background:#fff7ed!important;color:#c2410c!important;border:2px solid #fdba74!important;min-height:46px!important}
+      .immediate-note{font-size:12px;color:#64748b;line-height:1.5;margin-top:8px}
     `;
     document.head.appendChild(style);
 
-    function balanceClass(value) {
-      if (value < 0) return 'error';
-      if (value < 50) return 'bad';
-      if (value < 100) return 'mid';
-      return 'good';
+    function actor() {
+      try { return window.state?.actor || state?.actor || null; } catch (_) { return null; }
     }
 
-    function parseCurrentBalance(text) {
-      const match = String(text || '').match(/현재\s*(?:교재\s*)?잔고\s*(-?\d+)\s*권/);
-      return match ? Number(match[1]) : null;
-    }
-
-    function currentGroup(key) {
+    function group(key) {
       try { return state.groups.find(g => g.key === key); } catch (_) { return null; }
     }
 
-    function currentActor() {
-      try { return actorRequired(); } catch (_) { return null; }
+    function subBook(id) {
+      try { return state.subBooks.find(b => String(b.id) === String(id)); } catch (_) { return null; }
     }
 
-    function groupIds(g) {
-      return (g?.courses || []).map(c => c.id);
+    function balanceClass(v) {
+      if (v < 0) return 'error';
+      if (v < 50) return 'bad';
+      if (v < 100) return 'mid';
+      return 'good';
     }
 
-    function heroHTML(current, afterLabel, afterValue) {
-      return `<div class="balance-hero"><div class="balance-panel current"><div class="balance-kicker">현재 잔고</div><div class="balance-number ${balanceClass(current)}">${current}권</div></div><div class="balance-arrow">→</div><div class="balance-panel after"><div class="balance-kicker">${afterLabel}</div><div id="specialAfter" class="balance-number ${balanceClass(afterValue)}">${afterValue}권</div></div></div><div id="specialHelper" class="balance-helper">수량을 입력하면 처리 후 잔고가 바로 표시됩니다.</div>`;
+    function balanceHero(current) {
+      return `<div class="balance-hero"><div class="balance-panel current"><div class="balance-kicker">현재 잔고</div><div class="balance-number ${balanceClass(current)}">${current}권</div></div><div class="balance-arrow">→</div><div class="balance-panel after"><div class="balance-kicker">즉시출고 후</div><div id="immediateAfter" class="balance-number ${balanceClass(current)}">${current}권</div></div></div><div id="immediateHelper" class="balance-helper">수량을 입력하면 남는 재고가 바로 표시됩니다.</div>`;
     }
 
-    window.openEmergencyStock = function(key) {
-      const actor = currentActor();
-      const g = currentGroup(key);
-      if (!actor?.canManage) { notice('비상출고/재고맞춤은 주나연 담당자만 사용할 수 있습니다.'); return; }
-      if (!g) return;
-      openSheet(`<div class="sheet-title">${esc(g.name)} 재고 바로잡기</div><div class="balance-panel current" style="margin-top:14px"><div class="balance-kicker">현재 잔고</div><div class="balance-number ${balanceClass(g.balance)}">${g.balance}권</div></div><div class="sheet-sub" style="margin-top:10px">정식 과정 출고가 아닌 긴급 불출이나, 앱 수량과 실물 수량이 다를 때 사용합니다. 두 작업은 로그에서 구분하여 남습니다.</div><button id="emergencyChoiceOut" class="emergency-choice out"><strong>⇧ 비상출고</strong><span>급하게 1~몇 권이 실제로 나갔을 때</span></button><button id="emergencyChoiceAdjust" class="emergency-choice adjust"><strong>◎ 실물재고 맞춤</strong><span>앱 57권 · 실제 54권처럼 수량 차이를 바로잡을 때</span></button><div class="sheet-actions"><button class="btn light" onclick="closeSheet()">닫기</button></div>`);
-      document.getElementById('emergencyChoiceOut').onclick = () => window.openEmergencyOut(key);
-      document.getElementById('emergencyChoiceAdjust').onclick = () => window.openPhysicalAdjust(key);
-    };
-
-    window.openEmergencyOut = function(key) {
-      const actor = currentActor();
-      const g = currentGroup(key);
-      if (!actor?.canManage || !g) return;
-      if (g.balance < 0) { notice('현재 기록 오류가 있어 비상출고할 수 없습니다. 실물재고 맞춤을 먼저 해주세요.'); return; }
-      openSheet(`<div class="sheet-title">${esc(g.name)} 비상출고</div>${heroHTML(g.balance, '출고 후 잔고', g.balance)}<div class="field"><label>비상출고 수량</label><input id="emergencyQty" class="big-number" type="number" inputmode="numeric" min="1" max="${g.balance}" placeholder="0"></div><div class="chips"><button class="chip" data-emergency-qty="1">1권</button><button class="chip" data-emergency-qty="2">2권</button><button class="chip" data-emergency-qty="5">5권</button></div><div class="field"><label>메모 (선택)</label><textarea id="emergencyMemo" placeholder="예: 강사 추가 요청 / 긴급 불출"></textarea></div><div class="sheet-actions"><button class="btn light" onclick="closeSheet()">취소</button><button id="emergencySubmit" class="btn orange">⇧ 비상출고</button></div>`);
-      const input = document.getElementById('emergencyQty');
+    function bindQty(inputId, current, submitId) {
+      const input = document.getElementById(inputId);
+      const after = document.getElementById('immediateAfter');
+      const helper = document.getElementById('immediateHelper');
+      const submit = document.getElementById(submitId);
       const update = () => {
         const qty = Number(input.value || 0);
-        const after = g.balance - (Number.isFinite(qty) && qty > 0 ? qty : 0);
-        const out = document.getElementById('specialAfter');
-        const help = document.getElementById('specialHelper');
-        out.className = `balance-number ${balanceClass(after)}`;
-        if (after < 0) { out.textContent = '출고 불가'; help.textContent = `현재 잔고 ${g.balance}권을 초과합니다.`; help.classList.add('danger'); }
-        else { out.textContent = `${after}권`; help.textContent = qty > 0 ? `비상출고 ${qty}권 처리 시 남는 재고` : '수량을 입력하면 처리 후 잔고가 바로 표시됩니다.'; help.classList.remove('danger'); }
-        document.getElementById('emergencySubmit').disabled = !(Number.isInteger(qty) && qty > 0 && qty <= g.balance);
+        const valid = Number.isInteger(qty) && qty > 0;
+        const remain = current - (valid ? qty : 0);
+        if (valid && remain < 0) {
+          after.textContent = '출고 불가';
+          after.className = 'balance-number error';
+          helper.textContent = `현재 잔고 ${current}권을 초과합니다.`;
+          helper.classList.add('danger');
+          submit.disabled = true;
+        } else {
+          after.textContent = `${remain}권`;
+          after.className = `balance-number ${balanceClass(remain)}`;
+          helper.textContent = valid ? `즉시출고 ${qty}권 처리 후 남는 재고` : '수량을 입력하면 남는 재고가 바로 표시됩니다.';
+          helper.classList.remove('danger');
+          submit.disabled = !valid;
+        }
       };
       input.addEventListener('input', update);
-      document.querySelectorAll('[data-emergency-qty]').forEach(btn => btn.onclick = () => { input.value = btn.dataset.emergencyQty; update(); });
-      document.getElementById('emergencySubmit').onclick = async () => {
-        const qty = Number(input.value);
-        const button = document.getElementById('emergencySubmit');
+      document.querySelectorAll('[data-immediate-qty]').forEach(btn => {
+        btn.onclick = () => { input.value = btn.dataset.immediateQty; update(); };
+      });
+      update();
+    }
+
+    window.openImmediateOutGroup = function(key) {
+      const a = actor();
+      const g = group(key);
+      if (!a?.canManage) { notice('즉시출고는 주나연 담당자만 사용할 수 있습니다.'); return; }
+      if (!g) return;
+      if (g.balance < 0) { notice('현재 잔고가 음수인 품목은 즉시출고할 수 없습니다.'); return; }
+      openSheet(`<div class="sheet-title">${esc(g.name)} 즉시출고</div><div class="sheet-sub">과정·차수와 관계없이 입고 담당자가 바로 출고 처리합니다. 모든 작업은 기록됩니다.</div>${balanceHero(g.balance)}<div class="field"><label>즉시출고 수량</label><input id="immediateQty" class="big-number" type="number" inputmode="numeric" min="1" max="${g.balance}" placeholder="0"></div><div class="chips"><button class="chip" data-immediate-qty="1">1권</button><button class="chip" data-immediate-qty="2">2권</button><button class="chip" data-immediate-qty="5">5권</button></div><div class="field"><label>메모 (선택)</label><textarea id="immediateMemo" placeholder="예: 강사 추가 요청 / 현장 즉시 불출"></textarea></div><div class="immediate-note">정식 과정 출고와 별도로 ‘즉시출고’ 로그가 남습니다.</div><div class="sheet-actions"><button class="btn light" onclick="closeSheet()">취소</button><button id="immediateSubmit" class="btn orange">⇧ 즉시출고</button></div>`);
+      bindQty('immediateQty', g.balance, 'immediateSubmit');
+      document.getElementById('immediateSubmit').onclick = async () => {
+        const qty = Number(document.getElementById('immediateQty').value);
+        const button = document.getElementById('immediateSubmit');
         button.disabled = true;
         try {
-          const result = await state.inventory.emergencyOutGroup({ groupCourseIds: groupIds(g), groupKey: g.key, groupName: g.name, quantity: qty, actor, memo: document.getElementById('emergencyMemo').value.trim() });
-          closeSheet(); notice(`${g.name} 비상출고 ${qty}권 · 잔고 ${result.availableAfter}권`); await loadAll();
-        } catch (e) { console.error(e); notice('비상출고 차단 · ' + (e.message || e)); button.disabled = false; }
+          const result = await state.inventory.immediateOutGroup({
+            groupCourseIds: g.courses.map(c => c.id),
+            groupKey: g.key,
+            groupName: g.name,
+            quantity: qty,
+            actor: a,
+            memo: document.getElementById('immediateMemo').value.trim()
+          });
+          closeSheet();
+          notice(`${g.name} 즉시출고 ${qty}권 · 잔고 ${result.availableAfter}권`);
+          await loadAll();
+        } catch (e) {
+          console.error(e);
+          notice('즉시출고 차단 · ' + (e.message || e));
+          button.disabled = false;
+        }
       };
-      update();
     };
 
-    window.openPhysicalAdjust = function(key) {
-      const actor = currentActor();
-      const g = currentGroup(key);
-      if (!actor?.canManage || !g) return;
-      openSheet(`<div class="sheet-title">${esc(g.name)} 실물재고 맞춤</div>${heroHTML(g.balance, '맞춤 후 잔고', g.balance)}<div class="field"><label>실제로 세어본 수량</label><input id="physicalQty" class="big-number" type="number" inputmode="numeric" min="0" placeholder="실제 보유 권수"></div><div id="physicalDiff" class="balance-helper"></div><div class="field"><label>메모 (선택)</label><textarea id="physicalMemo" placeholder="예: 창고 실사 / 분실·누락 확인"></textarea></div><div class="sheet-actions"><button class="btn light" onclick="closeSheet()">취소</button><button id="physicalSubmit" class="btn purple">◎ 재고 맞춤</button></div>`);
-      const input = document.getElementById('physicalQty');
-      const update = () => {
-        const raw = input.value;
-        const actual = raw === '' ? null : Number(raw);
-        const out = document.getElementById('specialAfter');
-        const helper = document.getElementById('specialHelper');
-        const diff = document.getElementById('physicalDiff');
-        const valid = actual !== null && Number.isInteger(actual) && actual >= 0;
-        if (!valid) { out.textContent = `${g.balance}권`; out.className = `balance-number ${balanceClass(g.balance)}`; helper.textContent = '실제로 세어본 수량을 입력하세요.'; diff.textContent = ''; document.getElementById('physicalSubmit').disabled = true; return; }
-        out.textContent = `${actual}권`; out.className = `balance-number ${balanceClass(actual)}`;
-        const delta = actual - g.balance;
-        helper.textContent = `앱 잔고 ${g.balance}권 → 실물 잔고 ${actual}권`;
-        diff.textContent = delta === 0 ? '현재 앱 잔고와 같습니다.' : `자동 조정 ${delta > 0 ? '+' : ''}${delta}권`;
-        diff.classList.toggle('danger', delta < 0);
-        document.getElementById('physicalSubmit').disabled = delta === 0;
-      };
-      input.addEventListener('input', update);
-      document.getElementById('physicalSubmit').onclick = async () => {
-        const actual = Number(input.value);
-        const button = document.getElementById('physicalSubmit');
+    window.openImmediateOutSubBook = function(id) {
+      const a = actor();
+      const b = subBook(id);
+      if (!a?.canManage) { notice('즉시출고는 주나연 담당자만 사용할 수 있습니다.'); return; }
+      if (!b) return;
+      const current = Number(b.stock_quantity || 0) - Number(b.released_quantity || 0) + Number(b.inventory_adjustment || 0);
+      if (current < 0) { notice('현재 잔고가 음수인 부교재는 즉시출고할 수 없습니다.'); return; }
+      const name = String(b.inventory_display_name || b.book_name || '부교재');
+      openSheet(`<div class="sheet-title">${esc(name)} 즉시출고</div><div class="sheet-sub"><span class="badge sub">부교재</span> · 입고 담당자 재량 출고</div>${balanceHero(current)}<div class="field"><label>즉시출고 수량</label><input id="immediateQty" class="big-number" type="number" inputmode="numeric" min="1" max="${current}" placeholder="0"></div><div class="chips"><button class="chip" data-immediate-qty="1">1권</button><button class="chip" data-immediate-qty="2">2권</button><button class="chip" data-immediate-qty="5">5권</button></div><div class="field"><label>메모 (선택)</label><textarea id="immediateMemo" placeholder="예: 현장 즉시 불출"></textarea></div><div class="sheet-actions"><button class="btn light" onclick="closeSheet()">취소</button><button id="immediateSubmit" class="btn orange">⇧ 즉시출고</button></div>`);
+      bindQty('immediateQty', current, 'immediateSubmit');
+      document.getElementById('immediateSubmit').onclick = async () => {
+        const qty = Number(document.getElementById('immediateQty').value);
+        const button = document.getElementById('immediateSubmit');
         button.disabled = true;
         try {
-          const result = await state.inventory.reconcilePhysicalStock({ groupCourseIds: groupIds(g), groupKey: g.key, groupName: g.name, actualStock: actual, actor, memo: document.getElementById('physicalMemo').value.trim() });
-          closeSheet(); notice(`${g.name} 실물재고 ${actual}권으로 맞춤 · 조정 ${result.adjustment > 0 ? '+' : ''}${result.adjustment}권`); await loadAll();
-        } catch (e) { console.error(e); notice('재고 맞춤 실패 · ' + (e.message || e)); button.disabled = false; }
+          const result = await state.inventory.immediateOutSubBook({
+            subBookId: id,
+            quantity: qty,
+            actor: a,
+            memo: document.getElementById('immediateMemo').value.trim()
+          });
+          closeSheet();
+          notice(`${result.name} 즉시출고 ${qty}권 · 잔고 ${result.availableAfter}권`);
+          await loadAll();
+        } catch (e) {
+          console.error(e);
+          notice('즉시출고 차단 · ' + (e.message || e));
+          button.disabled = false;
+        }
       };
-      update();
     };
 
-    function enhanceEmergencyButtons() {
-      let actor;
-      try { actor = state.actor; } catch (_) { return; }
-      if (!actor?.canManage) return;
+    function enhanceButtons() {
+      const a = actor();
+      if (!a?.canManage) return;
+
       document.querySelectorAll('#inList .inventory-card').forEach(card => {
-        if (card.querySelector('.emergency-stock-btn')) return;
-        const inButton = [...card.querySelectorAll('button')].find(b => /openIn\('/.test(b.getAttribute('onclick') || ''));
-        if (!inButton) return;
-        const match = (inButton.getAttribute('onclick') || '').match(/openIn\('([^']+)'\)/);
-        if (!match) return;
-        const key = match[1];
-        let row = card.querySelector('.action-row');
-        if (!row) { row = document.createElement('div'); row.className = 'action-row'; card.appendChild(row); }
-        const button = document.createElement('button');
-        button.className = 'btn small emergency-stock-btn';
-        button.textContent = '⚡ 비상출고 / 실물재고 맞춤';
-        button.onclick = () => window.openEmergencyStock(key);
-        row.prepend(button);
+        // 주교재: 입고 버튼의 group key를 재사용한다.
+        const inBtn = [...card.querySelectorAll('button')].find(b => /openIn\('/.test(b.getAttribute('onclick') || ''));
+        if (inBtn && !card.querySelector('.immediate-stock-btn')) {
+          const match = (inBtn.getAttribute('onclick') || '').match(/openIn\('([^']+)'\)/);
+          if (match) {
+            let row = card.querySelector('.action-row');
+            if (!row) { row = document.createElement('div'); row.className = 'action-row'; card.appendChild(row); }
+            const btn = document.createElement('button');
+            btn.className = 'btn small immediate-stock-btn';
+            btn.textContent = '⇧ 즉시출고';
+            btn.onclick = () => window.openImmediateOutGroup(match[1]);
+            row.prepend(btn);
+          }
+        }
+
+        // 부교재: 기존 복합 버튼을 단일 즉시출고 버튼으로 교체한다.
+        const oldSubBtn = [...card.querySelectorAll('button')].find(b => /openSubEmergency\('/.test(b.getAttribute('onclick') || ''));
+        if (oldSubBtn) {
+          const match = (oldSubBtn.getAttribute('onclick') || '').match(/openSubEmergency\('([^']+)'\)/);
+          if (match) {
+            oldSubBtn.removeAttribute('onclick');
+            oldSubBtn.className = 'btn small immediate-stock-btn';
+            oldSubBtn.textContent = '⇧ 즉시출고';
+            oldSubBtn.onclick = () => window.openImmediateOutSubBook(match[1]);
+          }
+        }
       });
     }
 
-    function enhanceBalances() {
-      document.querySelectorAll('#inList .inventory-card .meta').forEach(el => {
-        if (/^현재\s*잔고\s*-?\d+\s*권/.test(el.textContent.trim())) el.classList.add('current-stock-emphasis');
-      });
-      document.querySelectorAll('#weekCourses .course-card').forEach(card => {
-        if (card.querySelector('.course-balance-emphasis')) return;
-        const meta = card.querySelector('.meta');
-        const current = meta ? parseCurrentBalance(meta.textContent) : null;
-        if (current === null) return;
-        const line = document.createElement('div');
-        line.className = 'course-balance-emphasis';
-        line.innerHTML = `현재 잔고 <strong>${current}권</strong>`;
-        const top = card.querySelector('.course-top > div');
-        if (top) top.appendChild(line);
-      });
-    }
-
-    function enhanceNormalSheet() {
-      const body = document.getElementById('sheetBody');
-      if (!body || body.querySelector('.balance-hero')) return;
-      const title = body.querySelector('.sheet-title');
-      const input = body.querySelector('#inQty, #outQty');
-      if (!title || !input) return;
-      const mode = input.id === 'inQty' ? 'in' : 'out';
-      const subtitle = body.querySelector('.sheet-sub');
-      const current = parseCurrentBalance(subtitle ? subtitle.textContent : body.textContent);
-      if (current === null) return;
-      title.insertAdjacentHTML('afterend', heroHTML(current, mode === 'in' ? '입고 후 잔고' : '출고 후 잔고', current));
-      const after = document.getElementById('specialAfter');
-      const helper = document.getElementById('specialHelper');
-      const update = () => {
-        const q = Number(input.value || 0); const qty = Number.isFinite(q) && q > 0 ? q : 0; const value = mode === 'in' ? current + qty : current - qty;
-        after.className = `balance-number ${balanceClass(value)}`;
-        if (mode === 'out' && value < 0) { after.textContent = '출고 불가'; helper.textContent = `현재 잔고 ${current}권을 초과합니다.`; helper.classList.add('danger'); }
-        else { after.textContent = `${value}권`; helper.textContent = qty > 0 ? `${mode === 'in' ? '입고' : '출고'} ${qty}권 처리 시 예상 잔고` : '수량을 입력하면 처리 후 잔고가 바로 표시됩니다.'; helper.classList.remove('danger'); }
-      };
-      input.addEventListener('input', update); input.addEventListener('change', update); update();
-    }
-
-    function enhanceLogTypes() {
+    function enhanceLogs() {
       document.querySelectorAll('#logList .log').forEach(card => {
-        const type = card.querySelector('.log-type'); if (!type) return;
-        if (card.textContent.includes('[비상출고]')) { type.textContent = type.textContent.replace(/^출고/, '비상출고'); type.classList.add('emergency'); }
-        if (type.textContent.startsWith('재고조정')) type.classList.add('adjust');
+        if (!card.textContent.includes('[즉시출고]')) return;
+        const type = card.querySelector('.log-type');
+        if (type && !type.textContent.startsWith('즉시출고')) {
+          type.textContent = type.textContent.replace(/^출고/, '즉시출고');
+        }
       });
     }
 
     function refresh() {
-      enhanceBalances();
-      enhanceEmergencyButtons();
-      enhanceNormalSheet();
-      enhanceLogTypes();
+      enhanceButtons();
+      enhanceLogs();
     }
 
     const start = () => {
       refresh();
-      const observer = new MutationObserver(refresh);
-      observer.observe(document.body, { childList: true, subtree: true });
-      document.addEventListener('click', event => { if (event.target.closest('.chip')) setTimeout(refresh, 0); }, true);
+      new MutationObserver(refresh).observe(document.body, { childList: true, subtree: true });
     };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
     else start();
