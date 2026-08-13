@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<title>교재 재고 정합성 전수점검</title>
+<style>
+:root{--bg:#f4f7fb;--card:#fff;--text:#0f172a;--muted:#64748b;--line:#dbe3ef;--blue:#2563eb;--red:#dc2626;--orange:#c2410c;--green:#15803d;--purple:#7c3aed}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif}body{min-height:100dvh}.shell{max-width:1040px;margin:auto;padding:16px 14px 50px}.top{margin-bottom:16px}.title{font-size:25px;font-weight:950;letter-spacing:-.7px}.sub{font-size:13px;color:var(--muted);line-height:1.55;margin-top:5px}.safe{background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;border-radius:15px;padding:13px 14px;margin:14px 0;font-size:13px;line-height:1.55}.btn{border:0;border-radius:13px;min-height:48px;padding:0 16px;font-weight:900;cursor:pointer}.btn.blue{background:var(--blue);color:white}.btn.light{background:#e2e8f0;color:#334155}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-bottom:14px}.metric{background:#fff;border:1px solid var(--line);border-radius:16px;padding:13px}.metric .l{font-size:12px;color:var(--muted);font-weight:800}.metric .n{font-size:25px;font-weight:950;margin-top:4px}.metric.red .n{color:var(--red)}.metric.orange .n{color:var(--orange)}.metric.purple .n{color:var(--purple)}.metric.green .n{color:var(--green)}.section{background:#fff;border:1px solid var(--line);border-radius:18px;padding:14px;margin-top:12px}.section h2{font-size:18px;margin:0 0 5px}.section-desc{font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:12px}.filter{display:flex;gap:6px;overflow:auto;margin-bottom:10px}.chip{border:1px solid var(--line);background:#f8fafc;border-radius:999px;min-height:38px;padding:0 12px;font-size:12px;font-weight:850;white-space:nowrap}.chip.active{background:#0f172a;color:#fff;border-color:#0f172a}.row{border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:8px}.row.bad{border-color:#fca5a5;background:#fffafa}.row.warn{border-color:#fdba74;background:#fffaf5}.row.good{border-color:#bbf7d0;background:#fbfffc}.row-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.name{font-size:16px;font-weight:950;line-height:1.35}.status{font-size:11px;font-weight:900;border-radius:999px;padding:5px 8px;white-space:nowrap}.status.bad{background:#fee2e2;color:#991b1b}.status.warn{background:#ffedd5;color:#9a3412}.status.good{background:#dcfce7;color:#166534}.status.info{background:#ede9fe;color:#6d28d9}.nums{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}.num{background:#f8fafc;border-radius:10px;padding:8px;text-align:center}.num .k{font-size:10px;color:var(--muted);font-weight:800}.num .v{font-size:17px;font-weight:950;margin-top:2px}.num.legacy .v{color:#0f172a}.num.simple .v{color:#2563eb}.num.diff .v{color:#dc2626}.cause{font-size:12px;line-height:1.55;margin-top:9px;color:#475569}.cause b{color:#0f172a}.detail{margin-top:9px}.detail summary{font-size:12px;color:#2563eb;font-weight:850;cursor:pointer}.course{font-size:11px;color:#475569;padding:7px 0;border-bottom:1px dashed #e2e8f0;line-height:1.45}.empty{text-align:center;color:var(--muted);padding:28px 12px}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.legend{font-size:12px;line-height:1.7;color:#475569}.fatal{background:#7f1d1d;color:white;border-radius:14px;padding:14px;font-weight:850}.search{width:100%;height:45px;border:1px solid var(--line);border-radius:12px;padding:0 13px;font-size:16px;margin-bottom:10px}
+@media(min-width:720px){.metrics{grid-template-columns:repeat(6,1fr)}.shell{padding-top:24px}.nums{grid-template-columns:repeat(7,1fr)}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="top"><div class="title">재고 정합성 전수점검</div><div class="sub">이전 앱의 실제 집계 규칙과 현재 Simple 집계 규칙을 같은 Firebase 데이터에서 동시에 계산합니다.</div></div>
+  <div class="safe"><b>읽기 전용 점검입니다.</b><br>이 페이지는 courses / work_logs / sub_books / sub_book_logs를 읽기만 합니다. 재고·로그·과정 데이터는 절대 수정하지 않습니다.</div>
+  <div class="actions"><button id="runBtn" class="btn blue">전수 점검 실행</button><button class="btn light" onclick="location.href='./'">Simple 화면으로 돌아가기</button></div>
+  <div id="fatal"></div>
+  <div id="metrics" class="metrics"></div>
+  <section class="section"><h2>1. 주교재/과정 재고 비교</h2><div class="section-desc">이전 앱: 차수 통합 + 완료상태 출고만 집계 / Simple: 현재 그룹키 + 모든 released_quantity 집계. 차이가 나는 이유를 자동 분류합니다.</div><input id="search" class="search" type="search" placeholder="교재명 검색"><div class="filter"><button class="chip active" data-filter="all">전체</button><button class="chip" data-filter="mismatch">불일치</button><button class="chip" data-filter="negative">Simple 음수</button><button class="chip" data-filter="excluded">미완료상태 출고량</button><button class="chip" data-filter="merge">그룹규칙 차이</button></div><div id="mainRows"><div class="empty">전수 점검을 실행해주세요.</div></div></section>
+  <section class="section"><h2>2. 기존 부교재</h2><div class="section-desc">이전 앱의 sub_books는 주교재와 독립된 실물 교재입니다. Simple 화면에 아직 통합되지 않은 기존 부교재를 별도로 확인합니다.</div><div id="subRows"><div class="empty">전수 점검을 실행해주세요.</div></div></section>
+  <section class="section"><h2>3. 신규 Simple 전용 원장</h2><div class="section-desc">새 교재 등록, 비상출고, 실물재고 맞춤 등 새 시스템이 생성한 inventory_only / inventory_ledger_only 문서는 과거 기준선과 분리해서 표시합니다.</div><div id="newRows"><div class="empty">전수 점검을 실행해주세요.</div></div></section>
+  <section class="section"><h2>판정 기준</h2><div class="legend">• <b>이전 앱 출고량</b>: 상태가 출고완료·출고확인·세팅중·세팅완료대기·세팅완료인 과정만 released_quantity 합산<br>• <b>Simple 원시 출고량</b>: 현재 Simple 화면처럼 그룹 내 released_quantity 전체 합산<br>• <b>미완료상태 출고량</b>: 이전 앱에서는 재고에서 차감하지 않았지만 Simple에서는 차감되는 값<br>• <b>부교재</b>: sub_books 자체의 stock_quantity - released_quantity로 별도 계산<br>• 이 페이지의 결과만으로 실물재고를 자동 보정하지 않습니다.</div></section>
+</div>
+<script src="../migration/firebase-compat.js?v=8"></script>
+<script>
+const RELEASED_STATUSES=['출고완료','출고확인','세팅중','세팅완료대기','세팅완료'];
+const S={client:null,courses:[],logs:[],subBooks:[],subLogs:[],rows:[],filter:'all'};
+const $=s=>document.querySelector(s); const num=v=>Number(v||0)||0; const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function legacyName(name){const s=String(name||'');return s.replace(/\s*\d+차(\([^)]*\))?$/,'').trim()||s.trim()}
+function legacyKey(name){return legacyName(name).replace(/\s+/g,'')}
+function simpleName(name){const s=String(name||'');return s.replace(/\s*(?:제\s*)?\d+\s*차(?:\s*.*)?$/,'').trim().replace(/\s+/g,' ')||s.trim()}
+function simpleKey(c){return String(c.inventory_group_key||simpleName(c.course_name)).replace(/\s+/g,'').toLowerCase()}
+function isImported(c){return c.inventory_only!==true && c.inventory_ledger_only!==true}
+function metric(l,n,cls=''){return `<div class="metric ${cls}"><div class="l">${l}</div><div class="n">${n}</div></div>`}
+function statusMap(courses){const m=new Map();for(const c of courses){const k=String(c.status||'상태없음');if(!m.has(k))m.set(k,{count:0,released:0});const x=m.get(k);x.count++;x.released+=num(c.released_quantity)}return [...m.entries()].map(([k,v])=>`${k} ${v.count}건${v.released?`/${v.released}권`:''}`).join(' · ')}
+function buildAudit(){
+  const imported=S.courses.filter(isImported);
+  const lg=new Map();
+  for(const c of imported){const key=legacyKey(c.course_name);if(!lg.has(key))lg.set(key,{key,name:legacyName(c.course_name),courses:[],stock:0,legacyReleased:0,rawReleased:0,simpleKeys:new Set()});const g=lg.get(key);g.courses.push(c);g.stock+=num(c.stock_quantity);g.rawReleased+=num(c.released_quantity);if(RELEASED_STATUSES.includes(c.status))g.legacyReleased+=num(c.released_quantity);g.simpleKeys.add(simpleKey(c))}
+  const simpleGroups=new Map();
+  for(const c of S.courses){const key=simpleKey(c);if(!simpleGroups.has(key))simpleGroups.set(key,{key,courses:[],stock:0,released:0});const g=simpleGroups.get(key);g.courses.push(c);g.stock+=Math.max(0,num(c.stock_quantity));g.released+=Math.max(0,num(c.released_quantity))}
+  const simpleToLegacy=new Map();
+  for(const g of lg.values())for(const sk of g.simpleKeys){if(!simpleToLegacy.has(sk))simpleToLegacy.set(sk,new Set());simpleToLegacy.get(sk).add(g.key)}
+  const rows=[];
+  for(const g of lg.values()){
+    const legacyBalance=g.stock-g.legacyReleased; const excluded=g.rawReleased-g.legacyReleased;
+    let currentStock=0,currentReleased=0,currentBalance=null,extraDocs=0;
+    const mergedLegacy=new Set();
+    for(const sk of g.simpleKeys){const sg=simpleGroups.get(sk);if(sg){currentStock+=sg.stock;currentReleased+=sg.released;extraDocs+=sg.courses.filter(c=>!isImported(c)).length}for(const lk of (simpleToLegacy.get(sk)||[]))mergedLegacy.add(lk)}
+    if(g.simpleKeys.size)currentBalance=currentStock-currentReleased;
+    const diff=currentBalance===null?null:currentBalance-legacyBalance;
+    const groupingChanged=g.simpleKeys.size!==1 || mergedLegacy.size>1 || g.courses.some(c=>legacyKey(c.course_name).toLowerCase()!==simpleKey(c));
+    const causes=[];
+    if(excluded!==0)causes.push(`미완료 상태의 released_quantity ${excluded}권이 Simple에서 추가 차감`);
+    if(mergedLegacy.size>1)causes.push(`이전 앱의 ${mergedLegacy.size}개 그룹이 Simple 그룹 하나로 병합`);
+    if(g.simpleKeys.size>1)causes.push(`이전 그룹 하나가 Simple에서 ${g.simpleKeys.size}개 그룹으로 분리`);
+    if(extraDocs)causes.push(`신규 Simple 전용 원장/항목 ${extraDocs}건 포함`);
+    if(diff===0&&!causes.length)causes.push('동일');
+    if(currentBalance<0&&legacyBalance>=0)causes.unshift('계산규칙 차이로 Simple에서 음수 발생');
+    rows.push({...g,legacyBalance,excluded,currentStock,currentReleased,currentBalance,diff,groupingChanged,mergedCount:mergedLegacy.size,extraDocs,causes,statusText:statusMap(g.courses)})
+  }
+  rows.sort((a,b)=>{const aa=(a.diff!==0?0:1),bb=(b.diff!==0?0:1);return aa-bb||a.legacyBalance-b.legacyBalance||a.name.localeCompare(b.name,'ko')});
+  S.rows=rows;
+}
+function renderMetrics(){const imported=S.courses.filter(isImported);const mismatch=S.rows.filter(r=>r.diff!==0).length;const neg=S.rows.filter(r=>r.currentBalance<0).length;const excluded=S.rows.filter(r=>r.excluded!==0).length;const grouping=S.rows.filter(r=>r.groupingChanged).length;$('#metrics').innerHTML=metric('기존 과정',imported.length+'건')+metric('기존 부교재',S.subBooks.length+'종','purple')+metric('불일치',mismatch+'종','red')+metric('Simple 음수',neg+'종','red')+metric('미완료 출고량',excluded+'종','orange')+metric('그룹규칙 차이',grouping+'종','orange')}
+function rowClass(r){if(r.currentBalance<0||r.diff!==0)return'bad';if(r.groupingChanged||r.excluded)return'warn';return'good'}
+function rowStatus(r){if(r.currentBalance<0&&r.legacyBalance>=0)return['계산 음수','bad'];if(r.diff!==0)return['불일치','bad'];if(r.groupingChanged||r.excluded)return['점검','warn'];return['일치','good']}
+function renderMain(){const q=$('#search').value.trim().toLowerCase();let rows=S.rows.filter(r=>!q||r.name.toLowerCase().includes(q)||r.courses.some(c=>String(c.course_name||'').toLowerCase().includes(q)));if(S.filter==='mismatch')rows=rows.filter(r=>r.diff!==0);if(S.filter==='negative')rows=rows.filter(r=>r.currentBalance<0);if(S.filter==='excluded')rows=rows.filter(r=>r.excluded!==0);if(S.filter==='merge')rows=rows.filter(r=>r.groupingChanged);$('#mainRows').innerHTML=rows.map(r=>{const [st,sc]=rowStatus(r);return `<div class="row ${rowClass(r)}"><div class="row-head"><div><div class="name">${esc(r.name)}</div><div class="cause">차수 통합 ${r.courses.length}건 · 상태: ${esc(r.statusText||'-')}</div></div><span class="status ${sc}">${st}</span></div><div class="nums"><div class="num legacy"><div class="k">이전 입고</div><div class="v">${r.stock}</div></div><div class="num legacy"><div class="k">이전 출고</div><div class="v">${r.legacyReleased}</div></div><div class="num legacy"><div class="k">이전 잔고</div><div class="v">${r.legacyBalance}</div></div><div class="num simple"><div class="k">Simple 입고</div><div class="v">${r.currentStock}</div></div><div class="num simple"><div class="k">Simple 출고</div><div class="v">${r.currentReleased}</div></div><div class="num simple"><div class="k">Simple 잔고</div><div class="v">${r.currentBalance??'-'}</div></div><div class="num diff"><div class="k">잔고 차이</div><div class="v">${r.diff===null?'-':(r.diff>0?'+':'')+r.diff}</div></div></div><div class="cause"><b>판정:</b> ${r.causes.map(esc).join(' / ')}</div><details class="detail"><summary>차수별 원본 데이터 보기</summary>${r.courses.map(c=>`<div class="course"><b>${esc(c.course_name)}</b><br>상태 ${esc(c.status||'-')} · 입고 ${num(c.stock_quantity)} · released_quantity ${num(c.released_quantity)} · 이전앱 출고반영 ${RELEASED_STATUSES.includes(c.status)?'예':'아니오'}<br><span class="mono">legacyKey=${esc(legacyKey(c.course_name))} / simpleKey=${esc(simpleKey(c))}</span></div>`).join('')}</details></div>`}).join('')||'<div class="empty">조건에 해당하는 항목이 없습니다.</div>'}
+function renderSubs(){const rows=[...S.subBooks].sort((a,b)=>(num(a.stock_quantity)-num(a.released_quantity))-(num(b.stock_quantity)-num(b.released_quantity)));$('#subRows').innerHTML=rows.map(b=>{const bal=num(b.stock_quantity)-num(b.released_quantity);return `<div class="row warn"><div class="row-head"><div><div class="name">${esc(b.book_name||'부교재')}</div><div class="cause">연결 과정: ${esc(b.course_group_name||b.course_group_key||'-')}</div></div><span class="status info">Simple 별도통합 필요</span></div><div class="nums"><div class="num"><div class="k">입고</div><div class="v">${num(b.stock_quantity)}</div></div><div class="num"><div class="k">출고</div><div class="v">${num(b.released_quantity)}</div></div><div class="num"><div class="k">잔고</div><div class="v">${bal}</div></div></div></div>`}).join('')||'<div class="empty">기존 부교재가 없습니다.</div>'}
+function renderNew(){const docs=S.courses.filter(c=>!isImported(c));$('#newRows').innerHTML=docs.map(c=>`<div class="row"><div class="row-head"><div><div class="name">${esc(c.inventory_display_name||c.course_name||c.id)}</div><div class="cause">${c.inventory_ledger_only?'비상출고/재고맞춤 내부 원장':c.inventory_only?'Simple 신규 재고항목':'기타'} · 입고 ${num(c.stock_quantity)} · 출고 ${num(c.released_quantity)} · 잔고 ${num(c.stock_quantity)-num(c.released_quantity)}</div></div><span class="status info">신규 시스템</span></div></div>`).join('')||'<div class="empty">아직 신규 Simple 전용 원장이 없습니다.</div>'}
+function render(){renderMetrics();renderMain();renderSubs();renderNew()}
+async function run(){const btn=$('#runBtn');btn.disabled=true;btn.textContent='점검 중...';$('#fatal').innerHTML='';try{S.client=await window.firebaseDbReady;const [c,l,s,sl]=await Promise.all([S.client.from('courses').select('*'),S.client.from('work_logs').select('*'),S.client.from('sub_books').select('*'),S.client.from('sub_book_logs').select('*')]);for(const x of [c,l,s,sl])if(x.error)throw new Error(x.error.message);S.courses=c.data||[];S.logs=l.data||[];S.subBooks=s.data||[];S.subLogs=sl.data||[];buildAudit();render();btn.textContent='전수 점검 다시 실행'}catch(e){console.error(e);$('#fatal').innerHTML=`<div class="fatal">점검 실패: ${esc(e.message||e)}</div>`;btn.textContent='다시 시도'}finally{btn.disabled=false}}
+$$('.chip').forEach(b=>b.onclick=()=>{$$('.chip').forEach(x=>x.classList.remove('active'));b.classList.add('active');S.filter=b.dataset.filter;renderMain()});$('#search').addEventListener('input',renderMain);$('#runBtn').onclick=run;
+</script>
+</body>
+</html>
