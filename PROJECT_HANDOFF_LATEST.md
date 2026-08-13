@@ -1,107 +1,175 @@
-# MG 교재관리 시스템 — PROJECT HANDOFF LATEST
+# MG 교재 재고관리 — PROJECT HANDOFF LATEST
 
-> 이 문서는 새 ChatGPT 채팅이 과거 대화 없이도 현재 작업을 안전하게 이어가기 위한 **고정 진입점**이다.
-> 저장소는 공개 저장소이므로 UID, 비밀번호, 토큰, 서비스계정 키 등 민감정보를 기록하지 않는다.
+> 최신 시작점은 `START_HERE_CHATGPT.md`이다.
+> 이 문서는 현재 제품/데이터/검증 상태를 보충하는 장문 인계 문서다.
 
-## 1. 새 채팅에서 가장 먼저 할 일
+## 새 채팅 재개 방법
 
-사용자가 **`교재관리 다음 작업 진행`**이라고 입력하면 다음 순서로 진행한다.
-
-1. GitHub 저장소 `kfcccpro-ship-it/book`의 `main` 최신 HEAD를 확인한다.
-2. 이 파일 `PROJECT_HANDOFF_LATEST.md`를 읽는다.
-3. 작업 브랜치 `firebase-migration`의 최신 HEAD를 확인한다.
-4. `firebase-migration/PROJECT_STATUS.md`를 읽는다.
-5. `main`과 `firebase-migration`을 compare하여 최신 변경을 재확인한다.
-6. GitHub Pages 배포 상태를 확인한다.
-7. 확인된 FIRST INCOMPLETE STEP부터 이어간다.
-
-## 2. 저장소와 배포 역할
-
-- Repository: `kfcccpro-ship-it/book`
-- `main`: GitHub Pages 운영/검증 배포 기준 브랜치.
-- GitHub Pages: `https://kfcccpro-ship-it.github.io/book/`
-- `firebase-migration`: Supabase → Firebase 무손실 전환 및 검증 개발 브랜치.
-- Firebase 검증용 파일은 `main/migration/` 하위에 선택적으로 게시하여 GitHub Pages에서 테스트한다.
-- 기존 운영 루트 `index.html`은 Firebase 전환 검증 완료 전까지 임의 교체하지 않는다.
-
-## 3. 배포 원칙 — PowerShell/CLI 사용 중단
-
-이 프로젝트에서는 일상적인 수정·배포에 PowerShell, Firebase CLI, ZIP 업로드를 사용하지 않는다.
-
-기본 흐름:
-
-`사용자 요청 → ChatGPT가 GitHub 최신 상태 확인 → 코드 수정 → GitHub commit/push → GitHub Pages 자동배포 → 사용자 URL 확인`
-
-- GitHub Pages는 현재 `main` 브랜치 루트에서 자동 배포된다.
-- Firebase Hosting은 더 이상 기본 배포 경로로 사용하지 않는다.
-- Firebase는 주로 Authentication + Firestore 데이터 저장소로 사용한다.
-- GitHub 연결이 끊긴 경우에만 수동 방식은 비상수단으로 고려한다.
-
-## 4. 절대 우선 원칙
-
-1. **기존 관리 데이터 무손실 유지가 최우선**이다.
-2. Supabase 원본은 Firebase 전환 검증 완료 전까지 삭제·비활성화하지 않는다.
-3. 기존 문서 ID, 과정 ID, 로그 이력은 유지한다.
-4. 재고/상태 변경과 작업로그는 원자적으로 처리한다.
-5. DB 전환 안정화 전에는 대규모 UI 리디자인을 동시에 진행하지 않는다.
-6. 기존 운영 루트 앱을 한 번에 Firebase 앱으로 교체하지 않고 별도 `migration/` 경로에서 먼저 검증한다.
-
-## 5. Firebase 기준
-
-- Firebase project ID: `new-book-e6ec7`
-- Authentication: Anonymous Auth 사용
-- Firestore: `(default)`
-- 소수 사용자(약 4명) 내부 재고관리 앱이므로 권한 구조는 가능한 단순하게 유지하되, 공개 웹에서 무제한 익명 쓰기는 허용하지 않는다.
-- 최종 운영 Rules는 복잡한 역할 체계보다 `인증 사용자 + 필요한 컬렉션` 중심의 단순 구조를 목표로 한다.
-
-## 6. 데이터 마이그레이션 검증 기준선
-
-Supabase 스냅샷 → Firestore 이관 후 전수 재조회 검증 완료:
-
-| Collection | Source | Firestore | Result |
-|---|---:|---:|---|
-| courses | 180 | 180 | PASS |
-| work_logs | 405 | 405 | PASS |
-| sub_books | 6 | 6 | PASS |
-| sub_book_logs | 13 | 13 | PASS |
-| users | 77 | 77 | PASS |
-| **Total** | **681** | **681** | **PASS** |
-
-- Field mismatch: `0`
-- 기존 Supabase 원본은 보존 중이다.
-
-## 7. 현재 GitHub Pages 테스트 경로
-
-Firebase 마이그레이션 검증 파일을 `main/migration/`에 게시한다.
-
-주요 경로:
-
-- `/book/migration/access.html`
-- `/book/migration/`
-- `/book/migration/atomic-course-test.html`
-
-`atomic-course-test.html`은 운영 기록을 선택하지 않고 UID 전용 테스트 문서만 생성하여 실제 원자적 과정+로그 쓰기 서비스를 검증하도록 설계되어 있다.
-
-## 8. 새 채팅이 반드시 읽어야 할 다음 파일
-
-`firebase-migration/PROJECT_STATUS.md`
-
-다만 과거 문서에 Firebase Hosting CLI 배포 지시가 남아 있으면 이 문서의 최신 원칙을 우선한다. 즉 **GitHub Pages 자동배포를 기본값**으로 사용한다.
-
-## 9. 다음 큰 단계
-
-1. GitHub Pages의 Firebase 테스트 앱 읽기 경로 검증
-2. 격리 원자적 과정+로그 쓰기 검증
-3. 핵심 쓰기 경로를 원자적 서비스로 전환
-4. Firebase 기반 앱 전체 회귀검증
-5. Firestore Rules를 소수 사용자용 단순 운영 규칙으로 정리
-6. 기존 루트 앱을 Firebase 기준본으로 전환
-7. Supabase 런타임 의존성 제거
-
-## 10. 새 채팅 호출문
-
-새 채팅에서 사용자는 아래 한 줄만 입력하면 된다.
+사용자가 새 채팅에서 아래 한 줄만 입력한다.
 
 **`교재관리 다음 작업 진행`**
 
-Assistant는 추가 설명을 요구하기 전에 GitHub 최신 상태와 이 문서를 먼저 읽고 작업을 이어간다.
+Assistant는 과거 대화를 요구하지 않고 GitHub `kfcccpro-ship-it/book`의 최신 `main`을 확인한 뒤:
+
+1. `START_HERE_CHATGPT.md`
+2. `PROJECT_STATE.json`
+3. 이 문서
+4. `simple/index.html`
+5. `simple/simple-inventory-service.js`
+
+순서로 읽고 `PROJECT_STATE.json.next_step`부터 이어간다.
+
+## 단일 기준본
+
+- Repository: `kfcccpro-ship-it/book`
+- Canonical: `main`
+- 운영/검증 URL: `https://kfcccpro-ship-it.github.io/book/simple/`
+- Routine deploy: GitHub Pages 자동배포
+- Routine workflow: 사용자 요청 → ChatGPT GitHub 확인/수정/commit → Pages 자동배포
+- ZIP 업로드, PowerShell, Firebase CLI는 일상 작업에 사용하지 않는다.
+
+## 현재 앱 목표
+
+소수 담당자가 스마트폰으로 설명 없이 사용할 수 있는 단순 교재 재고관리.
+
+핵심 메뉴:
+
+`홈 / 입고 / 출고 / 재고 / 기록`
+
+핵심 원칙:
+
+- 현재 잔고가 가장 중요한 숫자
+- 입고/출고 시 `현재 잔고 → 처리 후 잔고`를 크게 표시
+- 잔고보다 많은 출고 차단
+- 신규 음수 재고 금지
+- 모든 변경은 담당자/시간/수량/메모 로그 보존
+
+재고 시인성:
+
+- < 50: 부족 / 빨강
+- 50~99: 보통 / 보라
+- >= 100: 여유 / 파랑
+
+## 담당자
+
+### 주나연 — 입고 주 담당 / 전체 권한
+
+- 입고
+- 정식 출고
+- **즉시출고**
+- 새 교재/과정 등록
+- 표시명 변경
+- 운영 종료 숨김/복원
+
+### 교육매니저
+
+- 정식 출고
+- 필요 시 입고
+
+## 즉시출고 — 최신 확정 개념
+
+과거에 논의·구현했던 `비상출고`, `재고맞춤`, `실물재고 맞춤`이라는 사용자 노출 개념은 폐기한다.
+
+앞으로 사용자에게 보이는 단일 개념은 **즉시출고**다.
+
+- 주나연 전용
+- 과정/차수/주차 선택 불필요
+- 입고 화면에서 해당 교재의 `⇧ 즉시출고` 선택
+- 현재 잔고를 크게 표시
+- 1/2/5권 빠른 선택 가능
+- 처리 후 잔고 즉시 미리보기
+- 현재 잔고 초과 불가
+- `즉시출고` 로그 별도 기록
+- 정식 과정 출고 실적과 구분
+
+큰 틀은 **“입고 담당자가 필요할 때 재량으로 바로 출고할 수 있다”**뿐이다. 복잡한 재고조정 워크플로를 사용자에게 노출하지 않는다.
+
+## 데이터 / Firebase
+
+- Firebase project: `new-book-e6ec7`
+- Firestore `(default)`
+- Anonymous Auth
+
+이관 검증 기준선:
+
+| 컬렉션 | 건수 |
+|---|---:|
+| courses | 180 |
+| work_logs | 405 |
+| sub_books | 6 |
+| sub_book_logs | 13 |
+| users | 77 |
+| 합계 | 681 |
+
+Field mismatch: 0
+
+## 과거 재고 정합성 전수점검 — 완료
+
+동일 Firebase 데이터를 이전 앱 계산식과 Simple 계산식으로 비교한 결과:
+
+- 기존 과정 180건
+- 기존 부교재 6종
+- 주교재 불일치 **0종**
+- Simple 음수 **1종**
+- 미완료 상태 released_quantity 차이 **0종**
+
+따라서 주교재 180건의 기존 재고 계산 기준은 맞으며 임의 변경하지 않는다.
+
+음수 1종은 마이그레이션 계산 오류가 아니라 이전 기준에도 존재하던 값이다. 자동 보정하지 않는다.
+
+## 기존 부교재 6종
+
+기존 `sub_books`는 독립 실물 교재로 유지하며 Simple 입고/재고/기록 화면에 통합했다.
+
+검증 당시 기준:
+
+- (경력)신입직원 전산 / [경력] 신입직원 1, / 82-80 = 2
+- (경력)신입직원 전산 / [경력] 신입직원 3, / 32-0 = 32
+- 여신기본 실습(스프링) / 여신기본(집체) / 60-50 = 10
+- (무경력)신입직원 전산실습2 / (무)신입직원 1,2, / 66-66 = 0
+- 수신기본 실습(스프링) / 수신기본(집체) / 44-38 = 6
+- (무경력)신입직원 전산실습 1 / (무)신입직원 1,2, / 80-70 = 10
+
+이 값들은 과거 기준선이며 자동 변경하지 않는다.
+
+## 현재 핵심 파일
+
+- `START_HERE_CHATGPT.md` — 새 채팅 영구 진입점
+- `PROJECT_STATE.json` — 최신 상태/다음 작업 기계판독 파일
+- `simple/index.html` — 모바일 운영 UI
+- `simple/simple-inventory-service.js` — 원자적 입고/출고/즉시출고 서비스
+- `simple/inventory-audit.html` — 상세 읽기전용 재고 감사
+- `simple/inventory-audit-summary.html` — 감사 결과 복사 도구
+- `simple/sub-book-workflow-test.html` — 부교재 격리 테스트
+
+## 이미 검증된 주요 흐름
+
+- Firebase Auth / 읽기
+- 운영 `courses + work_logs` 원자적 격리 쓰기
+- 전체 상태 흐름 / 로그 / 정리 / 기준선 복원
+- 유지보수 생성·수정·삭제·로그 원자성
+- 부교재 기존 기준선 6/13 보존
+- 주교재 재고 과거 앱 vs Simple 0 mismatch
+
+## 다음 작업
+
+항상 `PROJECT_STATE.json.next_step`을 최신 기준으로 삼는다.
+
+현재 우선순위는:
+
+1. 모바일에서 단일 `즉시출고` UI가 주나연에게만 명확히 보이는지 확인
+2. 기존 복합 용어(`비상출고`, `재고맞춤`)가 운영 UI에 남아 있지 않은지 확인
+3. 부교재 격리 테스트가 아직 실행되지 않았다면 6/13 기준선 복원 PASS 확인
+4. 검증 후 감사/테스트 페이지를 유지할지 archive할지 결정
+5. 실제 사용자 피드백 기반 모바일 UI 미세조정
+
+## GitHub 상태 인계 규칙
+
+중대한 단계 완료 시 Assistant는 GitHub의:
+
+- `PROJECT_STATE.json`
+- 필요 시 `PROJECT_HANDOFF_LATEST.md`
+
+를 최신화한다.
+
+따라서 사용자는 더 이상 별도의 백업 MD/ZIP을 다운로드하고 새 채팅에 업로드할 필요가 없다.
