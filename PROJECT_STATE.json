@@ -12,7 +12,7 @@
     "auth": "Anonymous Auth"
   },
   "last_updated": "2026-08-13T15:26:00+09:00",
-  "current_commit": "4fa7bed7232b2494d6846ab70c4222771e330001",
+  "current_commit": "RESOLVE_LATEST_MAIN_AT_RUNTIME",
   "trigger_phrase": "교재관리 다음 작업 진행",
   "start_here": "START_HERE_CHATGPT.md",
   "core_files": [
@@ -63,7 +63,8 @@
   ],
   "next_step": "Verify the simplified 즉시출고 UI on mobile and run isolated sub-book workflow test if not yet confirmed; then remove or archive obsolete emergency/reconciliation wording and test-only pages after verification.",
   "rules": [
-    "Read latest main before modifying code",
+    "Resolve latest main HEAD at the start of every new chat",
+    "Read START_HERE_CHATGPT.md and PROJECT_STATE.json before modifying code",
     "Do not use ZIP upload or PowerShell for routine work",
     "Do not auto-correct historical inventory differences",
     "Do not create negative inventory",
