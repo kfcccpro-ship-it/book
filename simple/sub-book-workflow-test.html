@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>부교재 전체 흐름 격리 테스트</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f4f7fb;color:#0f172a;font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif}.wrap{max-width:760px;margin:auto;padding:18px 14px 40px}h1{font-size:24px;margin:0 0 7px}.sub{font-size:13px;color:#64748b;line-height:1.55}.safe{margin:14px 0;background:#eff6ff;border:1px solid #bfdbfe;border-radius:15px;padding:13px;color:#1e40af;font-size:13px;line-height:1.55}.btn{border:0;border-radius:13px;min-height:52px;padding:0 17px;font-weight:900;font-size:15px}.blue{background:#2563eb;color:#fff}.light{background:#e2e8f0;color:#334155}.btn:disabled{opacity:.5}.status{font-size:18px;font-weight:950;margin:16px 0;color:#64748b}.status.pass{color:#047857}.status.fail{color:#b91c1c}.row{display:grid;grid-template-columns:190px 1fr;gap:10px;padding:12px 4px;border-bottom:1px solid #dbe3ef;align-items:start}.k{font-weight:900}.v{font-weight:850;color:#475569}.v.pass{color:#047857}.v.fail{color:#b91c1c}.log{margin-top:16px;background:#0f172a;color:#e2e8f0;border-radius:14px;padding:13px;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;min-height:100px}.actions{display:flex;gap:8px;flex-wrap:wrap}.fatal{background:#7f1d1d;color:#fff;border-radius:14px;padding:13px;margin-top:12px;font-weight:850}@media(max-width:520px){.row{grid-template-columns:1fr}.k{margin-bottom:-4px}}
+</style>
+</head>
+<body><div class="wrap">
+<h1>부교재 전체 흐름 격리 테스트</h1>
+<div class="sub">실제 부교재 6종은 선택하거나 수정하지 않습니다. 현재 브라우저 UID 전용 테스트 부교재 1건만 생성해 검증 후 즉시 삭제합니다.</div>
+<div class="safe"><b>안전 범위</b><br>기준선: sub_books 6종 / sub_book_logs 13건<br>테스트: 입고 → 비상출고 → 실물재고 맞춤 → 이름 변경 → 숨김 → 복원 → 로그 6건 검증 → 테스트 자료 삭제 → 기준선 복원 확인</div>
+<div class="actions"><button id="run" class="btn blue">부교재 전체 테스트 실행</button><button id="cleanup" class="btn light">테스트 잔여물만 정리</button><button class="btn light" onclick="location.href='./'">돌아가기</button></div>
+<div id="status" class="status">준비 중...</div>
+<div id="rows"></div>
+<div id="fatal"></div>
+<div id="log" class="log">대기 중</div>
+</div>
+<script src="../migration/firebase-compat.js?v=8"></script>
+<script>
+const $=s=>document.querySelector(s);let client,fs,db,uid,testId,logIds=[];const TEST_NAME='[TEST] 부교재 원자적 흐름';
+function addLog(s){$('#log').textContent += `\n${s}`}
+function row(k,v,ok){return `<div class="row"><div class="k">${k}</div><div class="v ${ok===true?'pass':ok===false?'fail':''}">${v}</div></div>`}
+function render(items){$('#rows').innerHTML=items.map(x=>row(...x)).join('')}
+function n(v){const x=Number(v||0);return Number.isFinite(x)?x:0}
+async function count(col){const r=await client.from(col).select('*');if(r.error)throw new Error(r.error.message);return (r.data||[]).length}
+function docRef(col,id){return fs.doc(db,col,id)}
+function mkLogId(i){return `simple_sub_test_log_${uid}_${i}`}
+async function cleanup(){if(!client)return;const batch=fs.writeBatch(db);batch.delete(docRef('sub_books',testId));for(let i=1;i<=6;i++)batch.delete(docRef('sub_book_logs',mkLogId(i)));await batch.commit();addLog('테스트 잔여물 정리 완료')}
+async function getBook(){const s=await fs.getDoc(docRef('sub_books',testId));return s.exists()?{id:s.id,...s.data()}:null}
+async function writeLog(tx,i,type,qty,before,after,notes){const now=fs.Timestamp.now();tx.set(docRef('sub_book_logs',mkLogId(i)),{id:mkLogId(i),sub_book_id:testId,book_name:TEST_NAME,course_group_key:'__test__',course_group_name:'[TEST]',action_type:type,quantity:qty,action_date:now,created_at:now,user_name:'TEST',user_role:'TEST',before_balance:before,after_balance:after,notes})}
+async function run(){const btn=$('#run');btn.disabled=true;$('#fatal').innerHTML='';$('#log').textContent='테스트 시작';const items=[];try{
+ await cleanup();
+ const baseBooks=await count('sub_books'),baseLogs=await count('sub_book_logs');
+ items.push(['1. 기준선',`sub_books ${baseBooks} / sub_book_logs ${baseLogs}`,baseBooks===6&&baseLogs===13]);
+ if(baseBooks!==6||baseLogs!==13)throw new Error(`기준선이 예상과 다릅니다. 현재 ${baseBooks}/${baseLogs}`);
+ const now=fs.Timestamp.now();await fs.setDoc(docRef('sub_books',testId),{id:testId,book_name:TEST_NAME,course_group_key:'__test__',course_group_name:'[TEST]',stock_quantity:10,released_quantity:0,inventory_adjustment:0,inventory_hidden:false,created_at:now,updated_at:now});
+ items.push(['2. 테스트 부교재 생성','10권으로 테스트 문서 1건 생성',true]);
+ await fs.runTransaction(db,async tx=>{const s=await tx.get(docRef('sub_books',testId));const b=s.data(),before=n(b.stock_quantity)-n(b.released_quantity)+n(b.inventory_adjustment),after=before+20;tx.update(s.ref,{stock_quantity:n(b.stock_quantity)+20,updated_at:fs.Timestamp.now()});await writeLog(tx,1,'입고',20,before,after,'테스트 입고')});
+ let b=await getBook();items.push(['3. 입고+로그',`10 → ${n(b.stock_quantity)}권 / 잔고 30권`,n(b.stock_quantity)===30]);
+ await fs.runTransaction(db,async tx=>{const s=await tx.get(docRef('sub_books',testId));const x=s.data(),before=n(x.stock_quantity)-n(x.released_quantity)+n(x.inventory_adjustment);if(before<2)throw new Error('비상출고 테스트 잔고 부족');const after=before-2;tx.update(s.ref,{released_quantity:n(x.released_quantity)+2,updated_at:fs.Timestamp.now()});await writeLog(tx,2,'비상출고',2,before,after,'테스트 비상출고')});
+ b=await getBook();let bal=n(b.stock_quantity)-n(b.released_quantity)+n(b.inventory_adjustment);items.push(['4. 비상출고+로그',`30 → ${bal}권`,bal===28]);
+ await fs.runTransaction(db,async tx=>{const s=await tx.get(docRef('sub_books',testId));const x=s.data(),before=n(x.stock_quantity)-n(x.released_quantity)+n(x.inventory_adjustment),actual=25,delta=actual-before;tx.update(s.ref,{inventory_adjustment:n(x.inventory_adjustment)+delta,updated_at:fs.Timestamp.now()});await writeLog(tx,3,'재고조정',Math.abs(delta),before,actual,`테스트 실물재고 맞춤 ${delta}권`)});
+ b=await getBook();bal=n(b.stock_quantity)-n(b.released_quantity)+n(b.inventory_adjustment);items.push(['5. 실물재고 맞춤',`28 → ${bal}권`,bal===25]);
+ await fs.runTransaction(db,async tx=>{const s=await tx.get(docRef('sub_books',testId));const x=s.data(),before=n(x.stock_quantity)-n(x.released_quantity)+n(x.inventory_adjustment);tx.update(s.ref,{inventory_display_name:'[TEST] 이름변경',updated_at:fs.Timestamp.now()});await writeLog(tx,4,'이름변경',null,before,before,'테스트 이름 변경')});
+ b=await getBook();items.push(['6. 이름 변경+로그',String(b.inventory_display_name),b.inventory_display_name==='[TEST] 이름변경']);
+ await fs.runTransaction(db,async tx=>{const s=await tx.get(docRef('sub_books',testId));const x=s.data(),before=n(x.stock_quantity)-n(x.released_quantity)+n(x.inventory_adjustment);tx.update(s.ref,{inventory_hidden:true,updated_at:fs.Timestamp.now()});await writeLog(tx,5,'숨김',null,before,before,'테스트 숨김')});
+ b=await getBook();items.push(['7. 숨김+로그',`inventory_hidden=${b.inventory_hidden}`,b.inventory_hidden===true]);
+ await fs.runTransaction(db,async tx=>{const s=await tx.get(docRef('sub_books',testId));const x=s.data(),before=n(x.stock_quantity)-n(x.released_quantity)+n(x.inventory_adjustment);tx.update(s.ref,{inventory_hidden:false,updated_at:fs.Timestamp.now()});await writeLog(tx,6,'복원',null,before,before,'테스트 복원')});
+ b=await getBook();items.push(['8. 복원+로그',`inventory_hidden=${b.inventory_hidden}`,b.inventory_hidden===false]);
+ let found=0;for(let i=1;i<=6;i++){const s=await fs.getDoc(docRef('sub_book_logs',mkLogId(i)));if(s.exists())found++}items.push(['9. 로그 연속성',`테스트 로그 ${found}/6건 존재`,found===6]);
+ const duringBooks=await count('sub_books'),duringLogs=await count('sub_book_logs');items.push(['10. 테스트 중 건수',`sub_books ${duringBooks} / sub_book_logs ${duringLogs}`,duringBooks===7&&duringLogs===19]);
+ await cleanup();const finalBooks=await count('sub_books'),finalLogs=await count('sub_book_logs');items.push(['11. 정리/기준선 복원',`sub_books ${finalBooks} / sub_book_logs ${finalLogs}`,finalBooks===6&&finalLogs===13]);
+ const allPass=items.every(x=>x[2]===true);render(items);$('#status').textContent=allPass?'ATOMIC SUB-BOOK WORKFLOW PASS · 기존 6/13 기준선 복원 완료':'테스트 일부 실패';$('#status').className='status '+(allPass?'pass':'fail');addLog(allPass?'전체 PASS':'일부 FAIL');
+ }catch(e){console.error(e);try{await cleanup()}catch(_){}render(items);$('#status').textContent='테스트 실패';$('#status').className='status fail';$('#fatal').innerHTML=`<div class="fatal">${String(e.message||e)}</div>`;addLog('FAIL: '+(e.message||e));}finally{btn.disabled=false}}
+(async()=>{try{client=await window.firebaseDbReady;fs=await import('https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js');db=client.firebase.db;uid=client.firebase.auth.currentUser?.uid||'anonymous';testId=`simple_sub_test_${uid}`;$('#status').textContent='준비 완료 · 기존 부교재는 수정하지 않습니다.';$('#cleanup').onclick=async()=>{try{await cleanup();$('#status').textContent='테스트 잔여물 정리 완료'}catch(e){$('#fatal').innerHTML=`<div class="fatal">${String(e.message||e)}</div>`}};$('#run').onclick=run}catch(e){$('#status').textContent='준비 실패';$('#status').className='status fail';$('#fatal').innerHTML=`<div class="fatal">${String(e.message||e)}</div>`}})();
+</script></body></html>
