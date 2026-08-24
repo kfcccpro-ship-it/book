@@ -54,13 +54,13 @@
     }
   }
 
-  function loadWorkflowV2() {
-    if (document.querySelector('script[data-course-workflow-v2]')) return;
-    const workflow = document.createElement('script');
-    workflow.src = './course-workflow-v2.js?v=1';
-    workflow.async = false;
-    workflow.dataset.courseWorkflowV2 = '1';
-    document.head.appendChild(workflow);
+  function loadScript(src, marker) {
+    if (document.querySelector(`script[data-${marker}]`)) return;
+    const script = document.createElement('script');
+    script.src = src;
+    script.async = false;
+    script.setAttribute(`data-${marker}`, '1');
+    document.head.appendChild(script);
   }
 
   const core = document.createElement('script');
@@ -72,7 +72,8 @@
       const service = await coreReady;
       window.simpleInventoryServiceReady = publicReady;
       installUiTerminologyPolicy();
-      loadWorkflowV2();
+      loadScript('./course-workflow-v2.js?v=2', 'course-workflow-v2');
+      loadScript('./inventory-link-fix-v3.js?v=1', 'inventory-link-fix-v3');
       resolveReady(service);
     } catch (error) {
       rejectReady(error);
