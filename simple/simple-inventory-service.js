@@ -54,6 +54,15 @@
     }
   }
 
+  function loadWorkflowV2() {
+    if (document.querySelector('script[data-course-workflow-v2]')) return;
+    const workflow = document.createElement('script');
+    workflow.src = './course-workflow-v2.js?v=1';
+    workflow.async = false;
+    workflow.dataset.courseWorkflowV2 = '1';
+    document.head.appendChild(workflow);
+  }
+
   const core = document.createElement('script');
   core.src = './simple-inventory-service-core.js?v=7';
   core.async = false;
@@ -63,6 +72,7 @@
       const service = await coreReady;
       window.simpleInventoryServiceReady = publicReady;
       installUiTerminologyPolicy();
+      loadWorkflowV2();
       resolveReady(service);
     } catch (error) {
       rejectReady(error);
