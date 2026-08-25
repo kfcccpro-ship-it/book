@@ -73,7 +73,7 @@
       window.simpleInventoryServiceReady = publicReady;
       installUiTerminologyPolicy();
       loadScript('./course-workflow-v2.js?v=2', 'course-workflow-v2');
-      loadScript('./inventory-link-fix-v3.js?v=1', 'inventory-link-fix-v3');
+      loadScript('./inventory-link-fix-v3.js?v=2', 'inventory-link-fix-v3');
       resolveReady(service);
     } catch (error) {
       rejectReady(error);
