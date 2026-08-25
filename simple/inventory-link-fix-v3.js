@@ -34,9 +34,9 @@
 
   function pfTargetGroup() {
     try {
-      const groups = state.groups.filter(isPfInventoryGroup);
-      if (groups.length === 1) return groups[0];
-      return groups.sort((a,b) => b.balance - a.balance)[0] || null;
+      const groups = state.groups.filter(g => isPfInventoryGroup(g) && n(g.balance) > 0);
+      // Automatic repair is allowed only when exactly one positive-balance PF inventory group exists.
+      return groups.length === 1 ? groups[0] : null;
     } catch (_) { return null; }
   }
 
@@ -58,6 +58,9 @@
       const target = pfTargetGroup();
       if (!target) return normal;
       if (normal?.key === target.key) return normal;
+      // Never mask a valid non-zero (or negative) existing group with an inferred PF group.
+      // The project rule permits automatic link repair only from a verified zero-balance group.
+      if (!normal || n(normal.balance) !== 0) return normal;
       return syntheticPfGroup(course, target);
     };
     window.__pfAliasResolverInstalled = true;
@@ -77,7 +80,7 @@
     const courses = state.courses.filter(c => c.inventory_only !== true && isPfCourse(c));
     const candidates = courses.filter(course => {
       const current = courseOriginalGroup(course);
-      return !current || current.key !== target.key;
+      return current && current.key !== target.key && n(current.balance) === 0;
     });
     if (!candidates.length) return false;
 
