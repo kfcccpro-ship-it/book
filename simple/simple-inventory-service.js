@@ -72,8 +72,9 @@
       const service = await coreReady;
       window.simpleInventoryServiceReady = publicReady;
       installUiTerminologyPolicy();
-      loadScript('./course-workflow-v2.js?v=2', 'course-workflow-v2');
-      loadScript('./inventory-link-fix-v3.js?v=3', 'inventory-link-fix-v3');
+      // Simplified rule: a course directly selects one persisted textbook group.
+      // No runtime inference, PF special-case repair, or automatic link audit/repair.
+      loadScript('./course-workflow-simple-v3.js?v=1', 'course-workflow-simple-v3');
       resolveReady(service);
     } catch (error) {
       rejectReady(error);
