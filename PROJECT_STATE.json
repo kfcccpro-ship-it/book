@@ -11,42 +11,23 @@
     "database": "(default)",
     "auth": "Anonymous Auth"
   },
-  "last_updated": "2026-08-25T19:43:00+09:00",
-  "current_commit": "81ec3a0f618867c420cd17cb4a9644c6ee027640",
+  "last_updated": "2026-08-25T20:17:00+09:00",
+  "current_commit": "57933de916dbf8331edd322edf3d94b4bb2bdc04",
   "trigger_phrase": "교재관리 다음 작업 진행",
   "start_here": "START_HERE_CHATGPT.md",
   "core_files": [
     "simple/index.html",
     "simple/simple-inventory-service.js",
     "simple/simple-inventory-service-core.js",
-    "simple/course-workflow-v2.js",
-    "simple/inventory-audit.html",
-    "simple/inventory-audit-summary.html",
-    "simple/sub-book-workflow-test.html"
+    "simple/course-workflow-simple-v3.js"
   ],
   "operators": {
-    "주나연": [
-      "입고",
-      "정식출고",
-      "즉시출고",
-      "새 과정 등록",
-      "부교재 등록",
-      "표시명 변경",
-      "숨김/복원"
-    ],
-    "교육매니저": [
-      "정식출고",
-      "필요 시 입고",
-      "부교재 정식출고"
-    ]
+    "주나연": ["입고", "정식출고", "즉시출고", "새 과정 등록", "부교재 등록", "표시명 변경", "숨김/복원"],
+    "교육매니저": ["정식출고", "필요 시 입고", "부교재 정식출고"]
   },
   "official_terms": {
     "immediate_release": "즉시출고",
-    "deprecated": [
-      "비상출고",
-      "재고맞춤",
-      "실물재고 맞춤"
-    ]
+    "deprecated": ["비상출고", "재고맞춤", "실물재고 맞춤"]
   },
   "inventory_thresholds": {
     "low": "0-49",
@@ -65,43 +46,39 @@
     "known_negative_main_items": 1,
     "unfinished_status_release_difference": 0
   },
+  "architecture": {
+    "principle": "교재 1개 = 재고 1개, 과정은 inventory_group_key로 교재를 직접 참조",
+    "automatic_name_inference": false,
+    "pf_special_case_runtime_repair": false,
+    "runtime_alias": false,
+    "automatic_link_repair": false,
+    "course_registration_stock_mutation": false,
+    "inventory_mutation_location": "입고/출고/즉시출고 전용 흐름"
+  },
   "completed": [
     "Supabase snapshot to Firestore migration baseline verified 681/681",
-    "GitHub Pages adopted as routine deployment path",
-    "main course atomic stock-in/out workflow verified",
-    "maintenance workflow atomic tests verified",
-    "legacy sub_books 6 and sub_book_logs 13 preserved",
     "legacy vs Simple main inventory audit completed with 0 mismatch",
     "legacy sub-books integrated into Simple inventory UI",
-    "current balance emphasized in stock-in/out UI",
-    "dashboard cards linked to relevant screens",
+    "main course atomic stock-in/out workflow verified",
     "주나연 / 교육매니저 operator model simplified",
     "discretionary release terminology simplified to 즉시출고",
-    "Simple UI terminology policy enforced so deprecated emergency/reconciliation wording is not exposed in current operation",
-    "legacy service implementation preserved as simple-inventory-service-core.js behind compatibility loader",
-    "repository root routes to current Simple app",
-    "course workflow v2 added: new course creation now accepts start date and expected quantity and creates a real scheduled course visible in weekly outbound view",
-    "course workflow v2 added: sub-books are linked to parent inventory group and displayed beneath parent course in inbound and weekly outbound views",
-    "course workflow v2 added: linked sub-books support course-specific weekly outbound logging",
-    "inventory-link diagnostic added for duplicate groups, zero-balance courses with one strong alternate inventory match, and orphaned sub-books",
-    "guarded PF link repair added: only when PF-related course is on a zero-balance group and exactly one PF legal-risk inventory group with positive balance exists",
-    "GitHub-based permanent ChatGPT handoff system established",
-    "verified new-course date-to-week mapping at Monday/Sunday boundaries and confirmed next-Monday exclusion",
-    "verified linked sub-book parent display, hidden-item exclusion, balance calculation, and transactional outbound guard path",
-    "hardened PF inventory auto-link repair so it only runs from a verified zero-balance current group to exactly one positive-balance PF target group",
-    "bumped inventory-link-fix-v3 loader cache version to v2 so the hardened guard reaches deployed clients",
-    "verified inbound cards and outbound course cards both derive visible main-book balance from state.groups/courseGroup persisted inventory grouping",
-    "removed PF display-only alias fallback so a failed repair cannot make outbound show a different balance from inbound",
-    "restricted inventory-link audit suggestions to zero-balance current groups; negative historical inventory remains a separate physical-inventory issue",
-    "bumped inventory-link-fix-v3 loader cache version to v3 so unified balance behavior reaches deployed clients"
+    "new-course date-to-week mapping verified at week boundaries",
+    "linked sub-book display and transactional outbound path verified",
+    "course/textbook workflow simplified to direct textbook selection",
+    "new course registration no longer infers textbook from course/book names",
+    "new course registration no longer changes stock; stock is handled only in inventory workflows",
+    "PF-specific runtime inference, alias display, automatic repair and link-audit scripts removed from the live loader",
+    "existing inventory_group_key retained as the direct course-to-textbook relation to avoid destructive migration",
+    "manual textbook relink is allowed only before any course stock-in/out history exists"
   ],
-  "next_step": "After GitHub Pages reflects commit 81ec3a0, inspect the live home inventory-link audit warnings. For each warning, compare the current zero-balance group and proposed positive-balance group and repair only uniquely identifiable mappings. Do not repair negative-balance historical items through link reassignment. Then run a mobile usability pass on home/inbound/outbound with 주나연 and 교육매니저 roles.",
+  "next_step": "Verify the deployed Simple app after the direct-link v3 change: create a test course by selecting an existing textbook, confirm it appears in the correct week and uses that textbook balance, then confirm stock changes only through inbound/outbound screens. After that, perform a short mobile usability pass for 주나연 and 교육매니저. Do not reintroduce automatic name matching or PF-specific repair logic.",
   "rules": [
     "Resolve latest main HEAD at the start of every new chat",
     "Read START_HERE_CHATGPT.md and PROJECT_STATE.json before modifying code",
-    "Do not use ZIP upload or PowerShell for routine work",
+    "GitHub main is the single source of truth",
     "Do not auto-correct historical inventory differences",
-    "Only repair an inventory link when the mapping is uniquely identifiable and the current course group is zero-balance",
+    "Do not infer textbook links from course names",
+    "A course must use one explicit inventory_group_key as its textbook link",
     "Do not create negative inventory",
     "Use Firestore transaction/batch for inventory mutation plus logging",
     "Do not commit secrets to the public repository"
