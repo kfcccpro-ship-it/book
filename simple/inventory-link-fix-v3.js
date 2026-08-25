@@ -40,32 +40,6 @@
     } catch (_) { return null; }
   }
 
-  function syntheticPfGroup(course, target) {
-    const courses = [...target.courses];
-    if (!courses.some(c => String(c.id) === String(course.id))) courses.push(course);
-    const stock = courses.reduce((sum, c) => sum + Math.max(0, n(c.stock_quantity)), 0);
-    const released = courses.reduce((sum, c) => sum + Math.max(0, n(c.released_quantity)), 0);
-    return { ...target, courses, stock, released, balance: stock - released };
-  }
-
-  function installKnownAliasResolver() {
-    if (window.__pfAliasResolverInstalled) return;
-    if (typeof courseGroup !== 'function') return;
-    const original = courseGroup;
-    window.courseGroup = function(course) {
-      const normal = original(course);
-      if (!isPfCourse(course)) return normal;
-      const target = pfTargetGroup();
-      if (!target) return normal;
-      if (normal?.key === target.key) return normal;
-      // Never mask a valid non-zero (or negative) existing group with an inferred PF group.
-      // The project rule permits automatic link repair only from a verified zero-balance group.
-      if (!normal || n(normal.balance) !== 0) return normal;
-      return syntheticPfGroup(course, target);
-    };
-    window.__pfAliasResolverInstalled = true;
-  }
-
   async function firestoreContext() {
     const [fs, client] = await Promise.all([
       import('https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js'),
@@ -154,10 +128,10 @@
       if (list.length > 1) warnings.push({ type:'duplicate-group', text:`동일 교재명이 ${list.length}개 재고그룹으로 분리: ${list[0].name}` });
     }
 
-    // 2. Course points to a zero/negative group while a single similar positive group exists.
+    // 2. Only zero-balance groups are link-repair candidates. Negative balances are a separate physical-inventory issue.
     for (const course of courses) {
       const current = courseOriginalGroup(course);
-      if (!current || current.balance > 0) continue;
+      if (!current || n(current.balance) !== 0) continue;
       const positive = groups
         .filter(g => g.key !== current.key && g.balance > 0)
         .map(g => ({ g, score: scoreNames(course.course_name, g.name) }))
@@ -167,7 +141,7 @@
         warnings.push({
           type:'possible-link',
           courseId:String(course.id),
-          text:`${clean(course.course_name)}: 현재 연결 재고 ${current.balance}권 / 유사 재고 ${positive[0].g.name} ${positive[0].g.balance}권`
+          text:`${clean(course.course_name)}: 현재 연결 재고 0권 / 유사 재고 ${positive[0].g.name} ${positive[0].g.balance}권`
         });
       }
     }
@@ -219,12 +193,11 @@
     }
     if (!window.state || !state.courses?.length || !state.groups?.length) return;
 
-    installKnownAliasResolver();
     let repaired = false;
     try {
       repaired = await persistPfLinkRepair();
     } catch (error) {
-      // The alias resolver still keeps display and release calculations consistent if a write is temporarily blocked.
+      // Fail closed: keep both inbound and outbound on the same persisted source of truth.
       console.error('[PF 재고 연결 영구복구 실패]', error);
       REPORT.warnings.push({ type:'pf-write-failed', text:`PF 연결 영구복구 실패: ${error.message || error}` });
     }
@@ -238,8 +211,6 @@
       } catch (_) {}
     }
 
-    // Re-install after reload because globals may have been rebuilt by legacy code.
-    installKnownAliasResolver();
     runConsistencyAudit();
     showAuditBadge();
   }
