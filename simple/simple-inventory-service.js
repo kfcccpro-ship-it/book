@@ -55,12 +55,31 @@
   }
 
   function loadScript(src, marker) {
-    if (document.querySelector(`script[data-${marker}]`)) return;
-    const script = document.createElement('script');
-    script.src = src;
-    script.async = false;
-    script.setAttribute(`data-${marker}`, '1');
-    document.head.appendChild(script);
+    return new Promise((resolve, reject) => {
+      const existing = document.querySelector(`script[data-${marker}]`);
+      if (existing) {
+        if (existing.dataset.loaded === '1') { resolve(); return; }
+        existing.addEventListener('load', resolve, { once: true });
+        existing.addEventListener('error', () => reject(new Error(`${src} 로드 실패`)), { once: true });
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = src;
+      script.async = false;
+      script.setAttribute(`data-${marker}`, '1');
+      script.onload = () => { script.dataset.loaded = '1'; resolve(); };
+      script.onerror = () => reject(new Error(`${src} 로드 실패`));
+      document.head.appendChild(script);
+    });
+  }
+
+  async function waitForSimpleWorkflow() {
+    const started = Date.now();
+    while (Date.now() - started < 10000) {
+      if (window.courseWorkflowSimpleV3?.installed === true) return;
+      await new Promise(resolve => setTimeout(resolve, 25));
+    }
+    throw new Error('단순 교재 연결 화면을 초기화하지 못했습니다.');
   }
 
   const core = document.createElement('script');
@@ -74,7 +93,8 @@
       installUiTerminologyPolicy();
       // Simplified rule: a course directly selects one persisted textbook group.
       // No runtime inference, PF special-case repair, or automatic link audit/repair.
-      loadScript('./course-workflow-simple-v3.js?v=1', 'course-workflow-simple-v3');
+      await loadScript('./course-workflow-simple-v3.js?v=2', 'course-workflow-simple-v3');
+      await waitForSimpleWorkflow();
       resolveReady(service);
     } catch (error) {
       rejectReady(error);
