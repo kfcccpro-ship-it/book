@@ -11,8 +11,8 @@
     "database": "(default)",
     "auth": "Anonymous Auth"
   },
-  "last_updated": "2026-08-25T18:21:00+09:00",
-  "current_commit": "6f3efef771e520c74e9ea57e940ec8314eba49bd",
+  "last_updated": "2026-08-25T19:43:00+09:00",
+  "current_commit": "81ec3a0f618867c420cd17cb4a9644c6ee027640",
   "trigger_phrase": "교재관리 다음 작업 진행",
   "start_here": "START_HERE_CHATGPT.md",
   "core_files": [
@@ -89,9 +89,13 @@
     "verified new-course date-to-week mapping at Monday/Sunday boundaries and confirmed next-Monday exclusion",
     "verified linked sub-book parent display, hidden-item exclusion, balance calculation, and transactional outbound guard path",
     "hardened PF inventory auto-link repair so it only runs from a verified zero-balance current group to exactly one positive-balance PF target group",
-    "bumped inventory-link-fix-v3 loader cache version to v2 so the hardened guard reaches deployed clients"
+    "bumped inventory-link-fix-v3 loader cache version to v2 so the hardened guard reaches deployed clients",
+    "verified inbound cards and outbound course cards both derive visible main-book balance from state.groups/courseGroup persisted inventory grouping",
+    "removed PF display-only alias fallback so a failed repair cannot make outbound show a different balance from inbound",
+    "restricted inventory-link audit suggestions to zero-balance current groups; negative historical inventory remains a separate physical-inventory issue",
+    "bumped inventory-link-fix-v3 loader cache version to v3 so unified balance behavior reaches deployed clients"
   ],
-  "next_step": "After GitHub Pages reflects commit 6f3efef, open the live Simple app and verify the visible PF inbound/outbound balance is identical and review the on-screen inventory-link audit warnings. Do not auto-repair any additional item unless its mapping is uniquely identifiable and its current group balance is exactly zero.",
+  "next_step": "After GitHub Pages reflects commit 81ec3a0, inspect the live home inventory-link audit warnings. For each warning, compare the current zero-balance group and proposed positive-balance group and repair only uniquely identifiable mappings. Do not repair negative-balance historical items through link reassignment. Then run a mobile usability pass on home/inbound/outbound with 주나연 and 교육매니저 roles.",
   "rules": [
     "Resolve latest main HEAD at the start of every new chat",
     "Read START_HERE_CHATGPT.md and PROJECT_STATE.json before modifying code",
