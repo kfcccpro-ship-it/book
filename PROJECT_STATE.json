@@ -11,8 +11,8 @@
     "database": "(default)",
     "auth": "Anonymous Auth"
   },
-  "last_updated": "2026-08-24T18:24:00+09:00",
-  "current_commit": "0ad76f2987f0febe78a53a70dd35971b76f28293",
+  "last_updated": "2026-08-25T18:21:00+09:00",
+  "current_commit": "6f3efef771e520c74e9ea57e940ec8314eba49bd",
   "trigger_phrase": "교재관리 다음 작업 진행",
   "start_here": "START_HERE_CHATGPT.md",
   "core_files": [
@@ -25,12 +25,28 @@
     "simple/sub-book-workflow-test.html"
   ],
   "operators": {
-    "주나연": ["입고", "정식출고", "즉시출고", "새 과정 등록", "부교재 등록", "표시명 변경", "숨김/복원"],
-    "교육매니저": ["정식출고", "필요 시 입고", "부교재 정식출고"]
+    "주나연": [
+      "입고",
+      "정식출고",
+      "즉시출고",
+      "새 과정 등록",
+      "부교재 등록",
+      "표시명 변경",
+      "숨김/복원"
+    ],
+    "교육매니저": [
+      "정식출고",
+      "필요 시 입고",
+      "부교재 정식출고"
+    ]
   },
   "official_terms": {
     "immediate_release": "즉시출고",
-    "deprecated": ["비상출고", "재고맞춤", "실물재고 맞춤"]
+    "deprecated": [
+      "비상출고",
+      "재고맞춤",
+      "실물재고 맞춤"
+    ]
   },
   "inventory_thresholds": {
     "low": "0-49",
@@ -69,9 +85,13 @@
     "course workflow v2 added: linked sub-books support course-specific weekly outbound logging",
     "inventory-link diagnostic added for duplicate groups, zero-balance courses with one strong alternate inventory match, and orphaned sub-books",
     "guarded PF link repair added: only when PF-related course is on a zero-balance group and exactly one PF legal-risk inventory group with positive balance exists",
-    "GitHub-based permanent ChatGPT handoff system established"
+    "GitHub-based permanent ChatGPT handoff system established",
+    "verified new-course date-to-week mapping at Monday/Sunday boundaries and confirmed next-Monday exclusion",
+    "verified linked sub-book parent display, hidden-item exclusion, balance calculation, and transactional outbound guard path",
+    "hardened PF inventory auto-link repair so it only runs from a verified zero-balance current group to exactly one positive-balance PF target group",
+    "bumped inventory-link-fix-v3 loader cache version to v2 so the hardened guard reaches deployed clients"
   ],
-  "next_step": "Open the live Simple app on mobile, verify new-course date-to-week mapping and linked sub-book display/outbound flow, then confirm the PF course now reads the same balance in inbound and outbound. Review the on-screen inventory-link audit for any other suspected mismatches before performing any additional repairs.",
+  "next_step": "After GitHub Pages reflects commit 6f3efef, open the live Simple app and verify the visible PF inbound/outbound balance is identical and review the on-screen inventory-link audit warnings. Do not auto-repair any additional item unless its mapping is uniquely identifiable and its current group balance is exactly zero.",
   "rules": [
     "Resolve latest main HEAD at the start of every new chat",
     "Read START_HERE_CHATGPT.md and PROJECT_STATE.json before modifying code",
