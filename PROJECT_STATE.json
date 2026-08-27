@@ -11,8 +11,8 @@
     "database": "(default)",
     "auth": "Anonymous Auth"
   },
-  "last_updated": "2026-08-25T20:17:00+09:00",
-  "current_commit": "57933de916dbf8331edd322edf3d94b4bb2bdc04",
+  "last_updated": "2026-08-27T14:53:00+09:00",
+  "current_commit": "92123ce7a520cd7cbbd1b202e5d317d40c49a950",
   "trigger_phrase": "교재관리 다음 작업 진행",
   "start_here": "START_HERE_CHATGPT.md",
   "core_files": [
@@ -22,7 +22,7 @@
     "simple/course-workflow-simple-v3.js"
   ],
   "operators": {
-    "주나연": ["입고", "정식출고", "즉시출고", "새 과정 등록", "부교재 등록", "표시명 변경", "숨김/복원"],
+    "주나연": ["입고", "정식출고", "즉시출고", "새 과정 등록", "기존 과정 일정 설정", "부교재 등록", "표시명 변경", "숨김/복원"],
     "교육매니저": ["정식출고", "필요 시 입고", "부교재 정식출고"]
   },
   "official_terms": {
@@ -52,6 +52,8 @@
     "pf_special_case_runtime_repair": false,
     "runtime_alias": false,
     "automatic_link_repair": false,
+    "automatic_schedule_repair": false,
+    "existing_course_schedule_edit": true,
     "course_registration_stock_mutation": false,
     "inventory_mutation_location": "입고/출고/즉시출고 전용 흐름"
   },
@@ -69,15 +71,20 @@
     "new course registration no longer changes stock; stock is handled only in inventory workflows",
     "PF-specific runtime inference, alias display, automatic repair and link-audit scripts removed from the live loader",
     "existing inventory_group_key retained as the direct course-to-textbook relation to avoid destructive migration",
-    "manual textbook relink is allowed only before any course stock-in/out history exists"
+    "manual textbook relink is allowed only before any course stock-in/out history exists",
+    "existing inventory/course rows can now receive or edit start_date and expected quantity from an explicit 일정 설정 action in the inbound screen",
+    "schedule editing converts a legacy inventory_only course row into a scheduled course without changing inventory_group_key, stock_quantity or released_quantity",
+    "obsolete exact-name automatic schedule repair for 뉴MG커뮤니케이션스킬 removed",
+    "legacy sub-book name-only linkage compatibility retained while canonical key linkage remains primary"
   ],
-  "next_step": "Verify the deployed Simple app after the direct-link v3 change: create a test course by selecting an existing textbook, confirm it appears in the correct week and uses that textbook balance, then confirm stock changes only through inbound/outbound screens. After that, perform a short mobile usability pass for 주나연 and 교육매니저. Do not reintroduce automatic name matching or PF-specific repair logic.",
+  "next_step": "After GitHub Pages deploys commit 92123ce7, open inbound, search 뉴MG커뮤니케이션스킬, choose 일정 설정, enter the real start date and expected quantity, save, then confirm the same existing row appears in that week's outbound list with its existing 2-book balance. No new course or inventory row should be created.",
   "rules": [
     "Resolve latest main HEAD at the start of every new chat",
     "Read START_HERE_CHATGPT.md and PROJECT_STATE.json before modifying code",
     "GitHub main is the single source of truth",
     "Do not auto-correct historical inventory differences",
     "Do not infer textbook links from course names",
+    "Do not infer or invent course dates; existing-course dates are entered explicitly by the operator",
     "A course must use one explicit inventory_group_key as its textbook link",
     "Do not create negative inventory",
     "Use Firestore transaction/batch for inventory mutation plus logging",
