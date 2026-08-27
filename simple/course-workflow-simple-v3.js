@@ -1,5 +1,6 @@
 // Simple course <-> textbook workflow v3.
 // Principle: one persisted inventory_group_key is the source of truth.
+// Existing courses can receive/edit a schedule without creating a new course or inventory item.
 // No name-similarity inference, PF special cases, runtime aliases, or automatic link repair.
 (function () {
   'use strict';
@@ -8,6 +9,7 @@
   window.courseWorkflowSimpleV3 = V3;
 
   const clean = value => String(value || '').trim().replace(/\s+/g, ' ');
+  const norm = value => clean(value).toLowerCase().replace(/[^0-9a-z가-힣]+/g, '');
   const n = value => {
     const x = Number(value || 0);
     return Number.isFinite(x) ? x : 0;
@@ -41,9 +43,14 @@
   function linkedSubs(group) {
     if (!group) return [];
     const key = String(group.key || '');
-    return (state.subBooks || []).filter(book =>
-      book.inventory_hidden !== true && String(book.course_group_key || '') === key
-    );
+    const groupName = norm(group.name);
+    return (state.subBooks || []).filter(book => {
+      if (book.inventory_hidden === true) return false;
+      const bookKey = String(book.course_group_key || '');
+      const bookName = norm(book.course_group_name || book.course_group_key || '');
+      // Exact-key is canonical. Exact legacy group-name matching is retained only for old sub-book rows.
+      return bookKey === key || (!!groupName && bookName === groupName);
+    });
   }
 
   function findCourse(id) {
@@ -52,6 +59,25 @@
 
   function findGroup(key) {
     return (state.groups || []).find(g => String(g.key) === String(key)) || null;
+  }
+
+  function schedulableRows(group) {
+    return (group?.courses || [])
+      .filter(c => c.inventory_ledger_only !== true && c.inventory_hidden !== true)
+      .sort((a, b) => {
+        const au = !a.start_date ? 0 : 1;
+        const bu = !b.start_date ? 0 : 1;
+        if (au !== bu) return au - bu;
+        return clean(a.course_name).localeCompare(clean(b.course_name), 'ko');
+      });
+  }
+
+  function localDateInput(value) {
+    if (!value) return '';
+    let d;
+    try { d = typeof value?.toDate === 'function' ? value.toDate() : new Date(value); } catch (_) { return ''; }
+    if (!d || Number.isNaN(d.getTime())) return '';
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
 
   async function firestoreContext() {
@@ -136,6 +162,50 @@
 
     await batch.commit();
     return { id, course, displayName };
+  }
+
+  async function saveExistingCourseSchedule({ course, group, startDate, expectedQty, actor }) {
+    if (!actor?.canManage) throw new Error('일정 설정은 주나연 담당자만 할 수 있습니다.');
+    if (!course || !group) throw new Error('과정 정보를 찾을 수 없습니다.');
+    if (course.inventory_ledger_only === true) throw new Error('내부 재고원장에는 일정을 설정할 수 없습니다.');
+    if (!startDate) throw new Error('시작일을 입력해주세요.');
+
+    const expected = Number(expectedQty);
+    if (!Number.isInteger(expected) || expected < 0) throw new Error('예상 수량은 0권 이상 정수로 입력해주세요.');
+
+    const { fs, db } = await firestoreContext();
+    const start = timestampForLocalDate(fs, startDate);
+    const now = fs.Timestamp.now();
+    const batch = fs.writeBatch(db);
+
+    // This is metadata-only. Keep inventory_group_key, stock_quantity and released_quantity untouched.
+    batch.update(fs.doc(db, 'courses', String(course.id)), {
+      inventory_only: false,
+      inventory_ledger_only: false,
+      inventory_item_type: course.inventory_item_type || '주교재',
+      start_date: start,
+      scheduled_release_date: start,
+      student_count: expected,
+      updated_by: actor.name,
+      updated_at: now
+    });
+
+    const logId = makeId('log');
+    batch.set(fs.doc(db, 'work_logs', logId), {
+      id: logId,
+      course_id: String(course.id),
+      course_name: course.course_name || group.name,
+      action_type: '일정설정',
+      action_date: now,
+      created_at: now,
+      user_name: actor.name,
+      user_role: actor.role || '',
+      quantity: null,
+      notes: `기존 과정 일정 설정 · 시작 ${startDate} · 예상 ${expected}권 · 재고 수량/교재 연결 변경 없음`
+    });
+
+    await batch.commit();
+    return { courseName: course.course_name || group.name, startDate, expected };
   }
 
   async function changeCourseBook({ course, group, actor }) {
@@ -280,14 +350,14 @@
       const today = new Date();
       const ymd = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
       openSheet(`<div class="sheet-title">새 과정</div>
-        <div class="sheet-sub">과정과 사용할 교재를 직접 연결합니다. 자동 추론은 하지 않습니다.</div>
+        <div class="sheet-sub">새로 개설되는 과정만 여기서 등록합니다.</div>
         <div class="field"><label>과정명</label><input id="sv3CourseName" placeholder="과정명"></div>
         <div class="field"><label>시작일</label><input id="sv3StartDate" type="date" value="${ymd}"></div>
         <div class="field"><label>예상 수량</label><input id="sv3Expected" class="big-number" type="number" inputmode="numeric" min="0" value="0"></div>
         <div class="field"><label>사용 교재</label><select id="sv3Group"><option value="">＋ 새 교재 등록</option>${groupOptions()}</select></div>
         <div id="sv3NewBookWrap" class="field"><label>새 교재명</label><input id="sv3NewBook" placeholder="새 교재명을 입력"></div>
         <div class="field"><label>메모 (선택)</label><textarea id="sv3Memo"></textarea></div>
-        <div class="info-box"><b>재고는 입고 메뉴에서 별도로 처리합니다.</b><br>과정 등록과 재고 입고를 분리해 구조를 단순하게 유지합니다.</div>
+        <div class="info-box"><b>기존 과정에 날짜만 추가하려면 입고 화면의 ‘일정 설정’을 사용하세요.</b><br>재고는 입고 메뉴에서 별도로 처리합니다.</div>
         <div class="sheet-actions"><button class="btn light" onclick="closeSheet()">취소</button><button id="sv3Create" class="btn blue">등록</button></div>`);
       const select = document.getElementById('sv3Group');
       const sync = () => { document.getElementById('sv3NewBookWrap').style.display = select.value ? 'none' : 'block'; };
@@ -315,6 +385,65 @@
     const button = document.getElementById('createItemBtn');
     if (button) { button.textContent = '＋ 새 과정'; button.onclick = window.openCreateItem; }
   }
+
+  window.openExistingCourseSchedule = function (groupKey) {
+    const actor = actorRequired();
+    const group = findGroup(groupKey);
+    if (!actor?.canManage || !group) return;
+
+    const rows = schedulableRows(group);
+    if (!rows.length) {
+      notice('일정을 설정할 기존 과정이 없습니다.');
+      return;
+    }
+
+    const optionHtml = rows.map(c => {
+      const currentDate = localDateInput(c.start_date || c.scheduled_release_date);
+      const stateText = c.inventory_only === true ? ' · 기존 재고항목' : '';
+      return `<option value="${escSafe(c.id)}">${escSafe(c.course_name || group.name)}${currentDate ? ` · ${currentDate}` : ' · 날짜 미설정'}${stateText}</option>`;
+    }).join('');
+
+    openSheet(`<div class="sheet-title">${escSafe(group.name)} 일정 설정</div>
+      <div class="sheet-sub">기존 과정에 시작일만 연결합니다. <b>새 과정이나 새 재고를 만들지 않습니다.</b></div>
+      ${rows.length > 1 ? `<div class="field"><label>과정 선택</label><select id="sv3ScheduleCourse">${optionHtml}</select></div>` : `<input id="sv3ScheduleCourse" type="hidden" value="${escSafe(rows[0].id)}"><div class="info-box" style="margin-top:14px"><b>${escSafe(rows[0].course_name || group.name)}</b></div>`}
+      <div class="field"><label>시작일</label><input id="sv3ScheduleDate" type="date"></div>
+      <div class="field"><label>예상 수량</label><input id="sv3ScheduleExpected" class="big-number" type="number" inputmode="numeric" min="0" value="0"></div>
+      <div class="info-box"><b>현재 재고 ${group.balance}권은 그대로 유지됩니다.</b><br>저장하면 이 시작일이 속한 주의 출고 화면에 기존 과정이 나타납니다.</div>
+      <div class="sheet-actions"><button class="btn light" onclick="closeSheet()">취소</button><button id="sv3ScheduleSave" class="btn blue">일정 저장</button></div>`);
+
+    const select = document.getElementById('sv3ScheduleCourse');
+    const dateInput = document.getElementById('sv3ScheduleDate');
+    const expectedInput = document.getElementById('sv3ScheduleExpected');
+    const syncCourse = () => {
+      const course = findCourse(select.value);
+      if (!course) return;
+      dateInput.value = localDateInput(course.start_date || course.scheduled_release_date);
+      expectedInput.value = String(Math.max(0, n(course.student_count)));
+    };
+    select.addEventListener?.('change', syncCourse);
+    syncCourse();
+
+    document.getElementById('sv3ScheduleSave').onclick = async () => {
+      const btn = document.getElementById('sv3ScheduleSave');
+      btn.disabled = true;
+      try {
+        const course = findCourse(select.value);
+        const result = await saveExistingCourseSchedule({
+          course,
+          group,
+          startDate: dateInput.value,
+          expectedQty: expectedInput.value,
+          actor
+        });
+        closeSheet();
+        notice(`${result.courseName} · ${result.startDate} 일정 저장`);
+        await loadAll();
+      } catch (e) {
+        notice(e.message || String(e));
+        btn.disabled = false;
+      }
+    };
+  };
 
   window.openCourseBookLink = function (courseId) {
     const actor = actorRequired();
@@ -392,7 +521,7 @@
         const bal = subBalance(b);
         return `<div class="sv3-sub-row"><div><b>${escSafe(b.inventory_display_name || b.book_name)}</b><div class="meta">현재 ${bal}권</div></div><div><button class="btn green small" onclick="openSubIn('${escSafe(b.id)}')">입고</button>${manager ? ` <button class="btn light small" onclick="openImmediateOutSubBook('${escSafe(b.id)}')">즉시출고</button>` : ''}</div></div>`;
       }).join('')}</div>` : '';
-      return `<div class="inventory-card ${level.cls}"><div class="row"><div><div class="name">${escSafe(g.name)}</div><div class="meta">현재 잔고 ${g.balance}권</div></div><button class="btn green small" onclick="openIn('${escSafe(g.key)}')">입고</button></div>${manager ? `<div class="action-row"><button class="btn small immediate-stock-btn" onclick="openImmediateOutGroup('${escSafe(g.key)}')">즉시출고</button><button class="btn light small" onclick="openLinkedSubCreate('${escSafe(g.key)}')">＋ 부교재</button><button class="btn light small" onclick="openRename('${escSafe(g.key)}')">이름 변경</button></div>` : ''}${subHtml}</div>`;
+      return `<div class="inventory-card ${level.cls}"><div class="row"><div><div class="name">${escSafe(g.name)}</div><div class="meta">현재 잔고 ${g.balance}권</div></div><button class="btn green small" onclick="openIn('${escSafe(g.key)}')">입고</button></div>${manager ? `<div class="action-row"><button class="btn blue small" onclick="openExistingCourseSchedule('${escSafe(g.key)}')">일정 설정</button><button class="btn small immediate-stock-btn" onclick="openImmediateOutGroup('${escSafe(g.key)}')">즉시출고</button><button class="btn light small" onclick="openLinkedSubCreate('${escSafe(g.key)}')">＋ 부교재</button><button class="btn light small" onclick="openRename('${escSafe(g.key)}')">이름 변경</button></div>` : ''}${subHtml}</div>`;
     }).join('');
     const list = document.getElementById('inList');
     if (list) list.innerHTML = html || '<div class="empty">검색 결과가 없습니다.</div>';
