@@ -91,11 +91,11 @@
       const service = await coreReady;
       window.simpleInventoryServiceReady = publicReady;
       installUiTerminologyPolicy();
-      // Simplified rule: a course directly selects one persisted textbook group.
-      // Existing courses get dates through the explicit '일정 설정' UI.
-      // No runtime inference, PF special-case repair, or automatic schedule/link repair.
-      await loadScript('./course-workflow-simple-v3.js?v=3', 'course-workflow-simple-v3');
+      // Simplified rule: one textbook inventory group, multiple scheduled course runs.
+      // Existing runs are preserved; new runs are appended with the same inventory_group_key.
+      await loadScript('./course-workflow-simple-v3.js?v=4', 'course-workflow-simple-v3');
       await waitForSimpleWorkflow();
+      await loadScript('./course-run-add.js?v=1', 'course-run-add');
       resolveReady(service);
     } catch (error) {
       rejectReady(error);
