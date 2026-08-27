@@ -95,6 +95,9 @@
       // No runtime inference, PF special-case repair, or automatic link audit/repair.
       await loadScript('./course-workflow-simple-v3.js?v=2', 'course-workflow-simple-v3');
       await waitForSimpleWorkflow();
+      // One-time, exact-name compatibility repair for the legacy scheduled course.
+      // It changes no stock/release quantity and creates no new inventory group.
+      await loadScript('./legacy-scheduled-course-fix.js?v=1', 'legacy-scheduled-course-fix');
       resolveReady(service);
     } catch (error) {
       rejectReady(error);
