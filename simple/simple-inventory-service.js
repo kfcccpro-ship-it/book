@@ -95,7 +95,7 @@
       // Existing runs are preserved; new runs are appended with the same inventory_group_key.
       await loadScript('./course-workflow-simple-v3.js?v=4', 'course-workflow-simple-v3');
       await waitForSimpleWorkflow();
-      await loadScript('./course-run-add.js?v=1', 'course-run-add');
+      await loadScript('./course-run-add.js?v=2', 'course-run-add');
       resolveReady(service);
     } catch (error) {
       rejectReady(error);
