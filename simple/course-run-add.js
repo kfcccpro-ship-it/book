@@ -185,7 +185,7 @@
 
   function patchUi() {
     document.querySelectorAll('button[onclick*="openExistingCourseSchedule"]').forEach(button => {
-      button.textContent = '+ 차수 추가';
+      if (button.textContent !== '+ 차수 추가') button.textContent = '+ 차수 추가';
     });
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     const nodes = [];
@@ -213,6 +213,14 @@
 
   addStyles();
   patchUi();
-  new MutationObserver(patchUi).observe(document.body, { childList: true, subtree: true });
+  let patchQueued = false;
+  new MutationObserver(() => {
+    if (patchQueued) return;
+    patchQueued = true;
+    requestAnimationFrame(() => {
+      patchQueued = false;
+      patchUi();
+    });
+  }).observe(document.body, { childList: true, subtree: true });
   window.courseRunAddReady = true;
 })();
