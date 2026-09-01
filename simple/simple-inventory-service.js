@@ -82,6 +82,32 @@
     throw new Error('단순 교재 연결 화면을 초기화하지 못했습니다.');
   }
 
+  function installCourseManagementEntry() {
+    // Reuse the legacy inline rename hook as the entry point to the full management sheet.
+    // No MutationObserver: patch only after renders/loadAll to avoid recursive UI freezes.
+    window.openRename = window.openCourseManagement;
+    const patchButtons = () => {
+      document.querySelectorAll('button[onclick*="openRename("]').forEach(button => {
+        button.textContent = '과정 관리';
+      });
+      document.querySelectorAll('button[onclick*="openExistingCourseSchedule("]').forEach(button => {
+        button.textContent = '+ 차수 추가';
+      });
+    };
+    patchButtons();
+
+    const priorLoadAll = window.loadAll;
+    if (typeof priorLoadAll === 'function' && !priorLoadAll.__courseManagementWrapped) {
+      const wrapped = async function () {
+        const result = await priorLoadAll.apply(this, arguments);
+        patchButtons();
+        return result;
+      };
+      wrapped.__courseManagementWrapped = true;
+      window.loadAll = wrapped;
+    }
+  }
+
   const core = document.createElement('script');
   core.src = './simple-inventory-service-core.js?v=7';
   core.async = false;
@@ -91,11 +117,13 @@
       const service = await coreReady;
       window.simpleInventoryServiceReady = publicReady;
       installUiTerminologyPolicy();
-      // Simplified rule: one textbook inventory group, multiple scheduled course runs.
-      // Existing runs are preserved; new runs are appended with the same inventory_group_key.
+      // One representative course/inventory group can have multiple scheduled runs.
+      // Inbound is the management center; outbound reads the same persisted course rows.
       await loadScript('./course-workflow-simple-v3.js?v=4', 'course-workflow-simple-v3');
       await waitForSimpleWorkflow();
-      await loadScript('./course-run-add.js?v=2', 'course-run-add');
+      await loadScript('./course-run-add.js?v=3', 'course-run-add');
+      await loadScript('./course-management.js?v=1', 'course-management');
+      installCourseManagementEntry();
       resolveReady(service);
     } catch (error) {
       rejectReady(error);
