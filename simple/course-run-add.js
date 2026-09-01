@@ -1,14 +1,9 @@
 // Add a new course run (차수) to an existing inventory group without editing prior runs.
-// The new run shares the same inventory_group_key and starts with zero own stock/release,
-// so the group's existing inventory balance remains unchanged until an actual outbound occurs.
+// The representative course name is the canonical base name; each run stores its own label.
 (function () {
   'use strict';
 
   const clean = value => String(value || '').trim().replace(/\s+/g, ' ');
-  const n = value => {
-    const x = Number(value || 0);
-    return Number.isFinite(x) ? x : 0;
-  };
   const makeId = prefix => globalThis.crypto?.randomUUID
     ? `${prefix}_${crypto.randomUUID()}`
     : `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
@@ -25,21 +20,24 @@
     return (state.groups || []).find(g => String(g.key) === String(key)) || null;
   }
 
-  function runNo(name) {
-    const matches = [...clean(name).matchAll(/(?:제\s*)?(\d+)\s*차/g)];
+  function runNo(value) {
+    const matches = [...clean(value).matchAll(/(?:제\s*)?(\d+)\s*차/g)];
     if (!matches.length) return 0;
     return Math.max(...matches.map(m => Number(m[1]) || 0));
   }
 
-  function baseCourseName(group) {
-    const withRun = (group?.courses || []).find(c => runNo(c.course_name) > 0);
-    if (!withRun) return clean(group?.name);
-    const stripped = clean(withRun.course_name).replace(/\s*(?:제\s*)?\d+\s*차(?:\s*\([^)]*\))?\s*$/, '').trim();
-    return stripped || clean(group?.name);
+  function inferredRunLabel(course, groupName) {
+    const stored = clean(course?.course_run_label);
+    if (stored) return stored;
+    const name = clean(course?.course_name);
+    const base = clean(groupName);
+    if (base && name.startsWith(base) && name.length > base.length) return clean(name.slice(base.length));
+    const match = name.match(/((?:제\s*)?\d+\s*차(?:\s*\([^)]*\))?.*)$/);
+    return match ? clean(match[1]) : '';
   }
 
   function nextRunNo(group) {
-    const values = (group?.courses || []).map(c => runNo(c.course_name));
+    const values = (group?.courses || []).map(c => runNo(c.course_run_label || c.course_name));
     return Math.max(0, ...values) + 1;
   }
 
@@ -59,9 +57,14 @@
 
   function existingRuns(group) {
     return (group?.courses || [])
-      .map(c => ({ c, no: runNo(c.course_name), date: ymd(c.start_date || c.scheduled_release_date) }))
-      .filter(x => x.no > 0)
-      .sort((a, b) => a.no - b.no || String(a.date).localeCompare(String(b.date)));
+      .filter(c => c.inventory_ledger_only !== true && (c.inventory_only !== true || c.start_date || c.scheduled_release_date))
+      .map(c => ({
+        c,
+        no: runNo(c.course_run_label || c.course_name),
+        label: inferredRunLabel(c, group.name) || clean(c.course_name),
+        date: ymd(c.start_date || c.scheduled_release_date)
+      }))
+      .sort((a, b) => (a.no || 9999) - (b.no || 9999) || String(a.date).localeCompare(String(b.date)));
   }
 
   async function firestoreContext() {
@@ -87,8 +90,9 @@
     if (!Number.isInteger(expected) || expected < 0) throw new Error('예상 수량은 0권 이상 정수로 입력해주세요.');
 
     const no = nextRunNo(group);
-    const base = baseCourseName(group);
-    const courseName = `${base} ${no}차`;
+    const runLabel = `${no}차`;
+    const base = clean(group.name);
+    const courseName = `${base} ${runLabel}`;
     const { fs, db } = await firestoreContext();
     const id = makeId('course');
     const now = fs.Timestamp.now();
@@ -98,7 +102,8 @@
     batch.set(fs.doc(db, 'courses', id), {
       id,
       course_name: courseName,
-      inventory_display_name: group.name,
+      course_run_label: runLabel,
+      inventory_display_name: base,
       inventory_group_key: group.key,
       inventory_item_type: '주교재',
       inventory_only: false,
@@ -132,11 +137,11 @@
       quantity: null,
       previous_status: null,
       new_status: '입고대기',
-      notes: `기존 과정에 ${no}차 추가 · 시작 ${startDate} · 예상 ${expected}권 · 기존 재고 ${group.balance}권 유지 · 동일 교재 재고 공유${memo ? ` · ${clean(memo)}` : ''}`
+      notes: `기존 과정에 ${runLabel} 추가 · 시작 ${startDate} · 예상 ${expected}권 · 기존 재고 ${group.balance}권 유지 · 동일 교재 재고 공유${memo ? ` · ${clean(memo)}` : ''}`
     });
 
     await batch.commit();
-    return { no, courseName, startDate };
+    return { no, runLabel, courseName, startDate };
   }
 
   window.openAddCourseRun = function (groupKey) {
@@ -147,7 +152,7 @@
     const no = nextRunNo(group);
     const runs = existingRuns(group);
     const runList = runs.length
-      ? runs.map(x => `<div class="sv4-run-row"><b>${x.no}차</b><span>${x.date || '날짜 미설정'}</span></div>`).join('')
+      ? runs.map(x => `<div class="sv4-run-row"><b>${escSafe(x.label)}</b><span>${x.date || '날짜 미설정'}</span></div>`).join('')
       : '<div class="meta">등록된 차수가 없습니다.</div>';
 
     openSheet(`<div class="sheet-title">${escSafe(group.name)} ${no}차 추가</div>
@@ -180,23 +185,8 @@
     };
   };
 
-  // Keep the existing button hook for compatibility, but change its meaning from edit to add.
+  // Legacy hook kept only so old cached buttons still perform the safe append action.
   window.openExistingCourseSchedule = window.openAddCourseRun;
-
-  function patchUi() {
-    document.querySelectorAll('button[onclick*="openExistingCourseSchedule"]').forEach(button => {
-      if (button.textContent !== '+ 차수 추가') button.textContent = '+ 차수 추가';
-    });
-    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-    const nodes = [];
-    while (walker.nextNode()) nodes.push(walker.currentNode);
-    for (const node of nodes) {
-      if (!node.parentElement || /^(SCRIPT|STYLE|TEXTAREA|OPTION)$/i.test(node.parentElement.tagName)) continue;
-      if ((node.nodeValue || '').includes('입고 화면의 ‘일정 설정’')) {
-        node.nodeValue = node.nodeValue.replace('입고 화면의 ‘일정 설정’', '입고 화면의 ‘+ 차수 추가’');
-      }
-    }
-  }
 
   function addStyles() {
     if (document.getElementById('course-run-add-style')) return;
@@ -212,15 +202,5 @@
   }
 
   addStyles();
-  patchUi();
-  let patchQueued = false;
-  new MutationObserver(() => {
-    if (patchQueued) return;
-    patchQueued = true;
-    requestAnimationFrame(() => {
-      patchQueued = false;
-      patchUi();
-    });
-  }).observe(document.body, { childList: true, subtree: true });
   window.courseRunAddReady = true;
 })();
