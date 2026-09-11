@@ -4,25 +4,30 @@
   "canonical_branch": "main",
   "deployment": {
     "type": "GitHub Pages",
-    "url": "https://kfcccpro-ship-it.github.io/book/simple/"
+    "url": "https://kfcccpro-ship-it.github.io/book/simple/",
+    "last_verified_head": "b1e704b00cefe7d786fe2867fbe7712745f1fc04",
+    "last_verified_pages_run": 33489135594,
+    "last_verified_pages_result": "success"
   },
   "firebase": {
     "project_id": "new-book-e6ec7",
     "database": "(default)",
     "auth": "Anonymous Auth"
   },
-  "last_updated": "2026-08-27T14:53:00+09:00",
-  "current_commit": "92123ce7a520cd7cbbd1b202e5d317d40c49a950",
+  "last_updated": "2026-09-11T15:56:00+09:00",
+  "current_commit": "b1e704b00cefe7d786fe2867fbe7712745f1fc04",
   "trigger_phrase": "교재관리 다음 작업 진행",
   "start_here": "START_HERE_CHATGPT.md",
   "core_files": [
     "simple/index.html",
     "simple/simple-inventory-service.js",
     "simple/simple-inventory-service-core.js",
-    "simple/course-workflow-simple-v3.js"
+    "simple/course-workflow-simple-v3.js",
+    "simple/course-run-add.js",
+    "simple/course-management.js"
   ],
   "operators": {
-    "주나연": ["입고", "정식출고", "즉시출고", "새 과정 등록", "기존 과정 일정 설정", "부교재 등록", "표시명 변경", "숨김/복원"],
+    "주나연": ["입고", "정식출고", "즉시출고", "새 과정 등록", "대표과정명 변경", "차수 추가", "차수 일정/예상수량 수정", "부교재 등록", "숨김/복원"],
     "교육매니저": ["정식출고", "필요 시 입고", "부교재 정식출고"]
   },
   "official_terms": {
@@ -47,7 +52,10 @@
     "unfinished_status_release_difference": 0
   },
   "architecture": {
-    "principle": "교재 1개 = 재고 1개, 과정은 inventory_group_key로 교재를 직접 참조",
+    "principle": "교재 1개 = 재고 1개, 과정/차수는 동일 inventory_group_key를 공유하고 대표과정명을 기준명으로 사용",
+    "representative_course_name_is_canonical": true,
+    "course_run_label_field": true,
+    "inbound_is_course_management_center": true,
     "automatic_name_inference": false,
     "pf_special_case_runtime_repair": false,
     "runtime_alias": false,
@@ -75,9 +83,14 @@
     "existing inventory/course rows can now receive or edit start_date and expected quantity from an explicit 일정 설정 action in the inbound screen",
     "schedule editing converts a legacy inventory_only course row into a scheduled course without changing inventory_group_key, stock_quantity or released_quantity",
     "obsolete exact-name automatic schedule repair for 뉴MG커뮤니케이션스킬 removed",
-    "legacy sub-book name-only linkage compatibility retained while canonical key linkage remains primary"
+    "legacy sub-book name-only linkage compatibility retained while canonical key linkage remains primary",
+    "new course runs now use the representative course name as the canonical base name and store each run label separately",
+    "inbound screen now provides unified course management for representative-name synchronization, run editing, new-run append and reversible soft deletion",
+    "course management loader is wired into the live Simple app and button labels are repatched after loadAll without a recursive MutationObserver",
+    "GitHub Pages deployment for main HEAD b1e704b verified successful",
+    "static source audit confirms main and sub-book immediate-out services record new actions as 즉시출고 and enforce no-negative/no-overdraw checks"
   ],
-  "next_step": "After GitHub Pages deploys commit 92123ce7, open inbound, search 뉴MG커뮤니케이션스킬, choose 일정 설정, enter the real start date and expected quantity, save, then confirm the same existing row appears in that week's outbound list with its existing 2-book balance. No new course or inventory row should be created.",
+  "next_step": "Live mobile verification is now the gate. Open the deployed Simple app as 주나연 and check the 입고 screen: (1) 주교재와 부교재 모두 사용자에게 보이는 재량 출고 기능이 단일 '즉시출고'인지, (2) 즉시출고를 누르면 과정/차수 선택 없이 현재 잔고→처리 후 잔고, 1/2/5권 빠른 선택, 수량/메모 화면으로 바로 연결되는지, (3) '과정 관리'에서 대표과정명·기존 차수 수정·새 차수 추가·복원 가능한 과정 삭제가 보이는지 확인한다. 이 단계에서는 실제 저장 버튼을 누르지 않아도 된다. UI 확인이 끝나면 sub-book-workflow-test.html의 6개 부교재/13개 로그 기준선 복원 PASS를 실행하고, 그 다음 감사/테스트 페이지 archive 여부를 결정한다.",
   "rules": [
     "Resolve latest main HEAD at the start of every new chat",
     "Read START_HERE_CHATGPT.md and PROJECT_STATE.json before modifying code",
@@ -86,6 +99,7 @@
     "Do not infer textbook links from course names",
     "Do not infer or invent course dates; existing-course dates are entered explicitly by the operator",
     "A course must use one explicit inventory_group_key as its textbook link",
+    "Representative course name is the canonical display/base name; course runs keep their own course_run_label",
     "Do not create negative inventory",
     "Use Firestore transaction/batch for inventory mutation plus logging",
     "Do not commit secrets to the public repository"
