@@ -138,6 +138,10 @@ Field mismatch: 0
 - `PROJECT_STATE.json` — 최신 상태/다음 작업 기계판독 파일
 - `simple/index.html` — 모바일 운영 UI
 - `simple/simple-inventory-service.js` — 원자적 입고/출고/즉시출고 서비스
+- `simple/course-workflow-simple-v3.js` — 과정·교재 직접 연결과 입고 화면 통합 흐름
+- `simple/course-run-add.js` — 동일 교재를 공유하는 새 차수 추가
+- `simple/course-management.js` — 대표과정명·기존 차수·운영 종료 관리
+- `simple/course-management-rules.js` — 중복 방지와 레거시 부교재 연결 보존 규칙
 - `simple/inventory-audit.html` — 상세 읽기전용 재고 감사
 - `simple/inventory-audit-summary.html` — 감사 결과 복사 도구
 - `simple/sub-book-workflow-test.html` — 부교재 격리 테스트
@@ -150,6 +154,10 @@ Field mismatch: 0
 - 유지보수 생성·수정·삭제·로그 원자성
 - 부교재 기존 기준선 6/13 보존
 - 주교재 재고 과거 앱 vs Simple 0 mismatch
+- 대표과정명 변경 시 모든 차수명을 함께 동기화하되 `inventory_group_key`와 재고 수량은 유지
+- 과거 이름만으로 연결된 부교재는 대표과정명 변경 시 정식 `inventory_group_key`로 승격하여 연결 보존
+- 동일 교재명·동일 차수명 중복 등록 차단
+- `tests/course-management-rules.test.cjs` 격리 회귀 테스트 PASS
 
 ## 다음 작업
 
@@ -157,11 +165,11 @@ Field mismatch: 0
 
 현재 우선순위는:
 
-1. 모바일에서 단일 `즉시출고` UI가 주나연에게만 명확히 보이는지 확인
-2. 기존 복합 용어(`비상출고`, `재고맞춤`)가 운영 UI에 남아 있지 않은지 확인
-3. 부교재 격리 테스트가 아직 실행되지 않았다면 6/13 기준선 복원 PASS 확인
-4. 검증 후 감사/테스트 페이지를 유지할지 archive할지 결정
-5. 실제 사용자 피드백 기반 모바일 UI 미세조정
+1. 배포된 모바일 입고 화면에서 `과정 관리`와 `+ 차수 추가` 진입 확인
+2. 저장하지 않는 범위에서 대표과정명·기존 차수 목록과 수정 화면 확인
+3. 중복 대표과정명·중복 차수명 차단 메시지 확인
+4. `sub-book-workflow-test.html`에서 기존 부교재 6종/로그 13건 복원 PASS 확인
+5. 검증 후 감사/테스트 페이지를 유지할지 archive할지 결정
 
 ## GitHub 상태 인계 규칙
 

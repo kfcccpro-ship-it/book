@@ -25,7 +25,7 @@
 <nav class="bottom"><div class="bottom-inner"><button class="nav active" data-view="home"><span class="ico">⌂</span>홈</button><button class="nav primary-task" data-view="in"><span class="ico">⇩</span>입고</button><button class="nav primary-task" data-view="week"><span class="ico">⇧</span>출고</button><button class="nav" data-view="stock"><span class="ico">▤</span>재고</button><button class="nav" data-view="log"><span class="ico">≡</span>기록</button></div></nav>
 <div id="modal" class="modal"><div class="sheet"><div class="grab"></div><div id="sheetBody"></div></div></div><div id="notice" class="notice"></div>
 <script src="../migration/firebase-compat.js?v=8"></script>
-<script src="./simple-inventory-service.js?v=6"></script>
+<script src="./simple-inventory-service.js?v=7"></script>
 <script>
 const OPERATORS=[{name:'주나연',role:'입고 주 담당 · 전체 권한',canManage:true},{name:'교육매니저',role:'출고 담당 · 필요 시 입고 가능',canManage:false}];
 const state={client:null,inventory:null,courses:[],logs:[],subBooks:[],subLogs:[],actor:null,weekOffset:0,groups:[],stockFilter:'all'};const $=s=>document.querySelector(s);const $$=s=>[...document.querySelectorAll(s)];

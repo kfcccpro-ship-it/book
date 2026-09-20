@@ -3,7 +3,9 @@
 (function () {
   'use strict';
 
-  const clean = v => String(v || '').trim().replace(/\s+/g, ' ');
+  const rules = window.courseManagementRules;
+  if (!rules) throw new Error('과정관리 안전 규칙을 불러오지 못했습니다.');
+  const { clean, inferRunLabel } = rules;
   const n = v => Number.isFinite(Number(v)) ? Number(v) : 0;
   const makeId = prefix => globalThis.crypto?.randomUUID
     ? `${prefix}_${crypto.randomUUID()}`
@@ -39,16 +41,6 @@
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   }
 
-  function inferRunLabel(course, groupName) {
-    const stored = clean(course?.course_run_label);
-    if (stored) return stored;
-    const name = clean(course?.course_name);
-    const base = clean(groupName);
-    if (base && name.startsWith(base) && name.length > base.length) return clean(name.slice(base.length));
-    const match = name.match(/((?:제\s*)?\d+\s*차(?:\s*\([^)]*\))?.*)$/);
-    return match ? clean(match[1]) : '';
-  }
-
   function managedRuns(group) {
     return (group?.courses || [])
       .filter(c => c.inventory_ledger_only !== true && (c.inventory_only !== true || c.start_date || c.scheduled_release_date || c.course_run_label))
@@ -76,6 +68,8 @@
     if (!actor?.canManage) throw new Error('과정 정보 변경은 주나연 담당자만 가능합니다.');
     if (!after) throw new Error('대표과정명을 입력해주세요.');
     if (before === after) return false;
+    const conflict = rules.representativeNameConflict(state.groups, group.key, after);
+    if (conflict) throw new Error(`같은 이름의 교재가 이미 있습니다: ${conflict.name}`);
 
     const { fs, db } = await firestoreContext();
     const batch = fs.writeBatch(db);
@@ -99,8 +93,11 @@
       batch.update(fs.doc(db, 'courses', String(course.id)), patch);
     }
 
-    for (const book of (state.subBooks || []).filter(b => String(b.course_group_key || '') === String(group.key))) {
+    // Upgrade old name-only sub-book links to the canonical group key while renaming.
+    // This prevents legacy sub-books from disappearing after the representative name changes.
+    for (const book of rules.linkedSubBooksForRename(state.subBooks, group.key, before)) {
       batch.update(fs.doc(db, 'sub_books', String(book.id)), {
+        course_group_key: group.key,
         course_group_name: after,
         updated_by: actor.name,
         updated_at: now
@@ -133,6 +130,8 @@
     const expected = Number(values.expectedQty);
     if (!label) throw new Error('차수/표시명을 입력해주세요. 예: 3차, 7차(1주차)');
     if (!Number.isInteger(expected) || expected < 0) throw new Error('예상 수량은 0권 이상 정수로 입력해주세요.');
+    const conflict = rules.runLabelConflict(group.courses, course.id, label, group.name);
+    if (conflict) throw new Error(`같은 차수/표시명이 이미 있습니다: ${inferRunLabel(conflict, group.name) || conflict.course_name}`);
 
     const { fs, db } = await firestoreContext();
     const start = localTimestamp(fs, values.startDate);

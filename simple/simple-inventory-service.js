@@ -117,12 +117,13 @@
       const service = await coreReady;
       window.simpleInventoryServiceReady = publicReady;
       installUiTerminologyPolicy();
+      await loadScript('./course-management-rules.js?v=1', 'course-management-rules');
       // One representative course/inventory group can have multiple scheduled runs.
       // Inbound is the management center; outbound reads the same persisted course rows.
       await loadScript('./course-workflow-simple-v3.js?v=4', 'course-workflow-simple-v3');
       await waitForSimpleWorkflow();
       await loadScript('./course-run-add.js?v=3', 'course-run-add');
-      await loadScript('./course-management.js?v=1', 'course-management');
+      await loadScript('./course-management.js?v=2', 'course-management');
       installCourseManagementEntry();
       resolveReady(service);
     } catch (error) {

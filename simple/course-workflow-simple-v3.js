@@ -111,6 +111,8 @@
     } else {
       displayName = clean(newBookName);
       if (!displayName) throw new Error('사용할 교재를 선택하거나 새 교재명을 입력해주세요.');
+      const conflict = window.courseManagementRules?.representativeNameConflict(state.groups, '', displayName);
+      if (conflict) throw new Error(`같은 이름의 교재가 이미 있습니다. 기존 교재 목록에서 '${conflict.name}'을 선택해주세요.`);
       selectedKey = `book_${hash(displayName)}_${Date.now().toString(36)}`;
     }
 
