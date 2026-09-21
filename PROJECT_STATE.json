@@ -5,8 +5,8 @@
   "deployment": {
     "type": "GitHub Pages",
     "url": "https://kfcccpro-ship-it.github.io/book/simple/",
-    "last_verified_head": "b1e704b00cefe7d786fe2867fbe7712745f1fc04",
-    "last_verified_pages_run": 33489135594,
+    "last_verified_head": "802fb4d7e656891f957bd20777225e5b51600cbb",
+    "last_verified_pages_run": 35546193453,
     "last_verified_pages_result": "success"
   },
   "firebase": {
@@ -14,8 +14,8 @@
     "database": "(default)",
     "auth": "Anonymous Auth"
   },
-  "last_updated": "2026-09-11T16:05:00+09:00",
-  "current_commit": "521fcb8c87fb6d0710eafc773dec312072fdc77d",
+  "last_updated": "2026-09-21T09:00:09+09:00",
+  "current_commit": "802fb4d7e656891f957bd20777225e5b51600cbb",
   "trigger_phrase": "교재관리 다음 작업 진행",
   "start_here": "START_HERE_CHATGPT.md",
   "core_files": [
@@ -95,9 +95,10 @@
     "static source audit confirms main and sub-book immediate-out services record new actions as 즉시출고 and enforce no-negative/no-overdraw checks",
     "representative-course rename now preserves legacy name-only sub-book links by upgrading them to the canonical inventory_group_key without changing stock quantities",
     "duplicate representative textbook names, duplicate newly-created textbook names and duplicate run labels are blocked before Firestore writes",
-    "course-management safety rules have a Node regression test covering duplicate guards, legacy sub-book linkage and no stock-field mutation in representative rename"
+    "course-management safety rules have a Node regression test covering duplicate guards, legacy sub-book linkage and no stock-field mutation in representative rename",
+    "GitHub Pages deployment for course-management safety commit 802fb4d verified successful"
   ],
-  "next_step": "After GitHub Pages deploys commit 521fcb8, perform a no-write mobile check as 주나연: confirm that 입고 cards show 과정 관리 and + 차수 추가, that 과정 관리 lists representative name and existing runs, and that attempting to enter an already-used representative textbook name or run label shows a blocking message before any save. Then run sub-book-workflow-test.html and confirm the 6 sub-books/13 logs baseline is restored PASS before deciding whether to archive the audit/test pages.",
+  "next_step": "Perform a no-write mobile check as 주나연 on deployed commit 802fb4d: confirm that 입고 cards show 과정 관리 and + 차수 추가, that 과정 관리 lists representative name and existing runs, and that attempting to enter an already-used representative textbook name or run label shows a blocking message before any save. Then run sub-book-workflow-test.html and confirm the 6 sub-books/13 logs baseline is restored PASS before deciding whether to archive the audit/test pages.",
   "rules": [
     "Resolve latest main HEAD at the start of every new chat",
     "Read START_HERE_CHATGPT.md and PROJECT_STATE.json before modifying code",
